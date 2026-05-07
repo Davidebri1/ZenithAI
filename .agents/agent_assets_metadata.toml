@@ -1,0 +1,8 @@
+uploads = []
+outputs = []
+
+[[generated]]
+id = "IBSAe2M0H0nJne8_KkH_s"
+uri = "file://artifacts/multi-ai/assets/images/icon.png"
+type = "image"
+title = "multi-ai app icon"

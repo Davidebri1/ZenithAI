@@ -6,4 +6,18 @@
  * OpenAPI spec version: 0.1.0
  */
 
+export * from "./anthropicConversation";
+export * from "./anthropicError";
+export * from "./createAnthropicConversationBody";
+export * from "./createGeminiConversationBody";
+export * from "./createOpenaiConversationBody";
+export * from "./geminiConversation";
+export * from "./geminiError";
 export * from "./healthStatus";
+export * from "./multiPromptBody";
+export * from "./multiPromptResponse";
+export * from "./openaiConversation";
+export * from "./openaiError";
+export * from "./sendAnthropicMessageBody";
+export * from "./sendGeminiMessageBody";
+export * from "./sendOpenaiMessageBody";

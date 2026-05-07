@@ -1,0 +1,56 @@
+const colors = {
+  light: {
+    text: "#0a0a0a",
+    tint: "#10a37f",
+    background: "#f8f8f8",
+    foreground: "#0a0a0a",
+    card: "#ffffff",
+    cardForeground: "#0a0a0a",
+    primary: "#10a37f",
+    primaryForeground: "#ffffff",
+    secondary: "#f0f0f0",
+    secondaryForeground: "#1a1a1a",
+    muted: "#f0f0f0",
+    mutedForeground: "#737373",
+    accent: "#f0f0f0",
+    accentForeground: "#1a1a1a",
+    destructive: "#ef4444",
+    destructiveForeground: "#ffffff",
+    border: "#e5e5e5",
+    input: "#e5e5e5",
+  },
+
+  dark: {
+    text: "#f5f5f5",
+    tint: "#10a37f",
+    background: "#0d0d0d",
+    foreground: "#f5f5f5",
+    card: "#1a1a1a",
+    cardForeground: "#f5f5f5",
+    primary: "#10a37f",
+    primaryForeground: "#ffffff",
+    secondary: "#262626",
+    secondaryForeground: "#f5f5f5",
+    muted: "#262626",
+    mutedForeground: "#a3a3a3",
+    accent: "#262626",
+    accentForeground: "#f5f5f5",
+    destructive: "#ef4444",
+    destructiveForeground: "#ffffff",
+    border: "#2a2a2a",
+    input: "#2a2a2a",
+  },
+
+  radius: 12,
+
+  ai: {
+    openai: "#10a37f",
+    openaiLight: "#10a37f22",
+    anthropic: "#d4761c",
+    anthropicLight: "#d4761c22",
+    gemini: "#4285f4",
+    geminiLight: "#4285f422",
+  },
+};
+
+export default colors;

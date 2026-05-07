@@ -14,3 +14,106 @@ import * as zod from "zod";
 export const HealthCheckResponse = zod.object({
   status: zod.string(),
 });
+
+/**
+ * @summary Create a session ID for a multi-AI prompt
+ */
+export const SendMultiPromptBody = zod.object({
+  prompt: zod.string(),
+});
+
+export const SendMultiPromptResponse = zod.object({
+  openaiConversationId: zod.number(),
+  anthropicConversationId: zod.number(),
+  geminiConversationId: zod.number(),
+});
+
+/**
+ * @summary List all conversations
+ */
+export const ListOpenaiConversationsResponseItem = zod.object({
+  id: zod.number(),
+  title: zod.string(),
+  createdAt: zod.coerce.date(),
+});
+export const ListOpenaiConversationsResponse = zod.array(
+  ListOpenaiConversationsResponseItem,
+);
+
+/**
+ * @summary Create a new conversation
+ */
+export const CreateOpenaiConversationBody = zod.object({
+  title: zod.string(),
+});
+
+/**
+ * @summary Send a text message and receive a streaming text response
+ */
+export const SendOpenaiMessageParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const SendOpenaiMessageBody = zod.object({
+  content: zod.string(),
+});
+
+/**
+ * @summary List all conversations
+ */
+export const ListAnthropicConversationsResponseItem = zod.object({
+  id: zod.number(),
+  title: zod.string(),
+  createdAt: zod.coerce.date(),
+});
+export const ListAnthropicConversationsResponse = zod.array(
+  ListAnthropicConversationsResponseItem,
+);
+
+/**
+ * @summary Create a new conversation
+ */
+export const CreateAnthropicConversationBody = zod.object({
+  title: zod.string(),
+});
+
+/**
+ * @summary Send a message and receive an AI response (SSE stream)
+ */
+export const SendAnthropicMessageParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const SendAnthropicMessageBody = zod.object({
+  content: zod.string(),
+});
+
+/**
+ * @summary List all conversations
+ */
+export const ListGeminiConversationsResponseItem = zod.object({
+  id: zod.number(),
+  title: zod.string(),
+  createdAt: zod.coerce.date(),
+});
+export const ListGeminiConversationsResponse = zod.array(
+  ListGeminiConversationsResponseItem,
+);
+
+/**
+ * @summary Create a new conversation
+ */
+export const CreateGeminiConversationBody = zod.object({
+  title: zod.string(),
+});
+
+/**
+ * @summary Send a message and receive an AI response (SSE stream)
+ */
+export const SendGeminiMessageParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const SendGeminiMessageBody = zod.object({
+  content: zod.string(),
+});
