@@ -13,6 +13,7 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { Feather } from "@expo/vector-icons";
 import { fetch } from "expo/fetch";
 import * as Haptics from "expo-haptics";
+import * as Clipboard from "expo-clipboard";
 
 import { useColors } from "@/hooks/useColors";
 import colors from "@/constants/colors";
@@ -30,6 +31,18 @@ interface AiCardProps {
 
 function AiResponseCard({ name, model, color, lightColor, text, loading, done, error }: AiCardProps) {
   const c = useColors();
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = async () => {
+    if (!text) return;
+    await Clipboard.setStringAsync(text);
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  const canCopy = text.length > 0 && !error;
+
   return (
     <View style={[styles.card, { backgroundColor: c.card, borderColor: c.border }]}>
       <View style={[styles.cardHeader, { borderBottomColor: c.border }]}>
@@ -37,7 +50,28 @@ function AiResponseCard({ name, model, color, lightColor, text, loading, done, e
           <View style={[styles.aiDot, { backgroundColor: color }]} />
           <Text style={[styles.aiName, { color: color, fontFamily: "Inter_600SemiBold" }]}>{name}</Text>
         </View>
-        <Text style={[styles.modelLabel, { color: c.mutedForeground }]}>{model}</Text>
+        <View style={styles.cardHeaderRight}>
+          <Text style={[styles.modelLabel, { color: c.mutedForeground }]}>{model}</Text>
+          {canCopy && (
+            <TouchableOpacity
+              onPress={handleCopy}
+              style={[
+                styles.copyButton,
+                { backgroundColor: copied ? color + "22" : c.secondary, borderColor: copied ? color : c.border },
+              ]}
+              activeOpacity={0.7}
+            >
+              <Feather
+                name={copied ? "check" : "copy"}
+                size={13}
+                color={copied ? color : c.mutedForeground}
+              />
+              <Text style={[styles.copyLabel, { color: copied ? color : c.mutedForeground }]}>
+                {copied ? "Copied!" : "Copy"}
+              </Text>
+            </TouchableOpacity>
+          )}
+        </View>
       </View>
       <View style={styles.cardBody}>
         {error ? (
@@ -58,11 +92,6 @@ function AiResponseCard({ name, model, color, lightColor, text, loading, done, e
             {loading && (
               <View style={styles.streamingIndicator}>
                 <View style={[styles.cursor, { backgroundColor: color }]} />
-              </View>
-            )}
-            {done && text.length > 0 && (
-              <View style={styles.doneRow}>
-                <Feather name="check" size={12} color={c.mutedForeground} />
               </View>
             )}
           </>
@@ -281,7 +310,22 @@ const styles = StyleSheet.create({
   },
   aiDot: { width: 8, height: 8, borderRadius: 4 },
   aiName: { fontSize: 13 },
+  cardHeaderRight: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
   modelLabel: { fontSize: 12, fontFamily: "Inter_400Regular" },
+  copyButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 8,
+    borderWidth: 1,
+  },
+  copyLabel: { fontSize: 12, fontFamily: "Inter_500Medium" },
   cardBody: { padding: 14, minHeight: 80 },
   responseText: {
     fontSize: 15,
@@ -294,5 +338,4 @@ const styles = StyleSheet.create({
   errorText: { fontSize: 14, fontFamily: "Inter_400Regular", flex: 1 },
   streamingIndicator: { marginTop: 8 },
   cursor: { width: 2, height: 16, borderRadius: 1, opacity: 0.8 },
-  doneRow: { marginTop: 8, alignItems: "flex-end" },
 });
