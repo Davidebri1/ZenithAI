@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
-import { conversations } from "@workspace/db";
+import { conversations, messages } from "@workspace/db";
+import { eq, asc } from "drizzle-orm";
 
 const router = Router();
 
@@ -25,6 +26,21 @@ router.post("/prompt/multi", async (req, res) => {
     });
   } catch (err) {
     req.log.error({ err }, "prompt/multi error");
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+router.get("/conversations/:id/messages", async (req, res) => {
+  try {
+    const id = parseInt(req.params.id, 10);
+    const msgs = await db
+      .select()
+      .from(messages)
+      .where(eq(messages.conversationId, id))
+      .orderBy(asc(messages.createdAt));
+    res.json(msgs);
+  } catch (err) {
+    req.log.error({ err }, "getConversationMessages error");
     res.status(500).json({ error: "Internal server error" });
   }
 });
