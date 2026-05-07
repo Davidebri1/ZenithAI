@@ -12,13 +12,8 @@ import React, { useEffect } from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { KeyboardProvider } from "react-native-keyboard-controller";
 import { SafeAreaProvider } from "react-native-safe-area-context";
-import { useColorScheme } from "react-native";
-import { setBaseUrl } from "@workspace/api-client-react";
-
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { useColors } from "@/hooks/useColors";
-
-setBaseUrl(`https://${process.env.EXPO_PUBLIC_DOMAIN}`);
 
 SplashScreen.preventAutoHideAsync();
 
@@ -31,11 +26,11 @@ function RootLayoutNav() {
       screenOptions={{
         headerShown: false,
         contentStyle: { backgroundColor: colors.background },
-        animation: "slide_from_right",
+        animation: "slide_from_bottom",
       }}
     >
-      <Stack.Screen name="index" />
-      <Stack.Screen name="result" />
+      <Stack.Screen name="index" options={{ animation: "none" }} />
+      <Stack.Screen name="thread" options={{ animation: "slide_from_bottom", presentation: "modal" }} />
     </Stack>
   );
 }
@@ -49,9 +44,7 @@ export default function RootLayout() {
   });
 
   useEffect(() => {
-    if (fontsLoaded || fontError) {
-      SplashScreen.hideAsync();
-    }
+    if (fontsLoaded || fontError) SplashScreen.hideAsync();
   }, [fontsLoaded, fontError]);
 
   if (!fontsLoaded && !fontError) return null;
