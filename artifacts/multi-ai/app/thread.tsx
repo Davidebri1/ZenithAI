@@ -8,6 +8,7 @@ import {
   Platform,
   ScrollView,
   ActivityIndicator,
+  Alert,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useLocalSearchParams, useRouter } from "expo-router";
@@ -108,9 +109,9 @@ export default function ThreadScreen() {
     if (!text || streaming) return;
 
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    setReply("");
     setStreaming(true);
 
+    // Add messages to the thread optimistically, but DON'T clear the input yet
     const userMsg: Message = { role: "user", content: text };
     const assistantMsg: Message = { role: "assistant", content: "", streaming: true };
     setMessages((prev) => [...prev, userMsg, assistantMsg]);
@@ -126,6 +127,9 @@ export default function ThreadScreen() {
       });
 
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+      // Server accepted the request — safe to clear the input now
+      setReply("");
 
       const reader = res.body?.getReader();
       if (!reader) throw new Error("No stream");
@@ -167,12 +171,17 @@ export default function ThreadScreen() {
         }
       }
     } catch {
-      setMessages((prev) => {
-        const updated = [...prev];
-        const last = updated[updated.length - 1];
-        if (last?.role === "assistant") updated[updated.length - 1] = { ...last, content: "Something went wrong. Please try again.", streaming: false };
-        return updated;
-      });
+      // Remove the optimistic messages we added
+      setMessages((prev) => prev.slice(0, -2));
+      // Restore the user's text so nothing is lost
+      setReply(text);
+      setStreaming(false);
+      Alert.alert(
+        "Failed to send",
+        "Your message has been restored to the input bar. Please try again.",
+        [{ text: "OK" }]
+      );
+      return;
     }
     setStreaming(false);
   };

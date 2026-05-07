@@ -259,7 +259,14 @@ export default function HomeScreen() {
       }
       updateCard(key, { streaming: false, streamingText: "", lastMessage: fullText, lastRole: "assistant", hasUnread: true, conversationId: convId });
     } catch (err) {
-      updateCard(key, { streaming: false, streamingText: "", lastMessage: "Error — tap to retry", lastRole: "user" });
+      const providerName = AI_PROVIDERS.find((p) => p.key === key)?.name ?? key;
+      // Keep the user's original message visible — never wipe it
+      updateCard(key, { streaming: false, streamingText: "" });
+      Alert.alert(
+        `${providerName} failed`,
+        `Your message is still in the input bar — please try again.`,
+        [{ text: "OK" }]
+      );
     }
   };
 
@@ -270,15 +277,22 @@ export default function HomeScreen() {
 
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     inputRef.current?.blur();
-    setMessage("");
 
     try {
+      // Get/create conversation IDs BEFORE clearing the input — if this fails,
+      // the user's message stays in the field so nothing is lost.
       const ids = await getOrCreateConvIds();
+      setMessage(""); // Only clear after we know the server is reachable
       [...selected].forEach((key) => {
         if (ids[key]) streamForProvider(key, ids[key], text);
       });
     } catch {
-      Alert.alert("Error", "Could not connect to server. Make sure the app is running.");
+      // Input is NOT cleared — user can try again immediately
+      Alert.alert(
+        "Connection failed",
+        "Could not reach the server. Your message is still in the input bar.",
+        [{ text: "OK" }]
+      );
     }
   };
 
