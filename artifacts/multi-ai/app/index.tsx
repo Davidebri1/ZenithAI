@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import React, { useState, useRef, useCallback, useEffect } from "react";
 import {
   View,
   Text,
@@ -40,7 +40,14 @@ interface CardState {
 }
 
 function makeDefaultCard(): CardState {
-  return { conversationId: null, lastMessage: "", lastRole: "user", streaming: false, streamingText: "", hasUnread: false };
+  return {
+    conversationId: null,
+    lastMessage: "",
+    lastRole: "user",
+    streaming: false,
+    streamingText: "",
+    hasUnread: false,
+  };
 }
 
 interface AiCardProps {
@@ -72,12 +79,10 @@ function AiCard({ provider, state, selected, onToggleSelect, onOpen, cardWidth }
         },
       ]}
     >
-      {/* Colored header strip */}
       <View style={[styles.cardTop, { backgroundColor: provider.colorLight }]}>
         <View style={[styles.aiCircle, { backgroundColor: provider.color }]}>
           <Text style={styles.aiInitial}>{provider.name[0]}</Text>
         </View>
-        {/* Checkbox */}
         <TouchableOpacity
           onPress={(e) => { e.stopPropagation?.(); onToggleSelect(); }}
           hitSlop={{ top: 8, right: 8, bottom: 8, left: 8 }}
@@ -92,13 +97,11 @@ function AiCard({ provider, state, selected, onToggleSelect, onOpen, cardWidth }
         >
           {selected && <Feather name="check" size={11} color="#fff" />}
         </TouchableOpacity>
-        {/* Unread badge */}
         {state.hasUnread && !state.streaming && (
           <View style={[styles.unreadDot, { backgroundColor: provider.color }]} />
         )}
       </View>
 
-      {/* Card body */}
       <View style={styles.cardBody}>
         <View style={styles.cardNameRow}>
           <Text style={[styles.cardName, { color: c.foreground }]}>{provider.name}</Text>
@@ -116,7 +119,13 @@ function AiCard({ provider, state, selected, onToggleSelect, onOpen, cardWidth }
             <Text
               style={[
                 styles.previewText,
-                { color: state.lastMessage ? (state.lastRole === "assistant" ? c.foreground : c.mutedForeground) : c.mutedForeground },
+                {
+                  color: state.lastMessage
+                    ? state.lastRole === "assistant"
+                      ? c.foreground
+                      : c.mutedForeground
+                    : c.mutedForeground,
+                },
               ]}
               numberOfLines={3}
             >
@@ -145,78 +154,102 @@ export default function HomeScreen() {
   const [message, setMessage] = useState("");
   const [convIds, setConvIds] = useState<ConvIds>({});
   const inputRef = useRef<TextInput>(null);
+  // Track active stream readers so we can abort on new chat
+  const activeReaders = useRef<Map<string, ReadableStreamDefaultReader<Uint8Array>>>(new Map());
 
-  const updateCard = (key: string, patch: Partial<CardState>) =>
-    setCards((prev) => ({ ...prev, [key]: { ...prev[key], ...patch } }));
+  const updateCard = useCallback((key: string, patch: Partial<CardState>) =>
+    setCards((prev) => ({ ...prev, [key]: { ...prev[key], ...patch } })), []);
 
-  // Load stored conversation IDs on mount
+  const loadLastMessage = useCallback(async (key: string, convId: number) => {
+    try {
+      const res = await fetch(`${BASE_URL}/api/conversations/${convId}/messages`);
+      if (!res.ok) return;
+      const msgs = (await res.json()) as Array<{ role: string; content: string }>;
+      if (msgs.length > 0) {
+        const last = msgs[msgs.length - 1];
+        updateCard(key, {
+          lastMessage: last.content,
+          lastRole: last.role as "user" | "assistant",
+          conversationId: convId,
+          hasUnread: last.role === "assistant",
+        });
+      }
+    } catch {}
+  }, [updateCard]);
+
+  // Initial load on mount — fires on all platforms including web
   useEffect(() => {
     AsyncStorage.getItem(CONV_IDS_KEY).then((stored) => {
-      if (stored) {
+      if (!stored) return;
+      const ids: ConvIds = JSON.parse(stored);
+      setConvIds(ids);
+      AI_PROVIDERS.forEach((p) => {
+        if (ids[p.key]) loadLastMessage(p.key, ids[p.key]);
+      });
+    });
+  }, [loadLastMessage]);
+
+  // On every focus after mount: refresh messages so returning from thread shows updated state
+  useFocusEffect(
+    useCallback(() => {
+      AsyncStorage.getItem(CONV_IDS_KEY).then((stored) => {
+        if (!stored) return;
         const ids: ConvIds = JSON.parse(stored);
         setConvIds(ids);
-        // Load last message for each AI
         AI_PROVIDERS.forEach((p) => {
           if (ids[p.key]) loadLastMessage(p.key, ids[p.key]);
         });
-      }
-    });
-  }, []);
-
-  // Reload unread on focus
-  useFocusEffect(
-    useCallback(() => {
-      // Mark cards with unread if they have a last message
-      AI_PROVIDERS.forEach((p) => {
-        setCards((prev) => {
-          if (prev[p.key].lastMessage && prev[p.key].lastRole === "assistant") {
-            return { ...prev, [p.key]: { ...prev[p.key], hasUnread: true } };
-          }
-          return prev;
-        });
       });
-    }, [])
+    }, [loadLastMessage])
   );
 
-  const loadLastMessage = async (key: string, convId: number) => {
-    try {
-      const res = await fetch(`${BASE_URL}/api/conversations/${convId}/messages`);
-      const msgs = await res.json() as Array<{ role: string; content: string }>;
-      if (msgs.length > 0) {
-        const last = msgs[msgs.length - 1];
-        updateCard(key, { lastMessage: last.content, lastRole: last.role as "user" | "assistant", conversationId: convId });
-      }
-    } catch {}
-  };
+  // Create only the missing conversations (not all 3 if some already exist)
+  const getOrCreateConvIds = useCallback(async (): Promise<ConvIds> => {
+    // Fast path: state already complete
+    const allKeys = AI_PROVIDERS.map((p) => p.key);
+    const stateComplete = allKeys.every((k) => convIds[k]);
+    if (stateComplete) return convIds;
 
-  const getOrCreateConvIds = async (): Promise<ConvIds> => {
-    if (Object.keys(convIds).length === AI_PROVIDERS.length) return convIds;
+    // Load from AsyncStorage
     const stored = await AsyncStorage.getItem(CONV_IDS_KEY);
-    if (stored) {
-      const ids = JSON.parse(stored) as ConvIds;
-      setConvIds(ids);
-      return ids;
+    const existing: ConvIds = stored ? JSON.parse(stored) : {};
+
+    // Check if storage is complete
+    const storageComplete = allKeys.every((k) => existing[k]);
+    if (storageComplete) {
+      setConvIds(existing);
+      return existing;
     }
-    // Create one conversation per provider
+
+    // Create only missing conversations
+    const missing = AI_PROVIDERS.filter((p) => !existing[p.key]);
     const results = await Promise.all(
-      AI_PROVIDERS.map(async (p) => {
+      missing.map(async (p) => {
         const res = await fetch(`${BASE_URL}/api/${p.key}/conversations`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ title: "My Conversations" }),
         });
-        const data = await res.json() as { id: number };
+        if (!res.ok) throw new Error(`Failed to create ${p.name} conversation`);
+        const data = (await res.json()) as { id: number };
         return [p.key, data.id] as [string, number];
       })
     );
-    const ids = Object.fromEntries(results);
+
+    const ids = { ...existing, ...Object.fromEntries(results) };
     await AsyncStorage.setItem(CONV_IDS_KEY, JSON.stringify(ids));
     setConvIds(ids);
     return ids;
-  };
+  }, [convIds]);
 
-  const streamForProvider = async (key: string, convId: number, content: string) => {
-    updateCard(key, { streaming: true, streamingText: "", hasUnread: false, lastMessage: content, lastRole: "user" });
+  const streamForProvider = useCallback(async (key: string, convId: number, content: string) => {
+    updateCard(key, {
+      streaming: true,
+      streamingText: "",
+      hasUnread: false,
+      lastMessage: content,
+      lastRole: "user",
+    });
 
     try {
       const res = await fetch(`${BASE_URL}/api/${key}/conversations/${convId}/messages`, {
@@ -230,45 +263,79 @@ export default function HomeScreen() {
       const reader = res.body?.getReader();
       if (!reader) throw new Error("No stream");
 
+      activeReaders.current.set(key, reader);
+
       const decoder = new TextDecoder();
       let buffer = "";
       let fullText = "";
+      let finished = false;
 
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
+
         buffer += decoder.decode(value, { stream: true });
         const lines = buffer.split("\n");
         buffer = lines.pop() ?? "";
 
         for (const line of lines) {
           if (!line.startsWith("data: ")) continue;
+
+          // Parse JSON separately so a bad line doesn't swallow real errors
+          let parsed: { content?: string; done?: boolean; error?: string };
           try {
-            const data = JSON.parse(line.slice(6)) as { content?: string; done?: boolean; error?: string };
-            if (data.content) {
-              fullText += data.content;
-              updateCard(key, { streamingText: fullText });
-            }
-            if (data.done) {
-              updateCard(key, { streaming: false, streamingText: "", lastMessage: fullText, lastRole: "assistant", hasUnread: true, conversationId: convId });
-              return;
-            }
-            if (data.error) throw new Error(data.error);
-          } catch {}
+            parsed = JSON.parse(line.slice(6));
+          } catch {
+            continue;
+          }
+
+          if (parsed.content) {
+            fullText += parsed.content;
+            updateCard(key, { streamingText: fullText });
+          }
+          if (parsed.done) {
+            finished = true;
+            updateCard(key, {
+              streaming: false,
+              streamingText: "",
+              lastMessage: fullText,
+              lastRole: "assistant",
+              hasUnread: true,
+              conversationId: convId,
+            });
+            break;
+          }
+          if (parsed.error) {
+            throw new Error(parsed.error);
+          }
         }
+        if (finished) break;
       }
-      updateCard(key, { streaming: false, streamingText: "", lastMessage: fullText, lastRole: "assistant", hasUnread: true, conversationId: convId });
-    } catch (err) {
+
+      // Stream ended without explicit done event — still save what we got
+      if (!finished) {
+        updateCard(key, {
+          streaming: false,
+          streamingText: "",
+          lastMessage: fullText || content,
+          lastRole: fullText ? "assistant" : "user",
+          hasUnread: !!fullText,
+          conversationId: convId,
+        });
+      }
+    } catch {
       const providerName = AI_PROVIDERS.find((p) => p.key === key)?.name ?? key;
-      // Keep the user's original message visible — never wipe it
+      // Keep user's message on the card — never wipe it
       updateCard(key, { streaming: false, streamingText: "" });
       Alert.alert(
         `${providerName} failed`,
-        `Your message is still in the input bar — please try again.`,
+        "Your message is still in the input bar — you can try again.",
         [{ text: "OK" }]
       );
+    } finally {
+      activeReaders.current.delete(key);
     }
-  };
+  }, [updateCard]);
 
   const handleSend = async () => {
     const text = message.trim();
@@ -279,15 +346,14 @@ export default function HomeScreen() {
     inputRef.current?.blur();
 
     try {
-      // Get/create conversation IDs BEFORE clearing the input — if this fails,
-      // the user's message stays in the field so nothing is lost.
+      // Get/create conversation IDs BEFORE clearing the input.
+      // If this fails, the user's message stays in the field.
       const ids = await getOrCreateConvIds();
-      setMessage(""); // Only clear after we know the server is reachable
+      setMessage("");
       [...selected].forEach((key) => {
         if (ids[key]) streamForProvider(key, ids[key], text);
       });
-    } catch {
-      // Input is NOT cleared — user can try again immediately
+    } catch (err) {
       Alert.alert(
         "Connection failed",
         "Could not reach the server. Your message is still in the input bar.",
@@ -307,13 +373,15 @@ export default function HomeScreen() {
   };
 
   const openThread = (provider: AiProvider) => {
-    const card = cards[provider.key];
-    if (card.streaming) return;
     Haptics.selectionAsync();
     updateCard(provider.key, { hasUnread: false });
+    const card = cards[provider.key];
     router.push({
       pathname: "/thread",
-      params: { key: provider.key, convId: String(card.conversationId ?? "") },
+      params: {
+        key: provider.key,
+        convId: String(card.conversationId ?? convIds[provider.key] ?? ""),
+      },
     });
   };
 
@@ -324,10 +392,17 @@ export default function HomeScreen() {
         text: "New Chat",
         style: "destructive",
         onPress: async () => {
+          // Cancel active streams
+          activeReaders.current.forEach((reader) => {
+            try { reader.cancel(); } catch {}
+          });
+          activeReaders.current.clear();
+
           await AsyncStorage.removeItem(CONV_IDS_KEY);
           setConvIds({});
           setCards(Object.fromEntries(AI_PROVIDERS.map((p) => [p.key, makeDefaultCard()])));
           setSelected(new Set(AI_PROVIDERS.map((p) => p.key)));
+          setMessage("");
         },
       },
     ]);
@@ -340,14 +415,16 @@ export default function HomeScreen() {
   const topPad = Platform.OS === "web" ? 52 : insets.top;
   const bottomPad = Platform.OS === "web" ? 24 : insets.bottom;
 
-  // Build grid data: pairs of providers for 2-col layout
   const rows: (AiProvider | null)[][] = [];
   for (let i = 0; i < AI_PROVIDERS.length; i += 2) {
     rows.push([AI_PROVIDERS[i], AI_PROVIDERS[i + 1] ?? null]);
   }
 
   return (
-    <KeyboardAvoidingView style={[styles.container, { backgroundColor: c.background }]} behavior="padding">
+    <KeyboardAvoidingView
+      style={[styles.container, { backgroundColor: c.background }]}
+      behavior="padding"
+    >
       {/* Header */}
       <View style={[styles.header, { paddingTop: topPad + 10 }]}>
         <View style={styles.logoRow}>
@@ -364,7 +441,7 @@ export default function HomeScreen() {
         </TouchableOpacity>
       </View>
 
-      {/* Card Grid */}
+      {/* Card Grid — scrollable so cards are never clipped by keyboard */}
       <FlatList
         data={rows}
         keyExtractor={(_, i) => String(i)}
@@ -389,16 +466,18 @@ export default function HomeScreen() {
         )}
         contentContainerStyle={styles.grid}
         showsVerticalScrollIndicator={false}
-        scrollEnabled={false}
+        keyboardShouldPersistTaps="handled"
       />
 
       {/* Bottom input */}
-      <View style={[styles.bottomBar, { borderTopColor: c.border, paddingBottom: bottomPad + 8, backgroundColor: c.background }]}>
-        {/* Who we're sending to */}
+      <View
+        style={[
+          styles.bottomBar,
+          { borderTopColor: c.border, paddingBottom: bottomPad + 8, backgroundColor: c.background },
+        ]}
+      >
         <View style={styles.sendingRow}>
-          <Text style={[styles.sendingLabel, { color: c.mutedForeground }]}>
-            Sending to:{" "}
-          </Text>
+          <Text style={[styles.sendingLabel, { color: c.mutedForeground }]}>Sending to: </Text>
           <View style={styles.sendingChips}>
             {AI_PROVIDERS.map((p) => (
               <TouchableOpacity
@@ -413,8 +492,18 @@ export default function HomeScreen() {
                 ]}
                 activeOpacity={0.7}
               >
-                <View style={[styles.chipDot, { backgroundColor: selected.has(p.key) ? p.color : c.mutedForeground }]} />
-                <Text style={[styles.chipLabel, { color: selected.has(p.key) ? p.color : c.mutedForeground }]}>
+                <View
+                  style={[
+                    styles.chipDot,
+                    { backgroundColor: selected.has(p.key) ? p.color : c.mutedForeground },
+                  ]}
+                />
+                <Text
+                  style={[
+                    styles.chipLabel,
+                    { color: selected.has(p.key) ? p.color : c.mutedForeground },
+                  ]}
+                >
                   {p.name}
                 </Text>
               </TouchableOpacity>
@@ -422,7 +511,6 @@ export default function HomeScreen() {
           </View>
         </View>
 
-        {/* Input row */}
         <View style={[styles.inputRow, { backgroundColor: c.card, borderColor: c.border }]}>
           <TextInput
             ref={inputRef}
@@ -433,11 +521,16 @@ export default function HomeScreen() {
             onChangeText={setMessage}
             multiline
             maxLength={2000}
+            onSubmitEditing={handleSend}
+            blurOnSubmit={false}
           />
           <TouchableOpacity
             onPress={handleSend}
             disabled={!canSend}
-            style={[styles.sendBtn, { backgroundColor: canSend ? AI_PROVIDERS[0].color : c.muted }]}
+            style={[
+              styles.sendBtn,
+              { backgroundColor: canSend ? AI_PROVIDERS[0].color : c.muted },
+            ]}
             activeOpacity={0.7}
           >
             {anyStreaming ? (
@@ -514,15 +607,29 @@ const styles = StyleSheet.create({
     borderRadius: 5,
   },
   cardBody: { padding: 12, gap: 6 },
-  cardNameRow: { flexDirection: "row", alignItems: "baseline", justifyContent: "space-between" },
+  cardNameRow: {
+    flexDirection: "row",
+    alignItems: "baseline",
+    justifyContent: "space-between",
+  },
   cardName: { fontSize: 15, fontFamily: "Inter_600SemiBold" },
   cardModel: { fontSize: 11, fontFamily: "Inter_400Regular" },
   previewRow: { minHeight: 48 },
   streamingRow: { flexDirection: "row", alignItems: "flex-start", gap: 6 },
   previewText: { fontSize: 13, fontFamily: "Inter_400Regular", lineHeight: 19 },
 
-  bottomBar: { paddingTop: 10, paddingHorizontal: 16, borderTopWidth: StyleSheet.hairlineWidth, gap: 10 },
-  sendingRow: { flexDirection: "row", alignItems: "center", flexWrap: "wrap", gap: 6 },
+  bottomBar: {
+    paddingTop: 10,
+    paddingHorizontal: 16,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    gap: 10,
+  },
+  sendingRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    flexWrap: "wrap",
+    gap: 6,
+  },
   sendingLabel: { fontSize: 12, fontFamily: "Inter_400Regular" },
   sendingChips: { flexDirection: "row", gap: 6, flexWrap: "wrap" },
   sendingChip: {
@@ -546,6 +653,19 @@ const styles = StyleSheet.create({
     paddingVertical: 7,
     gap: 8,
   },
-  input: { flex: 1, fontSize: 16, fontFamily: "Inter_400Regular", maxHeight: 110, lineHeight: 22, paddingVertical: 3 },
-  sendBtn: { width: 38, height: 38, borderRadius: 10, alignItems: "center", justifyContent: "center" },
+  input: {
+    flex: 1,
+    fontSize: 16,
+    fontFamily: "Inter_400Regular",
+    maxHeight: 110,
+    lineHeight: 22,
+    paddingVertical: 3,
+  },
+  sendBtn: {
+    width: 38,
+    height: 38,
+    borderRadius: 10,
+    alignItems: "center",
+    justifyContent: "center",
+  },
 });
