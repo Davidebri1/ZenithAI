@@ -26,11 +26,11 @@ function RootLayoutNav() {
       screenOptions={{
         headerShown: false,
         contentStyle: { backgroundColor: colors.background },
-        animation: "slide_from_bottom",
       }}
     >
       <Stack.Screen name="index" options={{ animation: "none" }} />
       <Stack.Screen name="thread" options={{ animation: "slide_from_bottom", presentation: "modal" }} />
+      <Stack.Screen name="history" options={{ animation: "slide_from_right" }} />
     </Stack>
   );
 }

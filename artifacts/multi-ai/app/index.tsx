@@ -22,8 +22,8 @@ import { fetch } from "expo/fetch";
 
 import { useColors } from "@/hooks/useColors";
 import { AI_PROVIDERS, BASE_URL, type AiProvider } from "@/constants/aiConfig";
+import { saveSession, CONV_IDS_KEY } from "@/constants/sessions";
 
-const CONV_IDS_KEY = "@multiai_conv_ids_v2";
 const CARD_GAP = 12;
 
 interface ConvIds {
@@ -121,9 +121,7 @@ function AiCard({ provider, state, selected, onToggleSelect, onOpen, cardWidth }
                 styles.previewText,
                 {
                   color: state.lastMessage
-                    ? state.lastRole === "assistant"
-                      ? c.foreground
-                      : c.mutedForeground
+                    ? state.lastRole === "assistant" ? c.foreground : c.mutedForeground
                     : c.mutedForeground,
                 },
               ]}
@@ -154,8 +152,9 @@ export default function HomeScreen() {
   const [message, setMessage] = useState("");
   const [convIds, setConvIds] = useState<ConvIds>({});
   const inputRef = useRef<TextInput>(null);
-  // Track active stream readers so we can abort on new chat
   const activeReaders = useRef<Map<string, ReadableStreamDefaultReader<Uint8Array>>>(new Map());
+  // Stores the first message of the current session, used as history title
+  const sessionTitleRef = useRef<string>("");
 
   const updateCard = useCallback((key: string, patch: Partial<CardState>) =>
     setCards((prev) => ({ ...prev, [key]: { ...prev[key], ...patch } })), []);
@@ -177,8 +176,7 @@ export default function HomeScreen() {
     } catch {}
   }, [updateCard]);
 
-  // Initial load on mount — fires on all platforms including web
-  useEffect(() => {
+  const refreshFromStorage = useCallback(() => {
     AsyncStorage.getItem(CONV_IDS_KEY).then((stored) => {
       if (!stored) return;
       const ids: ConvIds = JSON.parse(stored);
@@ -189,39 +187,23 @@ export default function HomeScreen() {
     });
   }, [loadLastMessage]);
 
-  // On every focus after mount: refresh messages so returning from thread shows updated state
-  useFocusEffect(
-    useCallback(() => {
-      AsyncStorage.getItem(CONV_IDS_KEY).then((stored) => {
-        if (!stored) return;
-        const ids: ConvIds = JSON.parse(stored);
-        setConvIds(ids);
-        AI_PROVIDERS.forEach((p) => {
-          if (ids[p.key]) loadLastMessage(p.key, ids[p.key]);
-        });
-      });
-    }, [loadLastMessage])
-  );
+  // Load on mount
+  useEffect(() => { refreshFromStorage(); }, [refreshFromStorage]);
 
-  // Create only the missing conversations (not all 3 if some already exist)
+  // Re-fetch on every focus (catches thread replies coming back)
+  useFocusEffect(useCallback(() => { refreshFromStorage(); }, [refreshFromStorage]));
+
   const getOrCreateConvIds = useCallback(async (): Promise<ConvIds> => {
-    // Fast path: state already complete
     const allKeys = AI_PROVIDERS.map((p) => p.key);
-    const stateComplete = allKeys.every((k) => convIds[k]);
-    if (stateComplete) return convIds;
+    if (allKeys.every((k) => convIds[k])) return convIds;
 
-    // Load from AsyncStorage
     const stored = await AsyncStorage.getItem(CONV_IDS_KEY);
     const existing: ConvIds = stored ? JSON.parse(stored) : {};
-
-    // Check if storage is complete
-    const storageComplete = allKeys.every((k) => existing[k]);
-    if (storageComplete) {
+    if (allKeys.every((k) => existing[k])) {
       setConvIds(existing);
       return existing;
     }
 
-    // Create only missing conversations
     const missing = AI_PROVIDERS.filter((p) => !existing[p.key]);
     const results = await Promise.all(
       missing.map(async (p) => {
@@ -243,13 +225,7 @@ export default function HomeScreen() {
   }, [convIds]);
 
   const streamForProvider = useCallback(async (key: string, convId: number, content: string) => {
-    updateCard(key, {
-      streaming: true,
-      streamingText: "",
-      hasUnread: false,
-      lastMessage: content,
-      lastRole: "user",
-    });
+    updateCard(key, { streaming: true, streamingText: "", hasUnread: false, lastMessage: content, lastRole: "user" });
 
     try {
       const res = await fetch(`${BASE_URL}/api/${key}/conversations/${convId}/messages`, {
@@ -262,7 +238,6 @@ export default function HomeScreen() {
 
       const reader = res.body?.getReader();
       if (!reader) throw new Error("No stream");
-
       activeReaders.current.set(key, reader);
 
       const decoder = new TextDecoder();
@@ -273,21 +248,14 @@ export default function HomeScreen() {
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
-
         buffer += decoder.decode(value, { stream: true });
         const lines = buffer.split("\n");
         buffer = lines.pop() ?? "";
 
         for (const line of lines) {
           if (!line.startsWith("data: ")) continue;
-
-          // Parse JSON separately so a bad line doesn't swallow real errors
           let parsed: { content?: string; done?: boolean; error?: string };
-          try {
-            parsed = JSON.parse(line.slice(6));
-          } catch {
-            continue;
-          }
+          try { parsed = JSON.parse(line.slice(6)); } catch { continue; }
 
           if (parsed.content) {
             fullText += parsed.content;
@@ -295,24 +263,14 @@ export default function HomeScreen() {
           }
           if (parsed.done) {
             finished = true;
-            updateCard(key, {
-              streaming: false,
-              streamingText: "",
-              lastMessage: fullText,
-              lastRole: "assistant",
-              hasUnread: true,
-              conversationId: convId,
-            });
+            updateCard(key, { streaming: false, streamingText: "", lastMessage: fullText, lastRole: "assistant", hasUnread: true, conversationId: convId });
             break;
           }
-          if (parsed.error) {
-            throw new Error(parsed.error);
-          }
+          if (parsed.error) throw new Error(parsed.error);
         }
         if (finished) break;
       }
 
-      // Stream ended without explicit done event — still save what we got
       if (!finished) {
         updateCard(key, {
           streaming: false,
@@ -325,7 +283,6 @@ export default function HomeScreen() {
       }
     } catch {
       const providerName = AI_PROVIDERS.find((p) => p.key === key)?.name ?? key;
-      // Keep user's message on the card — never wipe it
       updateCard(key, { streaming: false, streamingText: "" });
       Alert.alert(
         `${providerName} failed`,
@@ -346,20 +303,33 @@ export default function HomeScreen() {
     inputRef.current?.blur();
 
     try {
-      // Get/create conversation IDs BEFORE clearing the input.
-      // If this fails, the user's message stays in the field.
+      const isFirstMessage = AI_PROVIDERS.every((p) => !convIds[p.key]);
       const ids = await getOrCreateConvIds();
+
+      // Record first message as session title for history
+      if (isFirstMessage && !sessionTitleRef.current) {
+        sessionTitleRef.current = text;
+      }
+
       setMessage("");
       [...selected].forEach((key) => {
         if (ids[key]) streamForProvider(key, ids[key], text);
       });
-    } catch (err) {
+    } catch {
       Alert.alert(
         "Connection failed",
         "Could not reach the server. Your message is still in the input bar.",
         [{ text: "OK" }]
       );
     }
+  };
+
+  const handleStop = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    activeReaders.current.forEach((reader) => {
+      try { reader.cancel(); } catch {}
+    });
+    // Cards will self-clean when their read() returns done=true
   };
 
   const toggleSelect = (key: string) => {
@@ -386,16 +356,22 @@ export default function HomeScreen() {
   };
 
   const handleNewChat = () => {
-    Alert.alert("Start New Chat?", "This will clear all conversations and start fresh.", [
+    Alert.alert("Start New Chat?", "Current session will be saved to History.", [
       { text: "Cancel", style: "cancel" },
       {
         text: "New Chat",
         style: "destructive",
         onPress: async () => {
+          // Save current session to history if it has any conversations
+          const currentIds = convIds;
+          if (Object.keys(currentIds).length > 0) {
+            const title = sessionTitleRef.current || "Untitled session";
+            await saveSession(title, currentIds);
+          }
+          sessionTitleRef.current = "";
+
           // Cancel active streams
-          activeReaders.current.forEach((reader) => {
-            try { reader.cancel(); } catch {}
-          });
+          activeReaders.current.forEach((reader) => { try { reader.cancel(); } catch {} });
           activeReaders.current.clear();
 
           await AsyncStorage.removeItem(CONV_IDS_KEY);
@@ -421,10 +397,7 @@ export default function HomeScreen() {
   }
 
   return (
-    <KeyboardAvoidingView
-      style={[styles.container, { backgroundColor: c.background }]}
-      behavior="padding"
-    >
+    <KeyboardAvoidingView style={[styles.container, { backgroundColor: c.background }]} behavior="padding">
       {/* Header */}
       <View style={[styles.header, { paddingTop: topPad + 10 }]}>
         <View style={styles.logoRow}>
@@ -435,13 +408,22 @@ export default function HomeScreen() {
           </View>
           <Text style={[styles.appName, { color: c.foreground }]}>MultiAI</Text>
         </View>
-        <TouchableOpacity onPress={handleNewChat} style={styles.newChatBtn} activeOpacity={0.7}>
-          <Feather name="refresh-cw" size={15} color={c.mutedForeground} />
-          <Text style={[styles.newChatText, { color: c.mutedForeground }]}>New Chat</Text>
-        </TouchableOpacity>
+        <View style={styles.headerActions}>
+          <TouchableOpacity
+            onPress={() => router.push("/history")}
+            style={styles.headerBtn}
+            activeOpacity={0.7}
+          >
+            <Feather name="clock" size={17} color={c.mutedForeground} />
+          </TouchableOpacity>
+          <TouchableOpacity onPress={handleNewChat} style={styles.newChatBtn} activeOpacity={0.7}>
+            <Feather name="plus-square" size={15} color={c.mutedForeground} />
+            <Text style={[styles.newChatText, { color: c.mutedForeground }]}>New Chat</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
-      {/* Card Grid — scrollable so cards are never clipped by keyboard */}
+      {/* Card Grid */}
       <FlatList
         data={rows}
         keyExtractor={(_, i) => String(i)}
@@ -470,12 +452,7 @@ export default function HomeScreen() {
       />
 
       {/* Bottom input */}
-      <View
-        style={[
-          styles.bottomBar,
-          { borderTopColor: c.border, paddingBottom: bottomPad + 8, backgroundColor: c.background },
-        ]}
-      >
+      <View style={[styles.bottomBar, { borderTopColor: c.border, paddingBottom: bottomPad + 8, backgroundColor: c.background }]}>
         <View style={styles.sendingRow}>
           <Text style={[styles.sendingLabel, { color: c.mutedForeground }]}>Sending to: </Text>
           <View style={styles.sendingChips}>
@@ -492,18 +469,8 @@ export default function HomeScreen() {
                 ]}
                 activeOpacity={0.7}
               >
-                <View
-                  style={[
-                    styles.chipDot,
-                    { backgroundColor: selected.has(p.key) ? p.color : c.mutedForeground },
-                  ]}
-                />
-                <Text
-                  style={[
-                    styles.chipLabel,
-                    { color: selected.has(p.key) ? p.color : c.mutedForeground },
-                  ]}
-                >
+                <View style={[styles.chipDot, { backgroundColor: selected.has(p.key) ? p.color : c.mutedForeground }]} />
+                <Text style={[styles.chipLabel, { color: selected.has(p.key) ? p.color : c.mutedForeground }]}>
                   {p.name}
                 </Text>
               </TouchableOpacity>
@@ -520,25 +487,28 @@ export default function HomeScreen() {
             value={message}
             onChangeText={setMessage}
             multiline
-            maxLength={2000}
+            maxLength={4000}
             onSubmitEditing={handleSend}
             blurOnSubmit={false}
           />
-          <TouchableOpacity
-            onPress={handleSend}
-            disabled={!canSend}
-            style={[
-              styles.sendBtn,
-              { backgroundColor: canSend ? AI_PROVIDERS[0].color : c.muted },
-            ]}
-            activeOpacity={0.7}
-          >
-            {anyStreaming ? (
-              <ActivityIndicator size="small" color="#fff" />
-            ) : (
+          {anyStreaming ? (
+            <TouchableOpacity
+              onPress={handleStop}
+              style={[styles.sendBtn, { backgroundColor: "#ef4444" }]}
+              activeOpacity={0.7}
+            >
+              <Feather name="square" size={15} color="#fff" />
+            </TouchableOpacity>
+          ) : (
+            <TouchableOpacity
+              onPress={handleSend}
+              disabled={!canSend}
+              style={[styles.sendBtn, { backgroundColor: canSend ? AI_PROVIDERS[0].color : c.muted }]}
+              activeOpacity={0.7}
+            >
               <Feather name="send" size={17} color={canSend ? "#fff" : c.mutedForeground} />
-            )}
-          </TouchableOpacity>
+            </TouchableOpacity>
+          )}
         </View>
       </View>
     </KeyboardAvoidingView>
@@ -558,6 +528,8 @@ const styles = StyleSheet.create({
   logoDots: { flexDirection: "row", gap: 4 },
   logoDot: { width: 9, height: 9, borderRadius: 5 },
   appName: { fontSize: 22, fontFamily: "Inter_700Bold" },
+  headerActions: { flexDirection: "row", alignItems: "center", gap: 14 },
+  headerBtn: { width: 32, height: 32, alignItems: "center", justifyContent: "center" },
   newChatBtn: { flexDirection: "row", alignItems: "center", gap: 5 },
   newChatText: { fontSize: 13, fontFamily: "Inter_500Medium" },
 
@@ -573,99 +545,38 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 3,
   },
-  cardTop: {
-    height: 80,
-    alignItems: "center",
-    justifyContent: "center",
-    position: "relative",
-  },
-  aiCircle: {
-    width: 46,
-    height: 46,
-    borderRadius: 23,
-    alignItems: "center",
-    justifyContent: "center",
-  },
+  cardTop: { height: 80, alignItems: "center", justifyContent: "center", position: "relative" },
+  aiCircle: { width: 46, height: 46, borderRadius: 23, alignItems: "center", justifyContent: "center" },
   aiInitial: { fontSize: 20, fontFamily: "Inter_700Bold", color: "#fff" },
   checkbox: {
-    position: "absolute",
-    top: 10,
-    right: 10,
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    borderWidth: 1.5,
-    alignItems: "center",
-    justifyContent: "center",
+    position: "absolute", top: 10, right: 10,
+    width: 22, height: 22, borderRadius: 11, borderWidth: 1.5,
+    alignItems: "center", justifyContent: "center",
   },
-  unreadDot: {
-    position: "absolute",
-    bottom: 10,
-    right: 10,
-    width: 9,
-    height: 9,
-    borderRadius: 5,
-  },
+  unreadDot: { position: "absolute", bottom: 10, right: 10, width: 9, height: 9, borderRadius: 5 },
   cardBody: { padding: 12, gap: 6 },
-  cardNameRow: {
-    flexDirection: "row",
-    alignItems: "baseline",
-    justifyContent: "space-between",
-  },
+  cardNameRow: { flexDirection: "row", alignItems: "baseline", justifyContent: "space-between" },
   cardName: { fontSize: 15, fontFamily: "Inter_600SemiBold" },
   cardModel: { fontSize: 11, fontFamily: "Inter_400Regular" },
   previewRow: { minHeight: 48 },
   streamingRow: { flexDirection: "row", alignItems: "flex-start", gap: 6 },
   previewText: { fontSize: 13, fontFamily: "Inter_400Regular", lineHeight: 19 },
 
-  bottomBar: {
-    paddingTop: 10,
-    paddingHorizontal: 16,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    gap: 10,
-  },
-  sendingRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    flexWrap: "wrap",
-    gap: 6,
-  },
+  bottomBar: { paddingTop: 10, paddingHorizontal: 16, borderTopWidth: StyleSheet.hairlineWidth, gap: 10 },
+  sendingRow: { flexDirection: "row", alignItems: "center", flexWrap: "wrap", gap: 6 },
   sendingLabel: { fontSize: 12, fontFamily: "Inter_400Regular" },
   sendingChips: { flexDirection: "row", gap: 6, flexWrap: "wrap" },
   sendingChip: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 5,
-    paddingHorizontal: 9,
-    paddingVertical: 4,
-    borderRadius: 20,
-    borderWidth: 1,
+    flexDirection: "row", alignItems: "center", gap: 5,
+    paddingHorizontal: 9, paddingVertical: 4, borderRadius: 20, borderWidth: 1,
   },
   chipDot: { width: 6, height: 6, borderRadius: 3 },
   chipLabel: { fontSize: 12, fontFamily: "Inter_500Medium" },
   inputRow: {
-    flexDirection: "row",
-    alignItems: "flex-end",
-    borderRadius: 14,
-    borderWidth: 1,
-    paddingLeft: 13,
-    paddingRight: 7,
-    paddingVertical: 7,
-    gap: 8,
+    flexDirection: "row", alignItems: "flex-end",
+    borderRadius: 14, borderWidth: 1,
+    paddingLeft: 13, paddingRight: 7, paddingVertical: 7, gap: 8,
   },
-  input: {
-    flex: 1,
-    fontSize: 16,
-    fontFamily: "Inter_400Regular",
-    maxHeight: 110,
-    lineHeight: 22,
-    paddingVertical: 3,
-  },
-  sendBtn: {
-    width: 38,
-    height: 38,
-    borderRadius: 10,
-    alignItems: "center",
-    justifyContent: "center",
-  },
+  input: { flex: 1, fontSize: 16, fontFamily: "Inter_400Regular", maxHeight: 110, lineHeight: 22, paddingVertical: 3 },
+  sendBtn: { width: 38, height: 38, borderRadius: 10, alignItems: "center", justifyContent: "center" },
 });
