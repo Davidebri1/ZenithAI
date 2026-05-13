@@ -13,6 +13,7 @@ import {
   Alert,
   Image,
 } from "react-native";
+import { LinearGradient } from "expo-linear-gradient";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter, useFocusEffect } from "expo-router";
 import { KeyboardAvoidingView } from "react-native-keyboard-controller";
@@ -26,7 +27,7 @@ import { useColors } from "@/hooks/useColors";
 import { AI_PROVIDERS, BASE_URL, type AiProvider } from "@/constants/aiConfig";
 import { saveSession, CONV_IDS_KEY } from "@/constants/sessions";
 
-const CARD_GAP = 12;
+const CARD_GAP = 10;
 
 interface ConvIds { [key: string]: number; }
 
@@ -49,6 +50,11 @@ function makeDefaultCard(): CardState {
   return { conversationId: null, lastMessage: "", lastRole: "user", streaming: false, streamingText: "", hasUnread: false };
 }
 
+function cardGlowStyle(color: string, selected: boolean) {
+  if (!selected || Platform.OS !== "web") return {};
+  return { boxShadow: `0 0 0 1.5px ${color}, 0 0 32px ${color}50` } as object;
+}
+
 interface AiCardProps {
   provider: AiProvider;
   state: CardState;
@@ -62,48 +68,85 @@ function AiCard({ provider, state, selected, onToggleSelect, onOpen, cardWidth }
   const c = useColors();
   const previewText = state.streaming
     ? state.streamingText || "Thinking…"
-    : state.lastMessage || "Tap to start chatting";
+    : state.lastMessage || "Start a conversation";
 
   return (
     <Pressable
       onPress={onOpen}
       style={({ pressed }) => [
         styles.card,
-        { width: cardWidth, backgroundColor: c.card, borderColor: selected ? provider.color : c.border, borderWidth: selected ? 2 : 1, opacity: pressed ? 0.92 : 1 },
+        {
+          width: cardWidth,
+          backgroundColor: c.card,
+          borderColor: selected ? provider.color : c.border,
+          borderWidth: 1,
+          opacity: pressed ? 0.88 : 1,
+          ...cardGlowStyle(provider.color, selected),
+        },
       ]}
     >
-      <View style={[styles.cardTop, { backgroundColor: provider.colorLight }]}>
-        <View style={[styles.aiCircle, { backgroundColor: provider.color }]}>
-          <Text style={styles.aiInitial}>{provider.name[0]}</Text>
+      <LinearGradient
+        colors={[`${provider.color}22`, `${provider.color}00`]}
+        start={{ x: 0.5, y: 0 }}
+        end={{ x: 0.5, y: 1 }}
+        style={styles.cardTop}
+      >
+        <View style={[
+          styles.aiCircleOuter,
+          { borderColor: `${provider.color}70` },
+          Platform.OS === "web" ? { boxShadow: `0 0 14px ${provider.colorGlow}` } as object : {},
+        ]}>
+          <Text style={[styles.aiInitial, { color: provider.color }]}>
+            {provider.name[0]}
+          </Text>
         </View>
+
         <TouchableOpacity
           onPress={(e) => { e.stopPropagation?.(); onToggleSelect(); }}
           hitSlop={{ top: 8, right: 8, bottom: 8, left: 8 }}
-          style={[styles.checkbox, { backgroundColor: selected ? provider.color : c.background, borderColor: selected ? provider.color : c.border }]}
+          style={[
+            styles.checkbox,
+            {
+              backgroundColor: selected ? provider.color : "transparent",
+              borderColor: selected ? provider.color : `${provider.color}50`,
+            },
+          ]}
           activeOpacity={0.7}
         >
-          {selected && <Feather name="check" size={11} color="#fff" />}
+          {selected && <Feather name="check" size={10} color="#000" />}
         </TouchableOpacity>
+
         {state.hasUnread && !state.streaming && (
           <View style={[styles.unreadDot, { backgroundColor: provider.color }]} />
         )}
-      </View>
+      </LinearGradient>
+
       <View style={styles.cardBody}>
         <View style={styles.cardNameRow}>
           <Text style={[styles.cardName, { color: c.foreground }]}>{provider.name}</Text>
-          <Text style={[styles.cardModel, { color: c.mutedForeground }]}>{provider.model}</Text>
+          <View style={[styles.modelChip, { borderColor: `${provider.color}40` }]}>
+            <Text style={[styles.modelChipText, { color: `${provider.color}cc` }]}>{provider.model}</Text>
+          </View>
         </View>
+
         <View style={styles.previewRow}>
           {state.streaming ? (
             <View style={styles.streamingRow}>
-              <ActivityIndicator size="small" color={provider.color} style={{ transform: [{ scale: 0.75 }] }} />
-              <Text style={[styles.previewText, { color: provider.color }]} numberOfLines={2}>
+              <ActivityIndicator size="small" color={provider.color} style={{ transform: [{ scale: 0.7 }] }} />
+              <Text style={[styles.previewText, { color: `${provider.color}cc` }]} numberOfLines={2}>
                 {state.streamingText || "Generating…"}
               </Text>
             </View>
           ) : (
             <Text
-              style={[styles.previewText, { color: state.lastMessage ? (state.lastRole === "assistant" ? c.foreground : c.mutedForeground) : c.mutedForeground }]}
+              style={[
+                styles.previewText,
+                {
+                  color: state.lastMessage
+                    ? state.lastRole === "assistant" ? c.foreground : c.mutedForeground
+                    : c.mutedForeground,
+                },
+              ]}
               numberOfLines={3}
             >
               {previewText}
@@ -164,11 +207,9 @@ export default function HomeScreen() {
   const getOrCreateConvIds = useCallback(async (): Promise<ConvIds> => {
     const allKeys = AI_PROVIDERS.map((p) => p.key);
     if (allKeys.every((k) => convIds[k])) return convIds;
-
     const stored = await AsyncStorage.getItem(CONV_IDS_KEY);
     const existing: ConvIds = stored ? JSON.parse(stored) : {};
     if (allKeys.every((k) => existing[k])) { setConvIds(existing); return existing; }
-
     const missing = AI_PROVIDERS.filter((p) => !existing[p.key]);
     const results = await Promise.all(
       missing.map(async (p) => {
@@ -196,53 +237,39 @@ export default function HomeScreen() {
     try {
       const body: Record<string, string> = { content };
       if (imageBase64) { body.imageBase64 = imageBase64; body.imageMimeType = imageMimeType || "image/jpeg"; }
-
       const res = await fetch(`${BASE_URL}/api/${key}/conversations/${convId}/messages`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-
       const reader = res.body?.getReader();
       if (!reader) throw new Error("No stream");
       activeReaders.current.set(key, reader);
-
       const decoder = new TextDecoder();
-      let buffer = "";
-      let fullText = "";
+      let buffer = "", fullText = "";
       let finished = false;
-
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
         buffer += decoder.decode(value, { stream: true });
         const lines = buffer.split("\n");
         buffer = lines.pop() ?? "";
-
         for (const line of lines) {
           if (!line.startsWith("data: ")) continue;
           let parsed: { content?: string; done?: boolean; error?: string };
           try { parsed = JSON.parse(line.slice(6)); } catch { continue; }
-
           if (parsed.content) { fullText += parsed.content; updateCard(key, { streamingText: fullText }); }
-          if (parsed.done) {
-            finished = true;
-            updateCard(key, { streaming: false, streamingText: "", lastMessage: fullText, lastRole: "assistant", hasUnread: true, conversationId: convId });
-            break;
-          }
+          if (parsed.done) { finished = true; updateCard(key, { streaming: false, streamingText: "", lastMessage: fullText, lastRole: "assistant", hasUnread: true, conversationId: convId }); break; }
           if (parsed.error) throw new Error(parsed.error);
         }
         if (finished) break;
       }
-
-      if (!finished) {
-        updateCard(key, { streaming: false, streamingText: "", lastMessage: fullText || content, lastRole: fullText ? "assistant" : "user", hasUnread: !!fullText, conversationId: convId });
-      }
+      if (!finished) updateCard(key, { streaming: false, streamingText: "", lastMessage: fullText || content, lastRole: fullText ? "assistant" : "user", hasUnread: !!fullText, conversationId: convId });
     } catch {
-      const providerName = AI_PROVIDERS.find((p) => p.key === key)?.name ?? key;
+      const pName = AI_PROVIDERS.find((p) => p.key === key)?.name ?? key;
       updateCard(key, { streaming: false, streamingText: "" });
-      Alert.alert(`${providerName} failed`, "Your message is still in the input bar — you can try again.", [{ text: "OK" }]);
+      Alert.alert(`${pName} failed`, "Your message is still in the input bar.", [{ text: "OK" }]);
     } finally {
       activeReaders.current.delete(key);
     }
@@ -250,10 +277,7 @@ export default function HomeScreen() {
 
   const pickImage = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (status !== "granted") {
-      Alert.alert("Permission needed", "Please allow photo access to attach images.");
-      return;
-    }
+    if (status !== "granted") { Alert.alert("Permission needed", "Please allow photo access."); return; }
     const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ["images"], quality: 0.7, base64: true });
     if (!result.canceled && result.assets[0]) {
       const asset = result.assets[0];
@@ -265,27 +289,20 @@ export default function HomeScreen() {
     const text = message.trim();
     if ((!text && !attachment) || selected.size === 0) return;
     if ([...selected].some((k) => cards[k].streaming)) return;
-
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     inputRef.current?.blur();
-
     try {
       const isFirstMessage = AI_PROVIDERS.every((p) => !convIds[p.key]);
       const ids = await getOrCreateConvIds();
-
-      if (isFirstMessage && !sessionTitleRef.current) {
-        sessionTitleRef.current = text || "[Image]";
-      }
-
+      if (isFirstMessage && !sessionTitleRef.current) sessionTitleRef.current = text || "[Image]";
       const pendingAttachment = attachment;
       setMessage("");
       setAttachment(null);
-
       [...selected].forEach((key) => {
         if (ids[key]) streamForProvider(key, ids[key], text, pendingAttachment?.base64, pendingAttachment?.mimeType);
       });
     } catch {
-      Alert.alert("Connection failed", "Could not reach the server. Your message is still in the input bar.", [{ text: "OK" }]);
+      Alert.alert("Connection failed", "Could not reach the server.", [{ text: "OK" }]);
     }
   };
 
@@ -318,9 +335,7 @@ export default function HomeScreen() {
         style: "destructive",
         onPress: async () => {
           const currentIds = convIds;
-          if (Object.keys(currentIds).length > 0) {
-            await saveSession(sessionTitleRef.current || "Untitled session", currentIds);
-          }
+          if (Object.keys(currentIds).length > 0) await saveSession(sessionTitleRef.current || "Untitled session", currentIds);
           sessionTitleRef.current = "";
           activeReaders.current.forEach((reader) => { try { reader.cancel(); } catch {} });
           activeReaders.current.clear();
@@ -338,22 +353,30 @@ export default function HomeScreen() {
   const anyStreaming = Object.values(cards).some((c) => c.streaming);
   const selectedProviders = AI_PROVIDERS.filter((p) => selected.has(p.key));
   const canSend = (message.trim().length > 0 || !!attachment) && selected.size > 0 && !anyStreaming;
-
   const topPad = Platform.OS === "web" ? 52 : insets.top;
   const bottomPad = Platform.OS === "web" ? 24 : insets.bottom;
-
   const rows: (AiProvider | null)[][] = [];
   for (let i = 0; i < AI_PROVIDERS.length; i += 2) rows.push([AI_PROVIDERS[i], AI_PROVIDERS[i + 1] ?? null]);
 
   return (
     <KeyboardAvoidingView style={[styles.container, { backgroundColor: c.background }]} behavior="padding">
-      {/* Header */}
-      <View style={[styles.header, { paddingTop: topPad + 10 }]}>
+      <View style={[styles.header, { paddingTop: topPad + 14 }]}>
         <View style={styles.logoRow}>
           <View style={styles.logoDots}>
-            {AI_PROVIDERS.map((p) => <View key={p.key} style={[styles.logoDot, { backgroundColor: p.color }]} />)}
+            {AI_PROVIDERS.map((p) => (
+              <View
+                key={p.key}
+                style={[
+                  styles.logoDot,
+                  { backgroundColor: p.color },
+                  Platform.OS === "web" ? { boxShadow: `0 0 8px ${p.color}` } as object : {},
+                ]}
+              />
+            ))}
           </View>
-          <Text style={[styles.appName, { color: c.foreground }]}>MultiAI</Text>
+          <Text style={[styles.appName, { color: c.foreground }]}>
+            Multi<Text style={{ color: AI_PROVIDERS[0].color }}>AI</Text>
+          </Text>
         </View>
         <View style={styles.headerActions}>
           <TouchableOpacity onPress={() => router.push("/search")} style={styles.headerBtn} activeOpacity={0.7}>
@@ -362,14 +385,13 @@ export default function HomeScreen() {
           <TouchableOpacity onPress={() => router.push("/history")} style={styles.headerBtn} activeOpacity={0.7}>
             <Feather name="clock" size={17} color={c.mutedForeground} />
           </TouchableOpacity>
-          <TouchableOpacity onPress={handleNewChat} style={styles.newChatBtn} activeOpacity={0.7}>
-            <Feather name="plus-square" size={15} color={c.mutedForeground} />
-            <Text style={[styles.newChatText, { color: c.mutedForeground }]}>New Chat</Text>
+          <TouchableOpacity onPress={handleNewChat} style={[styles.newChatBtn, { borderColor: c.border }]} activeOpacity={0.7}>
+            <Feather name="plus" size={13} color={c.mutedForeground} />
+            <Text style={[styles.newChatText, { color: c.mutedForeground }]}>New</Text>
           </TouchableOpacity>
         </View>
       </View>
 
-      {/* Card Grid */}
       <FlatList
         data={rows}
         keyExtractor={(_, i) => String(i)}
@@ -389,50 +411,48 @@ export default function HomeScreen() {
         keyboardShouldPersistTaps="handled"
       />
 
-      {/* Bottom bar */}
-      <View style={[styles.bottomBar, { borderTopColor: c.border, paddingBottom: bottomPad + 8, backgroundColor: c.background }]}>
-        <View style={styles.sendingRow}>
-          <Text style={[styles.sendingLabel, { color: c.mutedForeground }]}>Sending to: </Text>
-          <View style={styles.sendingChips}>
-            {AI_PROVIDERS.map((p) => (
-              <TouchableOpacity
-                key={p.key}
-                onPress={() => toggleSelect(p.key)}
-                style={[styles.sendingChip, { backgroundColor: selected.has(p.key) ? p.colorLight : c.secondary, borderColor: selected.has(p.key) ? p.color : c.border }]}
-                activeOpacity={0.7}
-              >
-                <View style={[styles.chipDot, { backgroundColor: selected.has(p.key) ? p.color : c.mutedForeground }]} />
-                <Text style={[styles.chipLabel, { color: selected.has(p.key) ? p.color : c.mutedForeground }]}>{p.name}</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
+      <View style={[styles.bottomBar, { paddingBottom: bottomPad + 8, backgroundColor: c.background, borderTopColor: c.border }]}>
+        <View style={styles.chipRow}>
+          {AI_PROVIDERS.map((p) => (
+            <TouchableOpacity
+              key={p.key}
+              onPress={() => toggleSelect(p.key)}
+              style={[
+                styles.providerChip,
+                {
+                  backgroundColor: selected.has(p.key) ? `${p.color}18` : "transparent",
+                  borderColor: selected.has(p.key) ? `${p.color}80` : c.border,
+                },
+                selected.has(p.key) && Platform.OS === "web" ? { boxShadow: `0 0 10px ${p.colorGlow}` } as object : {},
+              ]}
+              activeOpacity={0.7}
+            >
+              <View style={[styles.chipDot, { backgroundColor: selected.has(p.key) ? p.color : c.mutedForeground }]} />
+              <Text style={[styles.chipLabel, { color: selected.has(p.key) ? p.color : c.mutedForeground }]}>{p.name}</Text>
+            </TouchableOpacity>
+          ))}
         </View>
 
-        {/* Attachment preview */}
         {attachment && (
-          <View style={styles.attachmentPreview}>
+          <View style={styles.attachmentRow}>
             <Image source={{ uri: attachment.uri }} style={styles.attachmentThumb} />
-            <TouchableOpacity
-              onPress={() => setAttachment(null)}
-              style={[styles.removeAttachment, { backgroundColor: c.card, borderColor: c.border }]}
-              activeOpacity={0.8}
-            >
-              <Feather name="x" size={13} color={c.foreground} />
+            <TouchableOpacity onPress={() => setAttachment(null)} style={[styles.removeBtn, { backgroundColor: c.secondary, borderColor: c.border }]} activeOpacity={0.8}>
+              <Feather name="x" size={12} color={c.foreground} />
             </TouchableOpacity>
             <Text style={[styles.attachmentLabel, { color: c.mutedForeground }]}>
-              Image → {selectedProviders.map((p) => p.name).join(", ")}
+              → {selectedProviders.map((p) => p.name).join(", ")}
             </Text>
           </View>
         )}
 
         <View style={[styles.inputRow, { backgroundColor: c.card, borderColor: c.border }]}>
           <TouchableOpacity onPress={pickImage} style={styles.attachBtn} activeOpacity={0.7} disabled={anyStreaming}>
-            <Feather name="paperclip" size={19} color={attachment ? AI_PROVIDERS[0].color : c.mutedForeground} />
+            <Feather name="paperclip" size={18} color={attachment ? AI_PROVIDERS[0].color : c.mutedForeground} />
           </TouchableOpacity>
           <TextInput
             ref={inputRef}
             style={[styles.input, { color: c.foreground }]}
-            placeholder={`Message ${selectedProviders.map((p) => p.name).join(", ")}…`}
+            placeholder={`Ask ${selectedProviders.map((p) => p.name).join(", ")}…`}
             placeholderTextColor={c.mutedForeground}
             value={message}
             onChangeText={setMessage}
@@ -442,12 +462,21 @@ export default function HomeScreen() {
             blurOnSubmit={false}
           />
           {anyStreaming ? (
-            <TouchableOpacity onPress={handleStop} style={[styles.sendBtn, { backgroundColor: "#ef4444" }]} activeOpacity={0.7}>
-              <Feather name="square" size={15} color="#fff" />
+            <TouchableOpacity onPress={handleStop} style={[styles.sendBtn, { backgroundColor: "#ff4466" }]} activeOpacity={0.7}>
+              <Feather name="square" size={14} color="#fff" />
             </TouchableOpacity>
           ) : (
-            <TouchableOpacity onPress={handleSend} disabled={!canSend} style={[styles.sendBtn, { backgroundColor: canSend ? AI_PROVIDERS[0].color : c.muted }]} activeOpacity={0.7}>
-              <Feather name="send" size={17} color={canSend ? "#fff" : c.mutedForeground} />
+            <TouchableOpacity
+              onPress={handleSend}
+              disabled={!canSend}
+              style={[
+                styles.sendBtn,
+                { backgroundColor: canSend ? AI_PROVIDERS[0].color : c.secondary },
+                canSend && Platform.OS === "web" ? { boxShadow: `0 0 14px ${AI_PROVIDERS[0].colorGlow}` } as object : {},
+              ]}
+              activeOpacity={0.7}
+            >
+              <Feather name="send" size={16} color={canSend ? "#000" : c.mutedForeground} />
             </TouchableOpacity>
           )}
         </View>
@@ -458,48 +487,93 @@ export default function HomeScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 16, paddingBottom: 14 },
-  logoRow: { flexDirection: "row", alignItems: "center", gap: 9 },
-  logoDots: { flexDirection: "row", gap: 4 },
-  logoDot: { width: 9, height: 9, borderRadius: 5 },
-  appName: { fontSize: 22, fontFamily: "Inter_700Bold" },
-  headerActions: { flexDirection: "row", alignItems: "center", gap: 10 },
-  headerBtn: { width: 32, height: 32, alignItems: "center", justifyContent: "center" },
-  newChatBtn: { flexDirection: "row", alignItems: "center", gap: 5 },
+
+  header: {
+    flexDirection: "row", alignItems: "center", justifyContent: "space-between",
+    paddingHorizontal: 20, paddingBottom: 16,
+  },
+  logoRow: { flexDirection: "row", alignItems: "center", gap: 10 },
+  logoDots: { flexDirection: "row", gap: 5 },
+  logoDot: { width: 8, height: 8, borderRadius: 4 },
+  appName: { fontSize: 24, fontFamily: "Inter_700Bold", letterSpacing: -0.5 },
+  headerActions: { flexDirection: "row", alignItems: "center", gap: 6 },
+  headerBtn: { width: 34, height: 34, alignItems: "center", justifyContent: "center" },
+  newChatBtn: {
+    flexDirection: "row", alignItems: "center", gap: 4,
+    paddingHorizontal: 10, paddingVertical: 6,
+    borderRadius: 20, borderWidth: 1,
+  },
   newChatText: { fontSize: 13, fontFamily: "Inter_500Medium" },
 
   grid: { paddingHorizontal: 16, gap: CARD_GAP, paddingBottom: 12 },
   row: { flexDirection: "row", gap: CARD_GAP },
 
-  card: { borderRadius: 18, overflow: "hidden", shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.07, shadowRadius: 8, elevation: 3 },
-  cardTop: { height: 80, alignItems: "center", justifyContent: "center", position: "relative" },
-  aiCircle: { width: 46, height: 46, borderRadius: 23, alignItems: "center", justifyContent: "center" },
-  aiInitial: { fontSize: 20, fontFamily: "Inter_700Bold", color: "#fff" },
-  checkbox: { position: "absolute", top: 10, right: 10, width: 22, height: 22, borderRadius: 11, borderWidth: 1.5, alignItems: "center", justifyContent: "center" },
-  unreadDot: { position: "absolute", bottom: 10, right: 10, width: 9, height: 9, borderRadius: 5 },
-  cardBody: { padding: 12, gap: 6 },
-  cardNameRow: { flexDirection: "row", alignItems: "baseline", justifyContent: "space-between" },
-  cardName: { fontSize: 15, fontFamily: "Inter_600SemiBold" },
-  cardModel: { fontSize: 11, fontFamily: "Inter_400Regular" },
-  previewRow: { minHeight: 48 },
-  streamingRow: { flexDirection: "row", alignItems: "flex-start", gap: 6 },
-  previewText: { fontSize: 13, fontFamily: "Inter_400Regular", lineHeight: 19 },
+  card: {
+    borderRadius: 20, overflow: "hidden",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+    elevation: 6,
+  },
+  cardTop: {
+    height: 88,
+    alignItems: "center",
+    justifyContent: "center",
+    position: "relative",
+  },
+  aiCircleOuter: {
+    width: 50, height: 50, borderRadius: 25,
+    borderWidth: 1.5,
+    alignItems: "center", justifyContent: "center",
+  },
+  aiInitial: { fontSize: 22, fontFamily: "Inter_700Bold" },
+  checkbox: {
+    position: "absolute", top: 10, right: 10,
+    width: 20, height: 20, borderRadius: 10, borderWidth: 1.5,
+    alignItems: "center", justifyContent: "center",
+  },
+  unreadDot: { position: "absolute", bottom: 10, right: 10, width: 8, height: 8, borderRadius: 4 },
 
-  bottomBar: { paddingTop: 10, paddingHorizontal: 16, borderTopWidth: StyleSheet.hairlineWidth, gap: 10 },
-  sendingRow: { flexDirection: "row", alignItems: "center", flexWrap: "wrap", gap: 6 },
-  sendingLabel: { fontSize: 12, fontFamily: "Inter_400Regular" },
-  sendingChips: { flexDirection: "row", gap: 6, flexWrap: "wrap" },
-  sendingChip: { flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: 9, paddingVertical: 4, borderRadius: 20, borderWidth: 1 },
-  chipDot: { width: 6, height: 6, borderRadius: 3 },
+  cardBody: { padding: 12, gap: 7 },
+  cardNameRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 6 },
+  cardName: { fontSize: 15, fontFamily: "Inter_600SemiBold" },
+  modelChip: {
+    paddingHorizontal: 6, paddingVertical: 2,
+    borderRadius: 6, borderWidth: 1,
+  },
+  modelChipText: { fontSize: 10, fontFamily: "Inter_500Medium", letterSpacing: 0.3 },
+  previewRow: { minHeight: 44 },
+  streamingRow: { flexDirection: "row", alignItems: "flex-start", gap: 6 },
+  previewText: { fontSize: 12, fontFamily: "Inter_400Regular", lineHeight: 18 },
+
+  bottomBar: {
+    paddingTop: 12, paddingHorizontal: 16, gap: 10,
+    borderTopWidth: StyleSheet.hairlineWidth,
+  },
+  chipRow: { flexDirection: "row", gap: 6, flexWrap: "wrap" },
+  providerChip: {
+    flexDirection: "row", alignItems: "center", gap: 5,
+    paddingHorizontal: 10, paddingVertical: 5,
+    borderRadius: 20, borderWidth: 1,
+  },
+  chipDot: { width: 5, height: 5, borderRadius: 3 },
   chipLabel: { fontSize: 12, fontFamily: "Inter_500Medium" },
 
-  attachmentPreview: { flexDirection: "row", alignItems: "center", gap: 10 },
-  attachmentThumb: { width: 44, height: 44, borderRadius: 8 },
-  removeAttachment: { width: 22, height: 22, borderRadius: 11, borderWidth: 1, alignItems: "center", justifyContent: "center" },
+  attachmentRow: { flexDirection: "row", alignItems: "center", gap: 8 },
+  attachmentThumb: { width: 40, height: 40, borderRadius: 8 },
+  removeBtn: { width: 20, height: 20, borderRadius: 10, borderWidth: 1, alignItems: "center", justifyContent: "center" },
   attachmentLabel: { fontSize: 12, fontFamily: "Inter_400Regular", flex: 1 },
 
-  inputRow: { flexDirection: "row", alignItems: "flex-end", borderRadius: 14, borderWidth: 1, paddingLeft: 4, paddingRight: 7, paddingVertical: 7, gap: 4 },
+  inputRow: {
+    flexDirection: "row", alignItems: "flex-end",
+    borderRadius: 16, borderWidth: 1,
+    paddingLeft: 4, paddingRight: 6, paddingVertical: 6, gap: 4,
+  },
   attachBtn: { width: 36, height: 38, alignItems: "center", justifyContent: "center" },
-  input: { flex: 1, fontSize: 16, fontFamily: "Inter_400Regular", maxHeight: 110, lineHeight: 22, paddingVertical: 3 },
-  sendBtn: { width: 38, height: 38, borderRadius: 10, alignItems: "center", justifyContent: "center" },
+  input: {
+    flex: 1, fontSize: 15, fontFamily: "Inter_400Regular",
+    maxHeight: 100, lineHeight: 21, paddingVertical: 4,
+  },
+  sendBtn: { width: 38, height: 38, borderRadius: 11, alignItems: "center", justifyContent: "center" },
 });

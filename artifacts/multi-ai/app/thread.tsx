@@ -13,6 +13,7 @@ import {
   NativeSyntheticEvent,
   NativeScrollEvent,
 } from "react-native";
+import { LinearGradient } from "expo-linear-gradient";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { Feather } from "@expo/vector-icons";
@@ -74,10 +75,7 @@ export default function ThreadScreen() {
 
   useEffect(() => {
     return () => {
-      if (activeReader.current) {
-        try { activeReader.current.cancel(); } catch {}
-        activeReader.current = null;
-      }
+      if (activeReader.current) { try { activeReader.current.cancel(); } catch {} activeReader.current = null; }
     };
   }, []);
 
@@ -86,23 +84,15 @@ export default function ThreadScreen() {
     if (!id) {
       try {
         const stored = await AsyncStorage.getItem(CONV_IDS_KEY);
-        if (stored) {
-          const ids = JSON.parse(stored) as Record<string, number>;
-          id = ids[provider.key] ?? null;
-          if (id) setConvId(id);
-        }
+        if (stored) { const ids = JSON.parse(stored) as Record<string, number>; id = ids[provider.key] ?? null; if (id) setConvId(id); }
       } catch {}
     }
     if (!id) { setLoading(false); return; }
     try {
       const res = await fetch(`${BASE_URL}/api/conversations/${id}/messages`);
-      if (!res.ok) throw new Error("Failed to load");
+      if (!res.ok) throw new Error("Failed");
       const data = (await res.json()) as Array<{ role: string; content: string; createdAt?: string }>;
-      setMessages(data.map((m) => ({
-        role: m.role as "user" | "assistant",
-        content: m.content,
-        createdAt: m.createdAt,
-      })));
+      setMessages(data.map((m) => ({ role: m.role as "user" | "assistant", content: m.content, createdAt: m.createdAt })));
     } catch {}
     setLoading(false);
     setTimeout(() => scrollRef.current?.scrollToEnd({ animated: false }), 150);
@@ -112,17 +102,10 @@ export default function ThreadScreen() {
     if (convId) return convId;
     try {
       const stored = await AsyncStorage.getItem(CONV_IDS_KEY);
-      if (stored) {
-        const ids = JSON.parse(stored) as Record<string, number>;
-        if (ids[provider.key]) { setConvId(ids[provider.key]); return ids[provider.key]; }
-      }
+      if (stored) { const ids = JSON.parse(stored) as Record<string, number>; if (ids[provider.key]) { setConvId(ids[provider.key]); return ids[provider.key]; } }
     } catch {}
-    const res = await fetch(`${BASE_URL}/api/${provider.key}/conversations`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ title: "My Conversations" }),
-    });
-    if (!res.ok) throw new Error("Failed to create conversation");
+    const res = await fetch(`${BASE_URL}/api/${provider.key}/conversations`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ title: "My Conversations" }) });
+    if (!res.ok) throw new Error("Failed to create");
     const data = (await res.json()) as { id: number };
     const newId = data.id;
     const stored = await AsyncStorage.getItem(CONV_IDS_KEY);
@@ -135,39 +118,22 @@ export default function ThreadScreen() {
 
   const pickImage = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (status !== "granted") {
-      Alert.alert("Permission needed", "Please allow photo access to attach images.");
-      return;
-    }
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ["images"],
-      quality: 0.7,
-      base64: true,
-    });
+    if (status !== "granted") { Alert.alert("Permission needed", "Please allow photo access."); return; }
+    const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ["images"], quality: 0.7, base64: true });
     if (!result.canceled && result.assets[0]) {
       const asset = result.assets[0];
-      setAttachment({
-        base64: asset.base64 ?? "",
-        mimeType: asset.mimeType || "image/jpeg",
-        uri: asset.uri,
-      });
+      setAttachment({ base64: asset.base64 ?? "", mimeType: asset.mimeType || "image/jpeg", uri: asset.uri });
     }
   };
 
   const handleSend = async () => {
     const text = reply.trim();
     if ((!text && !attachment) || streaming) return;
-
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     setStreaming(true);
 
     const now = new Date().toISOString();
-    const userMsg: Message = {
-      role: "user",
-      content: text,
-      createdAt: now,
-      attachmentUri: attachment?.uri,
-    };
+    const userMsg: Message = { role: "user", content: text, createdAt: now, attachmentUri: attachment?.uri };
     const assistantMsg: Message = { role: "assistant", content: "", streaming: true };
     setMessages((prev) => [...prev, userMsg, assistantMsg]);
     const pendingAttachment = attachment;
@@ -176,29 +142,18 @@ export default function ThreadScreen() {
 
     try {
       const id = await getOrCreateConvId();
-
       const body: Record<string, string> = { content: text };
-      if (pendingAttachment?.base64) {
-        body.imageBase64 = pendingAttachment.base64;
-        body.imageMimeType = pendingAttachment.mimeType;
-      }
-
+      if (pendingAttachment?.base64) { body.imageBase64 = pendingAttachment.base64; body.imageMimeType = pendingAttachment.mimeType; }
       const res = await fetch(`${BASE_URL}/api/${provider.key}/conversations/${id}/messages`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
+        method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body),
       });
-
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       setReply("");
-
       const reader = res.body?.getReader();
       if (!reader) throw new Error("No stream");
       activeReader.current = reader;
-
       const decoder = new TextDecoder();
-      let buffer = "";
-      let finished = false;
+      let buffer = "", finished = false;
 
       while (true) {
         const { done, value } = await reader.read();
@@ -206,50 +161,29 @@ export default function ThreadScreen() {
         buffer += decoder.decode(value, { stream: true });
         const lines = buffer.split("\n");
         buffer = lines.pop() ?? "";
-
         for (const line of lines) {
           if (!line.startsWith("data: ")) continue;
           let parsed: { content?: string; done?: boolean; error?: string };
           try { parsed = JSON.parse(line.slice(6)); } catch { continue; }
-
           if (parsed.content) {
             setMessages((prev) => {
-              const updated = [...prev];
-              const last = updated[updated.length - 1];
-              if (last?.role === "assistant") {
-                updated[updated.length - 1] = { ...last, content: last.content + parsed.content };
-              }
-              return updated;
+              const u = [...prev]; const last = u[u.length - 1];
+              if (last?.role === "assistant") u[u.length - 1] = { ...last, content: last.content + parsed.content };
+              return u;
             });
             scrollRef.current?.scrollToEnd({ animated: false });
           }
           if (parsed.done) {
             finished = true;
-            setMessages((prev) => {
-              const updated = [...prev];
-              const last = updated[updated.length - 1];
-              if (last?.role === "assistant") {
-                updated[updated.length - 1] = { ...last, streaming: false, createdAt: new Date().toISOString() };
-              }
-              return updated;
-            });
-            setStreaming(false);
-            break;
+            setMessages((prev) => { const u = [...prev]; const last = u[u.length - 1]; if (last?.role === "assistant") u[u.length - 1] = { ...last, streaming: false, createdAt: new Date().toISOString() }; return u; });
+            setStreaming(false); break;
           }
           if (parsed.error) throw new Error(parsed.error);
         }
         if (finished) break;
       }
-
       if (!finished) {
-        setMessages((prev) => {
-          const updated = [...prev];
-          const last = updated[updated.length - 1];
-          if (last?.role === "assistant" && last.streaming) {
-            updated[updated.length - 1] = { ...last, streaming: false, createdAt: new Date().toISOString() };
-          }
-          return updated;
-        });
+        setMessages((prev) => { const u = [...prev]; const last = u[u.length - 1]; if (last?.role === "assistant" && last.streaming) u[u.length - 1] = { ...last, streaming: false, createdAt: new Date().toISOString() }; return u; });
         setStreaming(false);
       }
     } catch {
@@ -257,7 +191,7 @@ export default function ThreadScreen() {
       setReply(text);
       if (pendingAttachment) setAttachment(pendingAttachment);
       setStreaming(false);
-      Alert.alert("Failed to send", "Your message has been restored. Please try again.", [{ text: "OK" }]);
+      Alert.alert("Failed to send", "Your message has been restored.", [{ text: "OK" }]);
     } finally {
       activeReader.current = null;
     }
@@ -292,10 +226,10 @@ export default function ThreadScreen() {
     heading3: { fontSize: 16, fontWeight: "600" as const, color: c.foreground, marginVertical: 4 },
     strong: { fontWeight: "700" as const, color: c.foreground },
     em: { fontStyle: "italic" as const },
-    code_inline: { backgroundColor: c.secondary, color: provider.color, fontSize: 13, borderRadius: 4 },
-    fence: { backgroundColor: c.secondary, borderRadius: 8, padding: 12, marginVertical: 6, borderWidth: 1, borderColor: c.border },
+    code_inline: { backgroundColor: "#0a0a16", color: provider.color, fontSize: 13, borderRadius: 4, paddingHorizontal: 5 },
+    fence: { backgroundColor: "#0a0a16", borderRadius: 10, padding: 14, marginVertical: 8, borderWidth: 1, borderColor: `${provider.color}30` },
     code_block: { color: c.foreground, fontSize: 12, fontFamily: Platform.OS === "ios" ? "Courier" : "monospace" },
-    blockquote: { backgroundColor: c.secondary, borderLeftWidth: 3, borderLeftColor: provider.color, paddingHorizontal: 12, paddingVertical: 4, marginVertical: 4 },
+    blockquote: { backgroundColor: "#0a0a16", borderLeftWidth: 3, borderLeftColor: provider.color, paddingHorizontal: 14, paddingVertical: 6, marginVertical: 6 },
     bullet_list: { marginVertical: 4 },
     ordered_list: { marginVertical: 4 },
     link: { color: provider.color },
@@ -307,24 +241,34 @@ export default function ThreadScreen() {
 
   return (
     <KeyboardAvoidingView style={[styles.container, { backgroundColor: c.background }]} behavior="padding">
-      {/* Header */}
-      <View style={[styles.header, { paddingTop: topPad + 8, borderBottomColor: c.border, backgroundColor: c.card }]}>
+      <LinearGradient
+        colors={[`${provider.color}18`, c.background]}
+        start={{ x: 0.5, y: 0 }}
+        end={{ x: 0.5, y: 1 }}
+        style={[styles.header, { paddingTop: topPad + 10, borderBottomColor: `${provider.color}25` }]}
+      >
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn} activeOpacity={0.7}>
           <Feather name="chevron-down" size={24} color={c.foreground} />
         </TouchableOpacity>
-        <View style={[styles.headerAi, { backgroundColor: provider.colorLight }]}>
-          <View style={[styles.headerDot, { backgroundColor: provider.color }]} />
-          <Text style={[styles.headerName, { color: provider.color }]}>{provider.name}</Text>
+        <View style={styles.headerCenter}>
+          <View style={[
+            styles.headerBadge,
+            { borderColor: `${provider.color}50`, backgroundColor: `${provider.color}12` },
+            Platform.OS === "web" ? { boxShadow: `0 0 16px ${provider.colorGlow}` } as object : {},
+          ]}>
+            <View style={[styles.headerDot, { backgroundColor: provider.color }]} />
+            <Text style={[styles.headerName, { color: provider.color }]}>{provider.name}</Text>
+          </View>
+          <Text style={[styles.headerModel, { color: c.mutedForeground }]}>{provider.model}</Text>
         </View>
-        <Text style={[styles.headerModel, { color: c.mutedForeground }]}>{provider.model}</Text>
-      </View>
+        <View style={{ width: 34 }} />
+      </LinearGradient>
 
-      {/* Messages */}
       <View style={styles.scrollContainer}>
         <ScrollView
           ref={scrollRef}
           style={styles.scroll}
-          contentContainerStyle={[styles.scrollContent, { paddingBottom: 16 }]}
+          contentContainerStyle={[styles.scrollContent, { paddingBottom: 20 }]}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
           onScroll={handleScroll}
@@ -336,14 +280,16 @@ export default function ThreadScreen() {
             </View>
           ) : messages.length === 0 ? (
             <View style={styles.emptyState}>
-              <View style={[styles.emptyCircle, { backgroundColor: provider.colorLight }]}>
-                <View style={[styles.emptyDot, { backgroundColor: provider.color }]}>
-                  <Text style={styles.emptyInitial}>{provider.name[0]}</Text>
-                </View>
+              <View style={[
+                styles.emptyRing,
+                { borderColor: `${provider.color}40` },
+                Platform.OS === "web" ? { boxShadow: `0 0 30px ${provider.colorGlow}` } as object : {},
+              ]}>
+                <Text style={[styles.emptyInitial, { color: provider.color }]}>{provider.name[0]}</Text>
               </View>
               <Text style={[styles.emptyTitle, { color: c.foreground }]}>Chat with {provider.name}</Text>
               <Text style={[styles.emptySubtitle, { color: c.mutedForeground }]}>
-                Send a message or attach an image to get started.
+                Send a message or attach an image to start.
               </Text>
             </View>
           ) : (
@@ -355,9 +301,14 @@ export default function ThreadScreen() {
                       <Image source={{ uri: msg.attachmentUri }} style={styles.attachmentThumb} />
                     )}
                     {msg.content.length > 0 && (
-                      <View style={[styles.userBubble, { backgroundColor: provider.color }]}>
+                      <LinearGradient
+                        colors={[provider.color, provider.colorDark]}
+                        start={{ x: 0, y: 0 }}
+                        end={{ x: 1, y: 1 }}
+                        style={styles.userBubble}
+                      >
                         <Text style={styles.userText} selectable>{msg.content}</Text>
-                      </View>
+                      </LinearGradient>
                     )}
                     {msg.createdAt && (
                       <Text style={[styles.timestamp, styles.timestampRight, { color: c.mutedForeground }]}>
@@ -367,7 +318,14 @@ export default function ThreadScreen() {
                   </View>
                 ) : (
                   <View style={styles.aiMsgGroup}>
-                    <View style={[styles.aiBubble, { backgroundColor: c.card, borderColor: c.border }]}>
+                    <View style={[
+                      styles.aiBubble,
+                      {
+                        backgroundColor: c.card,
+                        borderColor: `${provider.color}20`,
+                        borderLeftColor: `${provider.color}80`,
+                      },
+                    ]}>
                       {msg.content.length === 0 && msg.streaming ? (
                         <View style={styles.typingRow}>
                           <ActivityIndicator size="small" color={provider.color} />
@@ -383,7 +341,7 @@ export default function ThreadScreen() {
                       )}
                       {!msg.streaming && msg.content.length > 0 && (
                         <TouchableOpacity onPress={() => handleCopy(idx, msg.content)} style={styles.copyBtn} activeOpacity={0.7}>
-                          <Feather name={copiedIdx === idx ? "check" : "copy"} size={13} color={copiedIdx === idx ? provider.color : c.mutedForeground} />
+                          <Feather name={copiedIdx === idx ? "check" : "copy"} size={12} color={copiedIdx === idx ? provider.color : c.mutedForeground} />
                           <Text style={[styles.copyLabel, { color: copiedIdx === idx ? provider.color : c.mutedForeground }]}>
                             {copiedIdx === idx ? "Copied" : "Copy"}
                           </Text>
@@ -405,41 +363,32 @@ export default function ThreadScreen() {
         {showScrollBtn && (
           <TouchableOpacity
             onPress={() => scrollRef.current?.scrollToEnd({ animated: true })}
-            style={[styles.scrollToBottom, { backgroundColor: c.card, borderColor: c.border }]}
+            style={[
+              styles.scrollToBottom,
+              { backgroundColor: c.card, borderColor: `${provider.color}40` },
+              Platform.OS === "web" ? { boxShadow: `0 0 12px ${provider.colorGlow}` } as object : {},
+            ]}
             activeOpacity={0.8}
           >
-            <Feather name="chevron-down" size={18} color={c.foreground} />
+            <Feather name="chevron-down" size={18} color={provider.color} />
           </TouchableOpacity>
         )}
       </View>
 
-      {/* Reply bar */}
       <View style={[styles.replyBar, { borderTopColor: c.border, paddingBottom: bottomPad + 8, backgroundColor: c.background }]}>
-        {/* Attachment preview */}
         {attachment && (
           <View style={styles.attachmentPreview}>
             <Image source={{ uri: attachment.uri }} style={styles.attachmentPreviewImg} />
-            <TouchableOpacity
-              onPress={() => setAttachment(null)}
-              style={[styles.removeAttachment, { backgroundColor: c.card, borderColor: c.border }]}
-              activeOpacity={0.8}
-            >
-              <Feather name="x" size={13} color={c.foreground} />
+            <TouchableOpacity onPress={() => setAttachment(null)} style={[styles.removeAttachment, { backgroundColor: c.card, borderColor: c.border }]} activeOpacity={0.8}>
+              <Feather name="x" size={12} color={c.foreground} />
             </TouchableOpacity>
             <Text style={[styles.attachmentLabel, { color: c.mutedForeground }]}>Image attached</Text>
           </View>
         )}
-
         <View style={[styles.inputRow, { backgroundColor: c.card, borderColor: c.border }]}>
-          <TouchableOpacity
-            onPress={pickImage}
-            style={styles.attachBtn}
-            activeOpacity={0.7}
-            disabled={streaming}
-          >
-            <Feather name="paperclip" size={19} color={attachment ? provider.color : c.mutedForeground} />
+          <TouchableOpacity onPress={pickImage} style={styles.attachBtn} activeOpacity={0.7} disabled={streaming}>
+            <Feather name="paperclip" size={18} color={attachment ? provider.color : c.mutedForeground} />
           </TouchableOpacity>
-
           <TextInput
             style={[styles.input, { color: c.foreground }]}
             placeholder={streaming ? "Generating…" : `Reply to ${provider.name}…`}
@@ -452,19 +401,22 @@ export default function ThreadScreen() {
             blurOnSubmit={false}
             editable={!streaming}
           />
-
           {streaming ? (
-            <TouchableOpacity onPress={handleStop} style={[styles.sendBtn, { backgroundColor: "#ef4444" }]} activeOpacity={0.7}>
-              <Feather name="square" size={15} color="#fff" />
+            <TouchableOpacity onPress={handleStop} style={[styles.sendBtn, { backgroundColor: "#ff4466" }]} activeOpacity={0.7}>
+              <Feather name="square" size={14} color="#fff" />
             </TouchableOpacity>
           ) : (
             <TouchableOpacity
               onPress={handleSend}
               disabled={!canSend}
-              style={[styles.sendBtn, { backgroundColor: canSend ? provider.color : c.muted }]}
+              style={[
+                styles.sendBtn,
+                { backgroundColor: canSend ? provider.color : c.secondary },
+                canSend && Platform.OS === "web" ? { boxShadow: `0 0 14px ${provider.colorGlow}` } as object : {},
+              ]}
               activeOpacity={0.7}
             >
-              <Feather name="send" size={16} color={canSend ? "#fff" : c.mutedForeground} />
+              <Feather name="send" size={15} color={canSend ? "#000" : c.mutedForeground} />
             </TouchableOpacity>
           )}
         </View>
@@ -477,57 +429,61 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   header: {
     flexDirection: "row", alignItems: "center",
-    paddingHorizontal: 16, paddingBottom: 12, gap: 10,
-    borderBottomWidth: StyleSheet.hairlineWidth,
+    paddingHorizontal: 16, paddingBottom: 14, gap: 12,
+    borderBottomWidth: 1,
   },
   backBtn: { width: 34, height: 34, alignItems: "center", justifyContent: "center" },
-  headerAi: {
+  headerCenter: { flex: 1, alignItems: "center", gap: 4 },
+  headerBadge: {
     flexDirection: "row", alignItems: "center", gap: 7,
-    paddingHorizontal: 11, paddingVertical: 5, borderRadius: 20,
+    paddingHorizontal: 14, paddingVertical: 6,
+    borderRadius: 20, borderWidth: 1,
   },
-  headerDot: { width: 8, height: 8, borderRadius: 4 },
+  headerDot: { width: 7, height: 7, borderRadius: 4 },
   headerName: { fontSize: 15, fontFamily: "Inter_600SemiBold" },
-  headerModel: { fontSize: 12, fontFamily: "Inter_400Regular", marginLeft: "auto" },
+  headerModel: { fontSize: 11, fontFamily: "Inter_400Regular", letterSpacing: 0.5 },
 
   scrollContainer: { flex: 1, position: "relative" },
   scroll: { flex: 1 },
-  scrollContent: { paddingHorizontal: 16, paddingTop: 12, gap: 6 },
+  scrollContent: { paddingHorizontal: 16, paddingTop: 16, gap: 6 },
 
   scrollToBottom: {
-    position: "absolute", bottom: 12, right: 16,
+    position: "absolute", bottom: 14, right: 16,
     width: 36, height: 36, borderRadius: 18, borderWidth: 1,
     alignItems: "center", justifyContent: "center",
-    shadowColor: "#000", shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.12, shadowRadius: 4, elevation: 4,
   },
 
   loadingCenter: { flex: 1, alignItems: "center", justifyContent: "center", paddingTop: 80 },
-  emptyState: { alignItems: "center", paddingTop: 60, gap: 14 },
-  emptyCircle: { width: 80, height: 80, borderRadius: 40, alignItems: "center", justifyContent: "center" },
-  emptyDot: { width: 52, height: 52, borderRadius: 26, alignItems: "center", justifyContent: "center" },
-  emptyInitial: { fontSize: 24, fontFamily: "Inter_700Bold", color: "#fff" },
+  emptyState: { alignItems: "center", paddingTop: 70, gap: 16 },
+  emptyRing: {
+    width: 80, height: 80, borderRadius: 40,
+    borderWidth: 2,
+    alignItems: "center", justifyContent: "center",
+  },
+  emptyInitial: { fontSize: 28, fontFamily: "Inter_700Bold" },
   emptyTitle: { fontSize: 20, fontFamily: "Inter_600SemiBold" },
-  emptySubtitle: { fontSize: 14, fontFamily: "Inter_400Regular", textAlign: "center", paddingHorizontal: 40 },
+  emptySubtitle: { fontSize: 14, fontFamily: "Inter_400Regular", textAlign: "center", paddingHorizontal: 48, color: "#525278" },
 
   msgRowUser: { flexDirection: "row", justifyContent: "flex-end", marginBottom: 4 },
   msgRowAi: { flexDirection: "row", justifyContent: "flex-start", marginBottom: 4 },
-  userMsgGroup: { alignItems: "flex-end", gap: 4, maxWidth: "82%" },
+  userMsgGroup: { alignItems: "flex-end", gap: 4, maxWidth: "80%" },
   aiMsgGroup: { alignItems: "flex-start", gap: 3, maxWidth: "92%" },
 
-  attachmentThumb: { width: 180, height: 130, borderRadius: 12, marginBottom: 2 },
+  attachmentThumb: { width: 180, height: 130, borderRadius: 14, marginBottom: 2 },
 
-  userBubble: { paddingHorizontal: 14, paddingVertical: 10, borderRadius: 18, borderBottomRightRadius: 4 },
-  userText: { fontSize: 15, fontFamily: "Inter_400Regular", color: "#fff", lineHeight: 22 },
+  userBubble: { paddingHorizontal: 15, paddingVertical: 11, borderRadius: 18, borderBottomRightRadius: 4 },
+  userText: { fontSize: 15, fontFamily: "Inter_400Regular", color: "#000", lineHeight: 22 },
 
   aiBubble: {
-    paddingHorizontal: 14, paddingVertical: 10,
-    borderRadius: 18, borderBottomLeftRadius: 4, borderWidth: 1, gap: 6,
+    paddingHorizontal: 14, paddingVertical: 12,
+    borderRadius: 18, borderBottomLeftRadius: 4,
+    borderWidth: 1, borderLeftWidth: 2, gap: 6,
   },
-  typingRow: { flexDirection: "row", alignItems: "center", gap: 8 },
+  typingRow: { flexDirection: "row", alignItems: "center", gap: 10 },
   typingText: { fontSize: 14, fontFamily: "Inter_400Regular" },
-  cursor: { width: 2, height: 16, borderRadius: 1, opacity: 0.8 },
+  cursor: { width: 2, height: 16, borderRadius: 1, opacity: 0.9 },
 
-  timestamp: { fontSize: 11, fontFamily: "Inter_400Regular", opacity: 0.6 },
+  timestamp: { fontSize: 11, fontFamily: "Inter_400Regular", opacity: 0.5 },
   timestampLeft: { alignSelf: "flex-start", marginLeft: 2 },
   timestampRight: { alignSelf: "flex-end", marginRight: 2 },
 
@@ -535,21 +491,17 @@ const styles = StyleSheet.create({
   copyLabel: { fontSize: 12, fontFamily: "Inter_400Regular" },
 
   replyBar: { paddingTop: 10, paddingHorizontal: 16, borderTopWidth: StyleSheet.hairlineWidth, gap: 8 },
-
   attachmentPreview: { flexDirection: "row", alignItems: "center", gap: 10 },
-  attachmentPreviewImg: { width: 52, height: 52, borderRadius: 10 },
-  removeAttachment: {
-    width: 22, height: 22, borderRadius: 11, borderWidth: 1,
-    alignItems: "center", justifyContent: "center",
-  },
+  attachmentPreviewImg: { width: 48, height: 48, borderRadius: 10 },
+  removeAttachment: { width: 20, height: 20, borderRadius: 10, borderWidth: 1, alignItems: "center", justifyContent: "center" },
   attachmentLabel: { fontSize: 13, fontFamily: "Inter_400Regular" },
 
   inputRow: {
     flexDirection: "row", alignItems: "flex-end",
-    borderRadius: 14, borderWidth: 1,
-    paddingLeft: 4, paddingRight: 7, paddingVertical: 7, gap: 4,
+    borderRadius: 16, borderWidth: 1,
+    paddingLeft: 4, paddingRight: 6, paddingVertical: 6, gap: 4,
   },
   attachBtn: { width: 36, height: 38, alignItems: "center", justifyContent: "center" },
-  input: { flex: 1, fontSize: 16, fontFamily: "Inter_400Regular", maxHeight: 110, lineHeight: 22, paddingVertical: 3 },
-  sendBtn: { width: 38, height: 38, borderRadius: 10, alignItems: "center", justifyContent: "center" },
+  input: { flex: 1, fontSize: 15, fontFamily: "Inter_400Regular", maxHeight: 100, lineHeight: 21, paddingVertical: 4 },
+  sendBtn: { width: 38, height: 38, borderRadius: 11, alignItems: "center", justifyContent: "center" },
 });

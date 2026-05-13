@@ -6,6 +6,7 @@ export interface AiProvider {
   color: string;
   colorLight: string;
   colorDark: string;
+  colorGlow: string;
 }
 
 export const AI_PROVIDERS: AiProvider[] = [
@@ -13,28 +14,31 @@ export const AI_PROVIDERS: AiProvider[] = [
     key: "openai",
     name: "ChatGPT",
     model: "GPT-5.4",
-    initial: "G",
-    color: "#10a37f",
-    colorLight: "#10a37f18",
-    colorDark: "#0d8a6a",
+    initial: "C",
+    color: "#00e5b0",
+    colorLight: "#00e5b012",
+    colorDark: "#00c99a",
+    colorGlow: "#00e5b035",
   },
   {
     key: "anthropic",
     name: "Claude",
     model: "Sonnet 4.6",
     initial: "C",
-    color: "#d4761c",
-    colorLight: "#d4761c18",
-    colorDark: "#b5621a",
+    color: "#ff6b47",
+    colorLight: "#ff6b4712",
+    colorDark: "#e85530",
+    colorGlow: "#ff6b4735",
   },
   {
     key: "gemini",
     name: "Gemini",
     model: "Flash 3",
     initial: "G",
-    color: "#4285f4",
-    colorLight: "#4285f418",
-    colorDark: "#3470d4",
+    color: "#7c5fff",
+    colorLight: "#7c5fff12",
+    colorDark: "#6644e8",
+    colorGlow: "#7c5fff35",
   },
 ];
 
