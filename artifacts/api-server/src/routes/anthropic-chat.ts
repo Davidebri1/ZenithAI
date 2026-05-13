@@ -29,14 +29,23 @@ router.get("/anthropic/conversations", async (req, res) => {
 router.post("/anthropic/conversations/:id/messages", async (req, res) => {
   try {
     const id = parseInt(req.params.id, 10);
-    const { content } = req.body as { content: string };
+    const { content, imageBase64, imageMimeType } = req.body as {
+      content: string;
+      imageBase64?: string;
+      imageMimeType?: string;
+    };
 
-    if (!content || typeof content !== "string") {
-      res.status(400).json({ error: "content is required" });
+    if ((content === undefined || content === null) && !imageBase64) {
+      res.status(400).json({ error: "content or image is required" });
       return;
     }
 
-    await db.insert(messages).values({ conversationId: id, role: "user", content });
+    const textContent = content || "";
+    const storedContent = imageBase64
+      ? `${textContent}${textContent ? "\n\n" : ""}[📷 Image attached]`
+      : textContent;
+
+    await db.insert(messages).values({ conversationId: id, role: "user", content: storedContent });
 
     const existingMessages = await db
       .select()
@@ -44,10 +53,36 @@ router.post("/anthropic/conversations/:id/messages", async (req, res) => {
       .where(eq(messages.conversationId, id))
       .orderBy(asc(messages.createdAt));
 
-    const chatMessages = existingMessages.map((m) => ({
-      role: m.role as "user" | "assistant",
-      content: m.content,
-    }));
+    type AnthropicMediaType = "image/jpeg" | "image/png" | "image/gif" | "image/webp";
+
+    type AnthropicContent =
+      | string
+      | Array<
+          | { type: "text"; text: string }
+          | { type: "image"; source: { type: "base64"; media_type: AnthropicMediaType; data: string } }
+        >;
+
+    const chatMessages: Array<{ role: "user" | "assistant"; content: AnthropicContent }> =
+      existingMessages.map((m, idx) => {
+        const isLastUser = idx === existingMessages.length - 1 && m.role === "user" && imageBase64;
+        if (isLastUser) {
+          return {
+            role: "user" as const,
+            content: [
+              {
+                type: "image" as const,
+                source: {
+                  type: "base64" as const,
+                  media_type: (imageMimeType || "image/jpeg") as AnthropicMediaType,
+                  data: imageBase64,
+                },
+              },
+              { type: "text" as const, text: textContent || "Describe this image." },
+            ],
+          };
+        }
+        return { role: m.role as "user" | "assistant", content: m.content };
+      });
 
     res.setHeader("Content-Type", "text/event-stream");
     res.setHeader("Cache-Control", "no-cache");
@@ -68,12 +103,7 @@ router.post("/anthropic/conversations/:id/messages", async (req, res) => {
       }
     }
 
-    await db.insert(messages).values({
-      conversationId: id,
-      role: "assistant",
-      content: fullResponse,
-    });
-
+    await db.insert(messages).values({ conversationId: id, role: "assistant", content: fullResponse });
     res.write(`data: ${JSON.stringify({ done: true })}\n\n`);
     res.end();
   } catch (err) {

@@ -29,14 +29,23 @@ router.get("/gemini/conversations", async (req, res) => {
 router.post("/gemini/conversations/:id/messages", async (req, res) => {
   try {
     const id = parseInt(req.params.id, 10);
-    const { content } = req.body as { content: string };
+    const { content, imageBase64, imageMimeType } = req.body as {
+      content: string;
+      imageBase64?: string;
+      imageMimeType?: string;
+    };
 
-    if (!content || typeof content !== "string") {
-      res.status(400).json({ error: "content is required" });
+    if ((content === undefined || content === null) && !imageBase64) {
+      res.status(400).json({ error: "content or image is required" });
       return;
     }
 
-    await db.insert(messages).values({ conversationId: id, role: "user", content });
+    const textContent = content || "";
+    const storedContent = imageBase64
+      ? `${textContent}${textContent ? "\n\n" : ""}[📷 Image attached]`
+      : textContent;
+
+    await db.insert(messages).values({ conversationId: id, role: "user", content: storedContent });
 
     const existingMessages = await db
       .select()
@@ -44,10 +53,22 @@ router.post("/gemini/conversations/:id/messages", async (req, res) => {
       .where(eq(messages.conversationId, id))
       .orderBy(asc(messages.createdAt));
 
-    const chatMessages = existingMessages.map((m) => ({
-      role: m.role === "assistant" ? ("model" as const) : ("user" as const),
-      parts: [{ text: m.content }],
-    }));
+    type GeminiPart = { text: string } | { inlineData: { mimeType: string; data: string } };
+    type GeminiMsg = { role: "user" | "model"; parts: GeminiPart[] };
+
+    const chatMessages: GeminiMsg[] = existingMessages.map((m, idx) => {
+      const isLastUser = idx === existingMessages.length - 1 && m.role === "user" && imageBase64;
+      const role = m.role === "assistant" ? ("model" as const) : ("user" as const);
+      if (isLastUser) {
+        const parts: GeminiPart[] = [
+          { inlineData: { mimeType: imageMimeType || "image/jpeg", data: imageBase64 } },
+        ];
+        if (textContent) parts.push({ text: textContent });
+        else parts.push({ text: "Describe this image." });
+        return { role, parts };
+      }
+      return { role, parts: [{ text: m.content }] };
+    });
 
     res.setHeader("Content-Type", "text/event-stream");
     res.setHeader("Cache-Control", "no-cache");
@@ -69,12 +90,7 @@ router.post("/gemini/conversations/:id/messages", async (req, res) => {
       }
     }
 
-    await db.insert(messages).values({
-      conversationId: id,
-      role: "assistant",
-      content: fullResponse,
-    });
-
+    await db.insert(messages).values({ conversationId: id, role: "assistant", content: fullResponse });
     res.write(`data: ${JSON.stringify({ done: true })}\n\n`);
     res.end();
   } catch (err) {

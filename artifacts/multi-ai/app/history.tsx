@@ -92,18 +92,16 @@ export default function HistoryScreen() {
           <Feather name="arrow-left" size={22} color={c.foreground} />
         </TouchableOpacity>
         <Text style={[styles.title, { color: c.foreground }]}>History</Text>
+        <TouchableOpacity onPress={() => router.push("/search")} style={styles.iconBtn} activeOpacity={0.7}>
+          <Feather name="search" size={19} color={c.mutedForeground} />
+        </TouchableOpacity>
         <TouchableOpacity
           onPress={handleClearAll}
           style={styles.clearBtn}
           activeOpacity={0.7}
           disabled={sessions.length === 0}
         >
-          <Text
-            style={[
-              styles.clearText,
-              { color: sessions.length > 0 ? "#ef4444" : c.mutedForeground },
-            ]}
-          >
+          <Text style={[styles.clearText, { color: sessions.length > 0 ? "#ef4444" : c.mutedForeground }]}>
             Clear All
           </Text>
         </TouchableOpacity>
@@ -129,15 +127,11 @@ export default function HistoryScreen() {
               style={[styles.card, { backgroundColor: c.card, borderColor: c.border }]}
               activeOpacity={0.75}
             >
-              {/* Provider dots */}
               <View style={styles.cardTop}>
                 <View style={styles.providerDots}>
                   {AI_PROVIDERS.map((p) =>
                     item.convIds[p.key] ? (
-                      <View
-                        key={p.key}
-                        style={[styles.providerDot, { backgroundColor: p.color }]}
-                      />
+                      <View key={p.key} style={[styles.providerDot, { backgroundColor: p.color }]} />
                     ) : null
                   )}
                 </View>
@@ -157,9 +151,7 @@ export default function HistoryScreen() {
                 {item.title}
               </Text>
               <View style={styles.restoreRow}>
-                <Text style={[styles.restoreHint, { color: c.mutedForeground }]}>
-                  Tap to restore
-                </Text>
+                <Text style={[styles.restoreHint, { color: c.mutedForeground }]}>Tap to restore</Text>
                 <Feather name="rotate-ccw" size={13} color={c.mutedForeground} />
               </View>
             </TouchableOpacity>
@@ -178,49 +170,29 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingBottom: 14,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    gap: 12,
+    gap: 8,
   },
   backBtn: { width: 34, height: 34, alignItems: "center", justifyContent: "center" },
   title: { flex: 1, fontSize: 20, fontFamily: "Inter_600SemiBold" },
+  iconBtn: { width: 32, height: 32, alignItems: "center", justifyContent: "center" },
   clearBtn: { paddingHorizontal: 4, paddingVertical: 4 },
   clearText: { fontSize: 14, fontFamily: "Inter_500Medium" },
 
   empty: { flex: 1, alignItems: "center", justifyContent: "center", gap: 12, paddingBottom: 80 },
   emptyTitle: { fontSize: 20, fontFamily: "Inter_600SemiBold", marginTop: 8 },
-  emptySubtitle: {
-    fontSize: 14,
-    fontFamily: "Inter_400Regular",
-    textAlign: "center",
-    paddingHorizontal: 48,
-  },
+  emptySubtitle: { fontSize: 14, fontFamily: "Inter_400Regular", textAlign: "center", paddingHorizontal: 48 },
 
   list: { padding: 16, gap: 12 },
   card: {
-    borderRadius: 16,
-    borderWidth: 1,
-    padding: 14,
-    gap: 8,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
+    borderRadius: 16, borderWidth: 1, padding: 14, gap: 8,
+    shadowColor: "#000", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 4, elevation: 2,
   },
   cardTop: { flexDirection: "row", alignItems: "center", gap: 8 },
   providerDots: { flexDirection: "row", gap: 5, flex: 1 },
   providerDot: { width: 10, height: 10, borderRadius: 5 },
   sessionDate: { fontSize: 12, fontFamily: "Inter_400Regular" },
   deleteBtn: { padding: 2 },
-  sessionTitle: {
-    fontSize: 15,
-    fontFamily: "Inter_400Regular",
-    lineHeight: 21,
-  },
-  restoreRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 5,
-    marginTop: 2,
-  },
+  sessionTitle: { fontSize: 15, fontFamily: "Inter_400Regular", lineHeight: 21 },
+  restoreRow: { flexDirection: "row", alignItems: "center", gap: 5, marginTop: 2 },
   restoreHint: { fontSize: 12, fontFamily: "Inter_400Regular" },
 });
