@@ -10,33 +10,36 @@ router.get("/stripe/config", async (_req: Request, res: Response) => {
   res.json({ publishableKey });
 });
 
-router.get("/stripe/products", async (_req: Request, res: Response) => {
-  const rows = await storage.listProductsWithPrices();
+router.get("/stripe/products", async (req: Request, res: Response) => {
+  try {
+    const stripe = await getUncachableStripeClient();
 
-  const productsMap = new Map<string, any>();
-  for (const row of rows as any[]) {
-    if (!productsMap.has(row.product_id)) {
-      productsMap.set(row.product_id, {
-        id: row.product_id,
-        name: row.product_name,
-        description: row.product_description,
-        active: row.product_active,
-        metadata: row.product_metadata,
-        prices: [],
+    const stripeProducts = await stripe.products.list({ active: true, limit: 10 });
+    const productsMap = new Map<string, any>();
+
+    for (const product of stripeProducts.data) {
+      const priceList = await stripe.prices.list({ product: product.id, active: true, limit: 10 });
+      productsMap.set(product.id, {
+        id: product.id,
+        name: product.name,
+        description: product.description,
+        active: product.active,
+        metadata: product.metadata,
+        prices: priceList.data.map((p) => ({
+          id: p.id,
+          unit_amount: p.unit_amount,
+          currency: p.currency,
+          recurring: p.recurring ? { interval: p.recurring.interval } : null,
+          active: p.active,
+        })),
       });
     }
-    if (row.price_id) {
-      productsMap.get(row.product_id).prices.push({
-        id: row.price_id,
-        unit_amount: row.unit_amount,
-        currency: row.currency,
-        recurring: row.recurring,
-        active: row.price_active,
-      });
-    }
+
+    res.json({ data: Array.from(productsMap.values()) });
+  } catch (err) {
+    req.log.error({ err }, "listProducts error");
+    res.status(500).json({ error: "Failed to load products" });
   }
-
-  res.json({ data: Array.from(productsMap.values()) });
 });
 
 router.get("/stripe/subscription", async (req: any, res: Response) => {
