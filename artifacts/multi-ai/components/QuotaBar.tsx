@@ -1,6 +1,5 @@
 import React from "react";
-import { View, Text, TouchableOpacity, StyleSheet, Platform } from "react-native";
-import { LinearGradient } from "expo-linear-gradient";
+import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import type { QuotaState } from "@/hooks/useQuota";
@@ -22,85 +21,43 @@ export function QuotaBar({ quota }: Props) {
   const barColor = isEmpty ? "#ef4444" : isLow ? "#f97316" : ACCENT;
 
   return (
-    <TouchableOpacity
-      onPress={() => router.push("/(home)/upgrade")}
-      activeOpacity={0.85}
-      style={styles.wrap}
-    >
-      <View style={styles.row}>
-        <View style={styles.left}>
-          <Feather
-            name={isEmpty ? "lock" : "zap"}
-            size={13}
-            color={barColor}
-            style={{ marginRight: 5 }}
-          />
-          <Text style={[styles.label, { color: isEmpty ? "#ef4444" : "rgba(240,240,255,0.65)" }]}>
-            {isEmpty
-              ? "No prompts left"
-              : `${quota.remaining} prompt${quota.remaining === 1 ? "" : "s"} remaining`}
-          </Text>
-        </View>
-        <View style={styles.upgradeBtn}>
-          <Text style={styles.upgradeText}>Upgrade</Text>
-          <Feather name="arrow-right" size={11} color={ACCENT} />
-        </View>
-      </View>
-
-      <View style={styles.track}>
-        <LinearGradient
-          colors={[barColor, `${barColor}aa`]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 0 }}
-          style={[styles.fill, { width: `${pct * 100}%` }]}
-        />
-      </View>
-
-      <Text style={styles.sub}>
-        {quota.promptsUsed}/{quota.promptsLimit} used · Free plan
+    <TouchableOpacity onPress={() => router.push("/(home)/upgrade")} activeOpacity={0.8} style={styles.wrap}>
+      <Feather name={isEmpty ? "lock" : "zap"} size={10} color={barColor} />
+      <Text style={[styles.label, { color: isEmpty ? "#ef4444" : "rgba(240,240,255,0.35)" }]}>
+        {isEmpty ? "No prompts left" : `${quota.remaining} left`}
       </Text>
+      <View style={styles.track}>
+        <View style={[styles.fill, { width: `${pct * 100}%` as any, backgroundColor: barColor }]} />
+      </View>
+      {(isLow || isEmpty) && (
+        <Text style={[styles.upgrade, { color: barColor }]}>Upgrade →</Text>
+      )}
     </TouchableOpacity>
   );
 }
 
 const styles = StyleSheet.create({
   wrap: {
-    marginHorizontal: 16,
-    marginBottom: 8,
-    backgroundColor: "rgba(255,255,255,0.04)",
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.07)",
-    padding: 10,
-    ...(Platform.OS === "web" ? {} : {}),
-  },
-  row: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
-    marginBottom: 7,
+    gap: 6,
+    paddingHorizontal: 16,
+    paddingVertical: 5,
   },
-  left: { flexDirection: "row", alignItems: "center" },
-  label: { fontSize: 12, fontWeight: "600" },
-  upgradeBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 3,
-    backgroundColor: `${ACCENT}18`,
-    borderRadius: 6,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderWidth: 1,
-    borderColor: `${ACCENT}30`,
+  label: {
+    fontSize: 10,
+    fontFamily: "Inter_500Medium",
   },
-  upgradeText: { color: ACCENT, fontSize: 11, fontWeight: "700" },
   track: {
-    height: 3,
-    backgroundColor: "rgba(255,255,255,0.08)",
-    borderRadius: 2,
+    flex: 1,
+    height: 2,
+    backgroundColor: "rgba(255,255,255,0.07)",
+    borderRadius: 1,
     overflow: "hidden",
-    marginBottom: 5,
   },
-  fill: { height: "100%", borderRadius: 2 },
-  sub: { color: "rgba(240,240,255,0.3)", fontSize: 11 },
+  fill: { height: "100%" as any, borderRadius: 1 },
+  upgrade: {
+    fontSize: 10,
+    fontFamily: "Inter_600SemiBold",
+  },
 });

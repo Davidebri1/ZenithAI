@@ -560,8 +560,6 @@ export default function HomeScreen() {
           </View>
         </View>
 
-        <QuotaBar quota={quota} />
-
         {hasSomeResponse && (
           <View style={styles.synthesisTop}>
             {synthesis.expanded && (
@@ -645,6 +643,8 @@ export default function HomeScreen() {
         <View style={[styles.bottomBar, { paddingBottom: bottomPad + 8 }]}>
           <BlurView intensity={40} tint="dark" style={StyleSheet.absoluteFill} pointerEvents="none" />
           <View pointerEvents="none" style={[StyleSheet.absoluteFill, { backgroundColor: "rgba(7,7,20,0.6)", borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: "rgba(255,255,255,0.08)" }]} />
+
+          <QuotaBar quota={quota} />
 
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipRow}>
             {AI_PROVIDERS.map((p) => (
