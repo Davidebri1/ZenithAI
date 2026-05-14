@@ -14,7 +14,7 @@ export async function sendEmail(opts: {
     const resp = await fetch("https://api.resend.com/emails", {
       method: "POST",
       headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ from: "OneAI <hello@oneai.app>", ...opts }),
+      body: JSON.stringify({ from: process.env.RESEND_FROM ?? "OneAI <onboarding@resend.dev>", ...opts }),
       signal: AbortSignal.timeout(10000),
     });
     if (!resp.ok) {
