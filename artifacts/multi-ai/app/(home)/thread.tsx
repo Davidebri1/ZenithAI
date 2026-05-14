@@ -99,7 +99,7 @@ export default function ThreadScreen() {
       setMessages(data.map((m) => ({ role: m.role as "user" | "assistant", content: m.content, createdAt: m.createdAt })));
     } catch {}
     setLoading(false);
-    setTimeout(() => scrollRef.current?.scrollToEnd({ animated: false }), 150);
+    setTimeout(() => scrollRef.current?.scrollToEnd({ animated: false }), 300);
   };
 
   const getOrCreateConvId = async (): Promise<number> => {

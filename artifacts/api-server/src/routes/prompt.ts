@@ -33,11 +33,6 @@ router.post("/prompt/track", async (req, res) => {
 
     const updated = await storage.incrementPromptsUsed(userId);
 
-    if (updated?.email && updated.promptsUsed >= updated.promptsLimit) {
-      const tpl = quotaExhaustedEmail();
-      sendEmail({ to: updated.email, ...tpl });
-    }
-
     res.json({
       tracked: true,
       promptsUsed: updated.promptsUsed,
@@ -56,6 +51,7 @@ router.get("/conversations/:id/messages", async (req, res) => {
     const { messages } = await import("@workspace/db");
     const { eq, asc } = await import("drizzle-orm");
     const id = parseInt(req.params.id, 10);
+    if (isNaN(id) || id <= 0) { res.status(400).json({ error: "Invalid conversation id" }); return; }
     const msgs = await db
       .select()
       .from(messages)

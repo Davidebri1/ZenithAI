@@ -15,12 +15,11 @@ import { BlurView } from "expo-blur";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { Feather } from "@expo/vector-icons";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import { authFetch } from "@/constants/apiAuth";
 
 import { useColors } from "@/hooks/useColors";
 import { AI_PROVIDERS, BASE_URL } from "@/constants/aiConfig";
-import { getSessions, CONV_IDS_KEY, formatMessageTime, type Session } from "@/constants/sessions";
+import { getSessions, formatMessageTime, type Session } from "@/constants/sessions";
 
 const BG = require("../../assets/images/bg-alley.png");
 
@@ -90,7 +89,7 @@ export default function SearchScreen() {
     setSearched(true);
     try {
       const [res, sessions] = await Promise.all([
-        fetch(`${BASE_URL}/api/search?q=${encodeURIComponent(q.trim())}`),
+        authFetch(`${BASE_URL}/api/search?q=${encodeURIComponent(q.trim())}`),
         getSessions(),
       ]);
       if (!res.ok) throw new Error("Search failed");
@@ -117,11 +116,12 @@ export default function SearchScreen() {
     debounceRef.current = setTimeout(() => doSearch(text), 400);
   };
 
-  const handleRestore = async (r: EnrichedResult) => {
+  const handleRestore = (r: EnrichedResult) => {
     if (!r.session) return;
-    await AsyncStorage.setItem(CONV_IDS_KEY, JSON.stringify(r.session.convIds));
-    router.back();
-    router.back();
+    router.push({
+      pathname: "/(home)/session-detail",
+      params: { sessionId: r.session.id },
+    });
   };
 
   const topPad = Platform.OS === "web" ? 52 : insets.top;
@@ -221,8 +221,8 @@ export default function SearchScreen() {
 
                   {r.session && (
                     <View style={styles.restoreRow}>
-                      <Feather name="rotate-ccw" size={11} color="rgba(255,255,255,0.3)" />
-                      <Text style={styles.restoreLabel}>Tap to restore session</Text>
+                      <Feather name="eye" size={11} color="rgba(255,255,255,0.3)" />
+                      <Text style={styles.restoreLabel}>Tap to view session</Text>
                     </View>
                   )}
                 </View>
