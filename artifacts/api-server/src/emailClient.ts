@@ -1,0 +1,112 @@
+async function getResendApiKey(): Promise<string> {
+  const hostname = process.env.REPLIT_CONNECTORS_HOSTNAME;
+  const xReplitToken = process.env.REPL_IDENTITY
+    ? "repl " + process.env.REPL_IDENTITY
+    : process.env.WEB_REPL_RENEWAL
+      ? "depl " + process.env.WEB_REPL_RENEWAL
+      : null;
+
+  if (!hostname || !xReplitToken) throw new Error("Resend integration not configured");
+
+  const isProduction = process.env.REPLIT_DEPLOYMENT === "1";
+  const url = new URL(`https://${hostname}/api/v2/connection`);
+  url.searchParams.set("include_secrets", "true");
+  url.searchParams.set("connector_names", "resend");
+  url.searchParams.set("environment", isProduction ? "production" : "development");
+
+  const resp = await fetch(url.toString(), {
+    headers: { Accept: "application/json", "X-Replit-Token": xReplitToken },
+    signal: AbortSignal.timeout(8000),
+  });
+
+  if (!resp.ok) throw new Error(`Resend credentials fetch failed: ${resp.status}`);
+  const data = await resp.json();
+  const apiKey = data.items?.[0]?.settings?.api_key;
+  if (!apiKey) throw new Error("Resend api_key not found");
+  return apiKey;
+}
+
+export async function sendEmail(opts: {
+  to: string;
+  subject: string;
+  html: string;
+}): Promise<void> {
+  try {
+    const apiKey = await getResendApiKey();
+    const resp = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ from: "OneAI <hello@oneai.app>", ...opts }),
+      signal: AbortSignal.timeout(10000),
+    });
+    if (!resp.ok) {
+      const err = await resp.json().catch(() => ({}));
+      throw new Error(`Resend API ${resp.status}: ${JSON.stringify(err)}`);
+    }
+  } catch (err: any) {
+    // Never crash the request over email failure
+    console.error("[email] send failed:", err?.message ?? err);
+  }
+}
+
+// ── Templates ────────────────────────────────────────────────────────────────
+
+function base(title: string, body: string): string {
+  return `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>${title}</title>
+</head>
+<body style="margin:0;padding:0;background:#07070d;font-family:-apple-system,BlinkMacSystemFont,'Inter',sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#07070d;min-height:100vh;">
+    <tr><td align="center" style="padding:40px 16px;">
+      <table width="100%" style="max-width:500px;">
+        <tr><td style="padding-bottom:28px;text-align:center;">
+          <span style="font-size:22px;font-weight:800;color:#f0f0ff;letter-spacing:-0.5px;">One<span style="color:#74aa9c;">AI</span></span>
+        </td></tr>
+        <tr><td style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:16px;padding:32px;">
+          ${body}
+        </td></tr>
+        <tr><td style="padding-top:22px;text-align:center;color:rgba(240,240,255,0.22);font-size:12px;line-height:1.6;">
+          OneAI · oneai.app
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>`;
+}
+
+export function contactAutoReplyEmail(opts: {
+  name: string;
+  company?: string | null;
+  message: string;
+  submittedAt: string;
+}): { subject: string; html: string } {
+  const companyLine = opts.company
+    ? `<p style="margin:0 0 4px;color:rgba(240,240,255,0.4);font-size:13px;">Company: ${opts.company}</p>`
+    : "";
+
+  return {
+    subject: "We received your OneAI inquiry",
+    html: base("Message received — OneAI", `
+      <h1 style="margin:0 0 10px;color:#f0f0ff;font-size:20px;font-weight:800;">Message received, ${opts.name.split(" ")[0]}.</h1>
+      <p style="margin:0 0 24px;color:rgba(240,240,255,0.55);font-size:15px;line-height:1.6;">
+        Thanks for reaching out. Our team will get back to you shortly about enterprise pricing and onboarding.
+      </p>
+
+      <div style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);border-radius:12px;padding:20px;margin-bottom:24px;">
+        <p style="margin:0 0 12px;color:rgba(240,240,255,0.35);font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;">Your message</p>
+        ${companyLine}
+        <p style="margin:0 0 12px;color:rgba(240,240,255,0.4);font-size:13px;">Submitted: ${opts.submittedAt}</p>
+        <p style="margin:0;color:rgba(240,240,255,0.75);font-size:14px;line-height:1.7;white-space:pre-wrap;">${opts.message.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</p>
+      </div>
+
+      <p style="margin:0;color:rgba(240,240,255,0.35);font-size:13px;line-height:1.6;">
+        If you have anything to add, just reply to this email.
+      </p>
+    `),
+  };
+}

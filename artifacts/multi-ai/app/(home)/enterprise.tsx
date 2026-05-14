@@ -18,6 +18,7 @@ import { BlurView } from "expo-blur";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
+import { useUser } from "@clerk/expo";
 import { authFetch } from "@/constants/apiAuth";
 import { BASE_URL } from "@/constants/aiConfig";
 
@@ -91,6 +92,8 @@ type ContactState = "idle" | "sending" | "sent";
 export default function EnterpriseScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const { user } = useUser();
+  const userEmail = user?.primaryEmailAddress?.emailAddress ?? "";
 
   const [contactOpen, setContactOpen] = useState(false);
   const [contactState, setContactState] = useState<ContactState>("idle");
@@ -105,7 +108,7 @@ export default function EnterpriseScreen() {
       await authFetch(`${BASE_URL}/api/contact`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: name.trim(), company: company.trim(), message: message.trim() }),
+        body: JSON.stringify({ name: name.trim(), company: company.trim(), message: message.trim(), email: userEmail }),
       });
     } catch {}
     setContactState("sent");
