@@ -41,3 +41,33 @@ id = "8hprNKPCWBHq8q-t37nhp"
 uri = "file://artifacts/multi-ai/assets/images/splash-icon.png"
 type = "image"
 title = "Splash Screen (1024×1024)"
+
+[[outputs]]
+id = "F6wbTDBoaJ-4ykuFuBMCd"
+uri = "file://artifacts/multi-ai/store/screenshots/01_home.jpg"
+type = "image"
+title = "Screenshot 1 — Home (History)"
+
+[[outputs]]
+id = "zuahrbHwdzZPQllvwtnab"
+uri = "file://artifacts/multi-ai/store/screenshots/02_responding.jpg"
+type = "image"
+title = "Screenshot 2 — All AI Models Responding"
+
+[[outputs]]
+id = "vjnA4Mc3XJ-cPDiFa-t9D"
+uri = "file://artifacts/multi-ai/store/screenshots/03_synthesis.jpg"
+type = "image"
+title = "Screenshot 3 — Synthesis"
+
+[[outputs]]
+id = "qEMUeOgoz5YAgKySsS-Xl"
+uri = "file://artifacts/multi-ai/store/screenshots/04_thread.jpg"
+type = "image"
+title = "Screenshot 4 — Conversation Thread"
+
+[[outputs]]
+id = "vSxusgzJfrwUWEXaMgvD1"
+uri = "file://artifacts/multi-ai/store/screenshots/05_pricing.jpg"
+type = "image"
+title = "Screenshot 5 — Pro Upgrade"
