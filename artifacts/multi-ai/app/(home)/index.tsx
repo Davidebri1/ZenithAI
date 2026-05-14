@@ -102,18 +102,12 @@ function AiCard({ provider, state, selected, onToggleSelect, onOpen, cardWidth }
       <View style={[StyleSheet.absoluteFill, { backgroundColor: "rgba(7,7,20,0.52)" }]} />
 
       <LinearGradient
-        colors={[`${provider.color}28`, `${provider.color}00`]}
-        start={{ x: 0.5, y: 0 }}
-        end={{ x: 0.5, y: 1 }}
+        colors={[`${provider.color}22`, `${provider.color}00`]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
         style={styles.cardTop}
       >
-        <View style={[
-          styles.aiCircleOuter,
-          { borderColor: `${provider.color}80` },
-          Platform.OS === "web" ? { boxShadow: `0 0 16px ${provider.colorGlow}` } as object : {},
-        ]}>
-          <Text style={[styles.aiInitial, { color: provider.color }]}>{provider.name[0]}</Text>
-        </View>
+        <Text style={[styles.cardProviderName, { color: provider.color }]}>{provider.name}</Text>
 
         <TouchableOpacity
           onPress={(e) => { e.stopPropagation?.(); onToggleSelect(); }}
@@ -136,13 +130,6 @@ function AiCard({ provider, state, selected, onToggleSelect, onOpen, cardWidth }
       </LinearGradient>
 
       <View style={styles.cardBody}>
-        <View style={styles.cardNameRow}>
-          <Text style={[styles.cardName, { color: "#f0f0ff" }]}>{provider.name}</Text>
-          <View style={[styles.modelChip, { borderColor: `${provider.color}40` }]}>
-            <Text style={[styles.modelChipText, { color: `${provider.color}cc` }]}>{provider.model}</Text>
-          </View>
-        </View>
-
         <View style={styles.previewRow}>
           {state.streaming ? (
             <View style={styles.streamingRow}>
@@ -798,34 +785,24 @@ const styles = StyleSheet.create({
     elevation: 6,
   },
   cardTop: {
-    height: 82,
-    alignItems: "center",
+    height: 40,
     justifyContent: "center",
+    paddingHorizontal: 10,
+    paddingTop: 10,
     position: "relative",
   },
-  aiCircleOuter: {
-    width: 46, height: 46, borderRadius: 23,
-    borderWidth: 1.5,
-    alignItems: "center", justifyContent: "center",
-    backgroundColor: "rgba(0,0,0,0.3)",
+  cardProviderName: {
+    fontSize: 13, fontFamily: "Inter_700Bold", letterSpacing: 0.2,
   },
-  aiInitial: { fontSize: 20, fontFamily: "Inter_700Bold" },
   checkbox: {
     position: "absolute", top: 10, right: 10,
     width: 20, height: 20, borderRadius: 10, borderWidth: 1.5,
     alignItems: "center", justifyContent: "center",
   },
-  unreadDot: { position: "absolute", bottom: 10, right: 10, width: 8, height: 8, borderRadius: 4 },
+  unreadDot: { position: "absolute", bottom: 6, right: 10, width: 7, height: 7, borderRadius: 4 },
 
-  cardBody: { padding: 10, gap: 6 },
-  cardNameRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 6 },
-  cardName: { fontSize: 14, fontFamily: "Inter_600SemiBold" },
-  modelChip: {
-    paddingHorizontal: 6, paddingVertical: 2,
-    borderRadius: 6, borderWidth: 1,
-  },
-  modelChipText: { fontSize: 9, fontFamily: "Inter_500Medium", letterSpacing: 0.3 },
-  previewRow: { minHeight: 40 },
+  cardBody: { padding: 10, paddingTop: 6, gap: 4 },
+  previewRow: { minHeight: 54 },
   streamingRow: { flexDirection: "row", alignItems: "flex-start", gap: 6 },
   previewText: { fontSize: 12, fontFamily: "Inter_400Regular", lineHeight: 18 },
 
@@ -837,12 +814,12 @@ const styles = StyleSheet.create({
     overflow: "hidden",
   },
   synthesizeBtnIcon: { fontSize: 20, color: SYNTHESIS_COLOR },
-  synthesizeBtnContent: { flex: 1, gap: 2 },
+  synthesizeBtnContent: { flex: 1, gap: 2, alignItems: "center" },
   synthesizeBtnTitle: {
     fontSize: 15, fontFamily: "Inter_700Bold",
-    color: SYNTHESIS_COLOR, letterSpacing: 0.3,
+    color: SYNTHESIS_COLOR, letterSpacing: 0.3, textAlign: "center",
   },
-  synthesizeBtnSub: { fontSize: 11, fontFamily: "Inter_400Regular", color: "rgba(255,200,0,0.5)" },
+  synthesizeBtnSub: { fontSize: 11, fontFamily: "Inter_400Regular", color: "rgba(255,200,0,0.5)", textAlign: "center" },
 
   synthCard: {
     borderRadius: 22,
