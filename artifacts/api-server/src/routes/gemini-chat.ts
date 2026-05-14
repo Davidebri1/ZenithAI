@@ -54,11 +54,14 @@ router.post("/gemini/conversations/:id/messages", async (req, res) => {
       .where(eq(messages.conversationId, id))
       .orderBy(asc(messages.createdAt));
 
+    // Collapse consecutive same-role messages (keeps last of each run).
+    const normalized = existingMessages.filter((m, i, arr) => i === arr.length - 1 || arr[i + 1].role !== m.role);
+
     type GeminiPart = { text: string } | { inlineData: { mimeType: string; data: string } };
     type GeminiMsg = { role: "user" | "model"; parts: GeminiPart[] };
 
-    const chatMessages: GeminiMsg[] = existingMessages.map((m, idx) => {
-      const isLastUser = idx === existingMessages.length - 1 && m.role === "user" && imageBase64;
+    const chatMessages: GeminiMsg[] = normalized.map((m, idx) => {
+      const isLastUser = idx === normalized.length - 1 && m.role === "user" && imageBase64;
       const role = m.role === "assistant" ? ("model" as const) : ("user" as const);
       if (isLastUser) {
         const parts: GeminiPart[] = [

@@ -17,7 +17,7 @@ import {
 import { LinearGradient } from "expo-linear-gradient";
 import { BlurView } from "expo-blur";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useLocalSearchParams, useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter, useFocusEffect } from "expo-router";
 import { Feather } from "@expo/vector-icons";
 import { authFetch } from "@/constants/apiAuth";
 import * as Haptics from "expo-haptics";
@@ -69,14 +69,13 @@ export default function ThreadScreen() {
   const [showScrollBtn, setShowScrollBtn] = useState(false);
 
   const scrollRef = useRef<ScrollView>(null);
-  const hasLoaded = useRef(false);
   const activeReader = useRef<ReadableStreamDefaultReader<Uint8Array> | null>(null);
 
-  useEffect(() => {
-    if (hasLoaded.current) return;
-    hasLoaded.current = true;
-    loadHistory();
-  }, []);
+  useFocusEffect(
+    useCallback(() => {
+      if (!streaming) loadHistory();
+    }, [streaming])
+  );
 
   useEffect(() => {
     return () => {

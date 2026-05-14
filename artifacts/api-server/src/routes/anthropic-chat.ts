@@ -54,6 +54,10 @@ router.post("/anthropic/conversations/:id/messages", async (req, res) => {
       .where(eq(messages.conversationId, id))
       .orderBy(asc(messages.createdAt));
 
+    // Collapse consecutive same-role messages (keeps last of each run).
+    // Anthropic strictly requires alternating user/assistant turns.
+    const normalized = existingMessages.filter((m, i, arr) => i === arr.length - 1 || arr[i + 1].role !== m.role);
+
     type AnthropicMediaType = "image/jpeg" | "image/png" | "image/gif" | "image/webp";
 
     type AnthropicContent =
@@ -64,8 +68,8 @@ router.post("/anthropic/conversations/:id/messages", async (req, res) => {
         >;
 
     const chatMessages: Array<{ role: "user" | "assistant"; content: AnthropicContent }> =
-      existingMessages.map((m, idx) => {
-        const isLastUser = idx === existingMessages.length - 1 && m.role === "user" && imageBase64;
+      normalized.map((m, idx) => {
+        const isLastUser = idx === normalized.length - 1 && m.role === "user" && imageBase64;
         if (isLastUser) {
           return {
             role: "user" as const,

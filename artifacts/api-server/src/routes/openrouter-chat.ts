@@ -72,13 +72,16 @@ router.post("/:provider/conversations/:id/messages", async (req, res) => {
       .where(eq(messages.conversationId, id))
       .orderBy(asc(messages.createdAt));
 
+    // Collapse consecutive same-role messages (keeps last of each run).
+    const normalized = existingMessages.filter((m, i, arr) => i === arr.length - 1 || arr[i + 1].role !== m.role);
+
     type ChatMsg = {
       role: "user" | "assistant";
       content: string | Array<{ type: string; text?: string; image_url?: { url: string } }>;
     };
 
-    const chatMessages: ChatMsg[] = existingMessages.map((m, idx) => {
-      const isLastUser = idx === existingMessages.length - 1 && m.role === "user" && imageBase64;
+    const chatMessages: ChatMsg[] = normalized.map((m, idx) => {
+      const isLastUser = idx === normalized.length - 1 && m.role === "user" && imageBase64;
       if (isLastUser) {
         return {
           role: "user",
