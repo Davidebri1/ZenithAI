@@ -7,14 +7,18 @@ import geminiChatRouter from "./gemini-chat";
 import openrouterChatRouter from "./openrouter-chat";
 import synthesizeRouter from "./synthesize";
 import searchRouter from "./search";
+import stripeRouter from "./stripe";
 import { requireAuth } from "../middlewares/requireAuth";
 
 const router: IRouter = Router();
 
 router.use(healthRouter);
 
+// Stripe routes (authenticated)
 router.use(requireAuth);
+router.use(stripeRouter);
 
+// All other authenticated routes
 router.use(promptRouter);
 router.use(openaiChatRouter);
 router.use(anthropicChatRouter);

@@ -27,6 +27,8 @@ import * as ImagePicker from "expo-image-picker";
 import { authFetch } from "@/constants/apiAuth";
 
 import { useColors } from "@/hooks/useColors";
+import { useQuota } from "@/hooks/useQuota";
+import { QuotaBar } from "@/components/QuotaBar";
 import { AI_PROVIDERS, BASE_URL, SYNTHESIS_COLOR, SYNTHESIS_COLOR_GLOW, type AiProvider } from "@/constants/aiConfig";
 import { saveSession, CONV_IDS_KEY } from "@/constants/sessions";
 
@@ -227,6 +229,7 @@ export default function HomeScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const cardWidth = (SCREEN_WIDTH - 32 - CARD_GAP) / 2;
+  const { quota, refresh: refreshQuota } = useQuota();
 
   const [cards, setCards] = useState<Record<string, CardState>>(() =>
     Object.fromEntries(AI_PROVIDERS.map((p) => [p.key, makeDefaultCard()]))
@@ -407,6 +410,19 @@ export default function HomeScreen() {
     const text = message.trim();
     if ((!text && !attachment) || selected.size === 0) return;
     if ([...selected].some((k) => cards[k].streaming)) return;
+
+    if (quota.plan === "free" && quota.remaining === 0) {
+      Alert.alert(
+        "No prompts remaining",
+        "You've used all your free prompts. Upgrade to Pro for unlimited access.",
+        [
+          { text: "Not now", style: "cancel" },
+          { text: "Upgrade", onPress: () => router.push("/(home)/upgrade") },
+        ]
+      );
+      return;
+    }
+
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     inputRef.current?.blur();
     setSynthesis({ status: "idle", text: "", expanded: false });
@@ -421,8 +437,20 @@ export default function HomeScreen() {
       [...selected].forEach((key) => {
         if (ids[key]) streamForProvider(key, ids[key], text, pendingAttachment?.base64, pendingAttachment?.mimeType);
       });
-    } catch {
-      Alert.alert("Connection failed", "Could not reach the server.", [{ text: "OK" }]);
+      refreshQuota();
+    } catch (err: any) {
+      if (err?.status === 402 || (typeof err?.message === "string" && err.message.includes("402"))) {
+        Alert.alert(
+          "Quota exceeded",
+          "You've used all your free prompts.",
+          [
+            { text: "Cancel", style: "cancel" },
+            { text: "Upgrade to Pro", onPress: () => router.push("/(home)/upgrade") },
+          ]
+        );
+      } else {
+        Alert.alert("Connection failed", "Could not reach the server.", [{ text: "OK" }]);
+      }
     }
   };
 
@@ -565,6 +593,8 @@ export default function HomeScreen() {
             </TouchableOpacity>
           </View>
         </View>
+
+        <QuotaBar quota={quota} />
 
         <FlatList
           data={rows}
