@@ -1,29 +1,7 @@
-async function getResendApiKey(): Promise<string> {
-  const hostname = process.env.REPLIT_CONNECTORS_HOSTNAME;
-  const xReplitToken = process.env.REPL_IDENTITY
-    ? "repl " + process.env.REPL_IDENTITY
-    : process.env.WEB_REPL_RENEWAL
-      ? "depl " + process.env.WEB_REPL_RENEWAL
-      : null;
-
-  if (!hostname || !xReplitToken) throw new Error("Resend integration not configured");
-
-  const isProduction = process.env.REPLIT_DEPLOYMENT === "1";
-  const url = new URL(`https://${hostname}/api/v2/connection`);
-  url.searchParams.set("include_secrets", "true");
-  url.searchParams.set("connector_names", "resend");
-  url.searchParams.set("environment", isProduction ? "production" : "development");
-
-  const resp = await fetch(url.toString(), {
-    headers: { Accept: "application/json", "X-Replit-Token": xReplitToken },
-    signal: AbortSignal.timeout(8000),
-  });
-
-  if (!resp.ok) throw new Error(`Resend credentials fetch failed: ${resp.status}`);
-  const data = await resp.json();
-  const apiKey = data.items?.[0]?.settings?.api_key;
-  if (!apiKey) throw new Error("Resend api_key not found");
-  return apiKey;
+function getResendApiKey(): string {
+  const key = process.env.RESEND_API_KEY;
+  if (!key) throw new Error("RESEND_API_KEY not set");
+  return key;
 }
 
 export async function sendEmail(opts: {
@@ -32,7 +10,7 @@ export async function sendEmail(opts: {
   html: string;
 }): Promise<void> {
   try {
-    const apiKey = await getResendApiKey();
+    const apiKey = getResendApiKey();
     const resp = await fetch("https://api.resend.com/emails", {
       method: "POST",
       headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
