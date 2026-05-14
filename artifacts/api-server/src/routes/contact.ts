@@ -3,7 +3,7 @@ import { getAuth } from "@clerk/express";
 import { db } from "@workspace/db";
 import { inquiries } from "@workspace/db";
 import { logger } from "../lib/logger";
-import { sendEmail, contactAutoReplyEmail } from "../emailClient";
+import { sendEmail, contactAutoReplyEmail, contactNotifyEmail } from "../emailClient";
 
 const router = Router();
 
@@ -32,12 +32,13 @@ router.post("/contact", async (req, res) => {
 
     logger.info({ userId, company }, "Enterprise inquiry received");
 
-    // Send auto-reply if we have their email
+    const submittedAt = new Date().toLocaleString("en-US", {
+      month: "long", day: "numeric", year: "numeric",
+      hour: "numeric", minute: "2-digit", timeZoneName: "short",
+    });
+
+    // Auto-reply to the customer
     if (email?.trim()) {
-      const submittedAt = new Date().toLocaleString("en-US", {
-        month: "long", day: "numeric", year: "numeric",
-        hour: "numeric", minute: "2-digit", timeZoneName: "short",
-      });
       const tpl = contactAutoReplyEmail({
         name: name.trim(),
         company: company?.trim() ?? null,
@@ -46,6 +47,17 @@ router.post("/contact", async (req, res) => {
       });
       sendEmail({ to: email.trim(), ...tpl });
     }
+
+    // Notify the owner
+    const ownerEmail = process.env.OWNER_EMAIL ?? "dreamtopllc@gmail.com";
+    const notifyTpl = contactNotifyEmail({
+      name: name.trim(),
+      company: company?.trim() ?? null,
+      message: message.trim(),
+      userEmail: email?.trim(),
+      submittedAt,
+    });
+    sendEmail({ to: ownerEmail, ...notifyTpl });
 
     res.json({ ok: true });
   } catch (err) {

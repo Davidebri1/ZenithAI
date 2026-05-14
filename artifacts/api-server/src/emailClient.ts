@@ -57,6 +57,40 @@ function base(title: string, body: string): string {
 </html>`;
 }
 
+export function contactNotifyEmail(opts: {
+  name: string;
+  company?: string | null;
+  message: string;
+  userEmail?: string;
+  submittedAt: string;
+}): { subject: string; html: string } {
+  const companyLine = opts.company
+    ? `<p style="margin:0 0 6px;color:rgba(240,240,255,0.5);font-size:14px;"><strong style="color:rgba(240,240,255,0.7);">Company:</strong> ${opts.company}</p>`
+    : "";
+  const emailLine = opts.userEmail
+    ? `<p style="margin:0 0 6px;color:rgba(240,240,255,0.5);font-size:14px;"><strong style="color:rgba(240,240,255,0.7);">Email:</strong> ${opts.userEmail}</p>`
+    : "";
+
+  return {
+    subject: `New enterprise inquiry from ${opts.name}`,
+    html: base(`New inquiry — ${opts.name}`, `
+      <h1 style="margin:0 0 10px;color:#f59e0b;font-size:20px;font-weight:800;">New enterprise inquiry</h1>
+      <p style="margin:0 0 20px;color:rgba(240,240,255,0.45);font-size:13px;">Submitted ${opts.submittedAt}</p>
+
+      <div style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);border-radius:12px;padding:20px;margin-bottom:20px;">
+        <p style="margin:0 0 6px;color:rgba(240,240,255,0.5);font-size:14px;"><strong style="color:rgba(240,240,255,0.7);">Name:</strong> ${opts.name}</p>
+        ${companyLine}
+        ${emailLine}
+      </div>
+
+      <div style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);border-radius:12px;padding:20px;">
+        <p style="margin:0 0 10px;color:rgba(240,240,255,0.35);font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;">Message</p>
+        <p style="margin:0;color:rgba(240,240,255,0.8);font-size:14px;line-height:1.7;white-space:pre-wrap;">${opts.message.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</p>
+      </div>
+    `),
+  };
+}
+
 export function contactAutoReplyEmail(opts: {
   name: string;
   company?: string | null;
