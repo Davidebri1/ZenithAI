@@ -21,7 +21,7 @@ import { fetch } from "expo/fetch";
 import { AI_PROVIDERS, BASE_URL } from "@/constants/aiConfig";
 import { CONV_IDS_KEY } from "@/constants/sessions";
 
-const BG = require("../assets/images/bg-brick.png");
+const BG = require("../assets/images/bg-alley.png");
 const { width: SW } = Dimensions.get("window");
 const PANEL_GAP = 8;
 const PANEL_W = (SW - 32 - PANEL_GAP) / 2;

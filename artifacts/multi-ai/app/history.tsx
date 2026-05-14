@@ -27,7 +27,7 @@ import {
   type Session,
 } from "@/constants/sessions";
 
-const BG = require("../assets/images/bg-brick.png");
+const BG = require("../assets/images/bg-alley.png");
 
 export default function HistoryScreen() {
   const c = useColors();

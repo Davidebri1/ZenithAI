@@ -31,7 +31,7 @@ import { AI_PROVIDERS, BASE_URL, SYNTHESIS_COLOR, SYNTHESIS_COLOR_GLOW, type AiP
 import { saveSession, CONV_IDS_KEY } from "@/constants/sessions";
 
 const CARD_GAP = 10;
-const BG = require("../assets/images/bg-brick.png");
+const BG = require("../assets/images/bg-alley.png");
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
 interface ConvIds { [key: string]: number; }
@@ -525,8 +525,8 @@ export default function HomeScreen() {
   return (
     <ImageBackground source={BG} style={styles.bg} resizeMode="cover">
       <LinearGradient
-        colors={["rgba(5,3,8,0.72)", "rgba(7,7,13,0.18)", "rgba(7,7,13,0.45)", "rgba(7,7,13,0.88)", "rgba(7,7,13,0.98)"]}
-        locations={[0, 0.12, 0.45, 0.78, 1]}
+        colors={["rgba(7,7,13,0.25)", "rgba(7,7,13,0.55)", "rgba(7,7,13,0.88)", "rgba(7,7,13,0.97)"]}
+        locations={[0, 0.35, 0.68, 1]}
         style={StyleSheet.absoluteFill}
         pointerEvents="none"
       />
