@@ -29,7 +29,7 @@ import { authFetch } from "@/constants/apiAuth";
 import { useColors } from "@/hooks/useColors";
 import { useQuota } from "@/hooks/useQuota";
 import { QuotaBar } from "@/components/QuotaBar";
-import { AI_PROVIDERS, BASE_URL, SYNTHESIS_COLOR, type AiProvider } from "@/constants/aiConfig";
+import { AI_PROVIDERS, BASE_URL, SYNTHESIS_COLOR, SYNTHESIS_COLOR_GLOW, type AiProvider } from "@/constants/aiConfig";
 import { saveSession, CONV_IDS_KEY } from "@/constants/sessions";
 
 const CARD_GAP = 10;
@@ -63,6 +63,11 @@ function makeDefaultCard(): CardState {
   return { conversationId: null, lastMessage: "", lastRole: "user", streaming: false, streamingText: "", hasUnread: false };
 }
 
+function cardGlowStyle(color: string, selected: boolean) {
+  if (!selected || Platform.OS !== "web") return {};
+  return { boxShadow: `0 0 0 1.5px ${color}, 0 0 28px ${color}55` } as object;
+}
+
 
 interface AiCardProps {
   provider: AiProvider;
@@ -89,6 +94,7 @@ function AiCard({ provider, state, selected, onToggleSelect, onOpen, cardWidth }
           borderWidth: 1,
           opacity: pressed ? 0.85 : 1,
           overflow: "hidden",
+          ...cardGlowStyle(provider.color, selected),
         },
       ]}
     >
@@ -104,6 +110,7 @@ function AiCard({ provider, state, selected, onToggleSelect, onOpen, cardWidth }
         <View style={[
           styles.aiCircleOuter,
           { borderColor: `${provider.color}80` },
+          Platform.OS === "web" ? { boxShadow: `0 0 16px ${provider.colorGlow}` } as object : {},
         ]}>
           <Text style={[styles.aiInitial, { color: provider.color }]}>{provider.name[0]}</Text>
         </View>
@@ -508,52 +515,14 @@ export default function HomeScreen() {
   const selectedProviders = AI_PROVIDERS.filter((p) => selected.has(p.key));
   const canSend = (message.trim().length > 0 || !!attachment) && selected.size > 0 && !anyStreaming;
   const canSynthesize = !anyStreaming && AI_PROVIDERS.filter((p) => selected.has(p.key) && cards[p.key].lastRole === "assistant" && cards[p.key].lastMessage.length > 10).length >= 2;
+  const hasSomeResponse = AI_PROVIDERS.some((p) => cards[p.key].lastRole === "assistant" && cards[p.key].lastMessage.length > 0);
   const topPad = Platform.OS === "web" ? 52 : insets.top;
   const bottomPad = Platform.OS === "web" ? 24 : insets.bottom;
 
   const rows: (AiProvider | null)[][] = [];
   for (let i = 0; i < AI_PROVIDERS.length; i += 2) rows.push([AI_PROVIDERS[i], AI_PROVIDERS[i + 1] ?? null]);
 
-  const listFooter = (
-    <View style={{ paddingBottom: 8 }}>
-      {canSynthesize && (
-        <TouchableOpacity
-          onPress={synthesis.expanded ? () => setSynthesis((s) => ({ ...s, expanded: !s.expanded })) : handleSynthesize}
-          style={[
-            styles.synthesizeBtn,
-            synthesis.expanded && { borderColor: `${SYNTHESIS_COLOR}70` },
-          ]}
-          activeOpacity={0.75}
-        >
-          <BlurView intensity={22} tint="dark" style={StyleSheet.absoluteFill} pointerEvents="none" />
-          <LinearGradient
-            colors={[`${SYNTHESIS_COLOR}20`, `${SYNTHESIS_COLOR}05`]}
-            style={StyleSheet.absoluteFill}
-            pointerEvents="none"
-          />
-          <Text style={styles.synthesizeBtnIcon}>✦</Text>
-          <View style={styles.synthesizeBtnContent}>
-            <Text style={[styles.synthesizeBtnTitle, Platform.OS === "web" ? { textShadow: `0 0 20px ${SYNTHESIS_COLOR}` } as object : {}]}>
-              {synthesis.status === "loading" ? "Synthesizing…" : "Synthesize"}
-            </Text>
-            <Text style={styles.synthesizeBtnSub}>
-              {synthesis.expanded && synthesis.status !== "idle"
-                ? "Tap to collapse"
-                : synthesis.status !== "idle"
-                  ? "Tap to reveal consensus"
-                  : `Consensus across ${AI_PROVIDERS.filter((p) => selected.has(p.key) && cards[p.key].lastRole === "assistant").length} AI responses`}
-            </Text>
-          </View>
-          {synthesis.status === "loading" ? (
-            <ActivityIndicator size="small" color={SYNTHESIS_COLOR} />
-          ) : (
-            <Feather name={synthesis.expanded ? "chevron-up" : "chevron-down"} size={16} color={`${SYNTHESIS_COLOR}90`} />
-          )}
-        </TouchableOpacity>
-      )}
-      {synthesis.expanded && <SynthesisCard synthesis={synthesis} onClose={() => setSynthesis((s) => ({ ...s, expanded: false }))} stale={anyStreaming && synthesis.status === "done"} />}
-    </View>
-  );
+  const listFooter = <View style={{ paddingBottom: 4 }} />;
 
   return (
     <ImageBackground source={BG} style={styles.bg} resizeMode="cover">
@@ -592,6 +561,50 @@ export default function HomeScreen() {
         </View>
 
         <QuotaBar quota={quota} />
+
+        {hasSomeResponse && (
+          <View style={styles.synthesisTop}>
+            {synthesis.expanded && (
+              <SynthesisCard synthesis={synthesis} onClose={() => setSynthesis((s) => ({ ...s, expanded: false }))} stale={anyStreaming && synthesis.status === "done"} />
+            )}
+            <TouchableOpacity
+              onPress={synthesis.expanded ? () => setSynthesis((s) => ({ ...s, expanded: !s.expanded })) : handleSynthesize}
+              disabled={!canSynthesize && synthesis.status === "idle"}
+              style={[
+                styles.synthesizeBtn,
+                synthesis.expanded && { borderColor: `${SYNTHESIS_COLOR}70` },
+                !canSynthesize && synthesis.status === "idle" && { opacity: 0.45 },
+                Platform.OS === "web" ? { boxShadow: `0 0 18px ${SYNTHESIS_COLOR_GLOW}` } as object : {},
+              ]}
+              activeOpacity={0.75}
+            >
+              <BlurView intensity={22} tint="dark" style={StyleSheet.absoluteFill} pointerEvents="none" />
+              <LinearGradient
+                colors={[`${SYNTHESIS_COLOR}20`, `${SYNTHESIS_COLOR}05`]}
+                style={StyleSheet.absoluteFill}
+                pointerEvents="none"
+              />
+              <Text style={styles.synthesizeBtnIcon}>✦</Text>
+              <View style={styles.synthesizeBtnContent}>
+                <Text style={[styles.synthesizeBtnTitle, Platform.OS === "web" ? { textShadow: `0 0 20px ${SYNTHESIS_COLOR}` } as object : {}]}>
+                  {synthesis.status === "loading" ? "Synthesizing…" : "Synthesize"}
+                </Text>
+                <Text style={styles.synthesizeBtnSub}>
+                  {synthesis.expanded && synthesis.status !== "idle"
+                    ? "Tap to collapse"
+                    : synthesis.status !== "idle"
+                      ? "Tap to reveal consensus"
+                      : `Consensus across ${AI_PROVIDERS.filter((p) => selected.has(p.key) && cards[p.key].lastRole === "assistant").length} AI responses`}
+                </Text>
+              </View>
+              {synthesis.status === "loading" ? (
+                <ActivityIndicator size="small" color={SYNTHESIS_COLOR} />
+              ) : (
+                <Feather name={synthesis.expanded ? "chevron-up" : "chevron-down"} size={16} color={`${SYNTHESIS_COLOR}90`} />
+              )}
+            </TouchableOpacity>
+          </View>
+        )}
 
         <FlatList
           data={rows}
@@ -644,6 +657,7 @@ export default function HomeScreen() {
                     backgroundColor: selected.has(p.key) ? `${p.color}18` : "rgba(255,255,255,0.05)",
                     borderColor: selected.has(p.key) ? `${p.color}70` : "rgba(255,255,255,0.1)",
                   },
+                  selected.has(p.key) && Platform.OS === "web" ? { boxShadow: `0 0 10px ${p.colorGlow}` } as object : {},
                 ]}
                 activeOpacity={0.7}
               >
@@ -692,6 +706,7 @@ export default function HomeScreen() {
                 style={[
                   styles.sendBtn,
                   { backgroundColor: canSend ? AI_PROVIDERS[0].color : "rgba(255,255,255,0.08)" },
+                  canSend && Platform.OS === "web" ? { boxShadow: `0 0 14px ${AI_PROVIDERS[0].colorGlow}` } as object : {},
                 ]}
                 activeOpacity={0.7}
               >
@@ -706,7 +721,7 @@ export default function HomeScreen() {
 }
 
 const styles = StyleSheet.create({
-  bg: { flex: 1 },
+  bg: { flex: 1, ...(Platform.OS === "web" ? { height: "100dvh" } as object : {}) },
   container: { flex: 1 },
 
   header: {
@@ -776,6 +791,11 @@ const styles = StyleSheet.create({
 
   card: {
     borderRadius: 20,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.35,
+    shadowRadius: 10,
+    elevation: 6,
   },
   cardTop: {
     height: 82,
@@ -826,7 +846,12 @@ const styles = StyleSheet.create({
 
   synthCard: {
     borderRadius: 22,
-    marginTop: 8,
+    marginTop: 4,
+  },
+  synthesisTop: {
+    paddingHorizontal: 16,
+    paddingBottom: 6,
+    gap: 4,
   },
   synthHeader: {
     flexDirection: "row", alignItems: "center", justifyContent: "space-between",

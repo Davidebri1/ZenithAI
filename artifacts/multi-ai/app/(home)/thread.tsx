@@ -275,6 +275,7 @@ export default function ThreadScreen() {
             <View style={[
               styles.headerBadge,
               { borderColor: `${provider.color}50`, backgroundColor: `${provider.color}15` },
+              Platform.OS === "web" ? { boxShadow: `0 0 16px ${provider.colorGlow}` } as object : {},
             ]}>
               <View style={[styles.headerDot, { backgroundColor: provider.color }]} />
               <Text style={[styles.headerName, { color: provider.color }]}>{provider.name}</Text>
@@ -303,6 +304,7 @@ export default function ThreadScreen() {
                 <View style={[
                   styles.emptyRing,
                   { borderColor: `${provider.color}50` },
+                  Platform.OS === "web" ? { boxShadow: `0 0 32px ${provider.colorGlow}` } as object : {},
                 ]}>
                   <Text style={[styles.emptyInitial, { color: provider.color }]}>{provider.name[0]}</Text>
                 </View>
@@ -376,6 +378,7 @@ export default function ThreadScreen() {
               style={[
                 styles.scrollToBottom,
                 { borderColor: `${provider.color}40` },
+                Platform.OS === "web" ? { boxShadow: `0 0 12px ${provider.colorGlow}` } as object : {},
               ]}
               activeOpacity={0.8}
             >
@@ -426,6 +429,7 @@ export default function ThreadScreen() {
                 style={[
                   styles.sendBtn,
                   { backgroundColor: canSend ? provider.color : "rgba(255,255,255,0.08)" },
+                  canSend && Platform.OS === "web" ? { boxShadow: `0 0 14px ${provider.colorGlow}` } as object : {},
                 ]}
                 activeOpacity={0.7}
               >
