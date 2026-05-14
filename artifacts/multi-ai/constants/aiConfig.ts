@@ -7,6 +7,7 @@ export interface AiProvider {
   colorLight: string;
   colorDark: string;
   colorGlow: string;
+  tagline: string;
 }
 
 export const AI_PROVIDERS: AiProvider[] = [
@@ -19,6 +20,7 @@ export const AI_PROVIDERS: AiProvider[] = [
     colorLight: "#00e5b012",
     colorDark: "#00c99a",
     colorGlow: "#00e5b035",
+    tagline: "Creative & versatile",
   },
   {
     key: "anthropic",
@@ -29,6 +31,7 @@ export const AI_PROVIDERS: AiProvider[] = [
     colorLight: "#ff6b4712",
     colorDark: "#e85530",
     colorGlow: "#ff6b4735",
+    tagline: "Deep reasoning & nuance",
   },
   {
     key: "gemini",
@@ -39,6 +42,7 @@ export const AI_PROVIDERS: AiProvider[] = [
     colorLight: "#7c5fff12",
     colorDark: "#6644e8",
     colorGlow: "#7c5fff35",
+    tagline: "Multimodal & fast",
   },
   {
     key: "grok",
@@ -49,6 +53,7 @@ export const AI_PROVIDERS: AiProvider[] = [
     colorLight: "#00d4ff12",
     colorDark: "#00b8e0",
     colorGlow: "#00d4ff35",
+    tagline: "Real-time & unfiltered",
   },
   {
     key: "deepseek",
@@ -59,6 +64,7 @@ export const AI_PROVIDERS: AiProvider[] = [
     colorLight: "#4d6bfe12",
     colorDark: "#3a55e8",
     colorGlow: "#4d6bfe35",
+    tagline: "Code & logic specialist",
   },
   {
     key: "mistral",
@@ -69,6 +75,7 @@ export const AI_PROVIDERS: AiProvider[] = [
     colorLight: "#ffc40012",
     colorDark: "#e0aa00",
     colorGlow: "#ffc40035",
+    tagline: "Efficient & precise",
   },
   {
     key: "llama",
@@ -79,6 +86,7 @@ export const AI_PROVIDERS: AiProvider[] = [
     colorLight: "#e040fb12",
     colorDark: "#cc22ee",
     colorGlow: "#e040fb35",
+    tagline: "Open-source powerhouse",
   },
   {
     key: "qwen",
@@ -89,6 +97,7 @@ export const AI_PROVIDERS: AiProvider[] = [
     colorLight: "#69ff4712",
     colorDark: "#4ae828",
     colorGlow: "#69ff4735",
+    tagline: "Multilingual & broad",
   },
 ];
 

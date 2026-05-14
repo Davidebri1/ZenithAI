@@ -14,6 +14,7 @@ import {
   Image,
   ImageBackground,
   ScrollView,
+  Animated,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { BlurView } from "expo-blur";
@@ -88,7 +89,6 @@ const SYNTH_MD: Record<string, object> = {
   list_item: { marginBottom: 2 },
 };
 
-
 interface AiCardProps {
   provider: AiProvider;
   state: CardState;
@@ -101,7 +101,7 @@ interface AiCardProps {
 function AiCard({ provider, state, selected, onToggleSelect, onOpen, cardWidth }: AiCardProps) {
   const previewText = state.streaming
     ? state.streamingText || "Thinking…"
-    : state.lastMessage || "Start a conversation";
+    : state.lastMessage || provider.tagline;
 
   return (
     <Pressable
@@ -128,7 +128,6 @@ function AiCard({ provider, state, selected, onToggleSelect, onOpen, cardWidth }
         style={styles.cardTop}
       >
         <Text style={[styles.cardProviderName, { color: provider.color }]}>{provider.name}</Text>
-
         <TouchableOpacity
           onPress={(e) => { e.stopPropagation?.(); onToggleSelect(); }}
           hitSlop={{ top: 8, right: 8, bottom: 8, left: 8 }}
@@ -160,7 +159,7 @@ function AiCard({ provider, state, selected, onToggleSelect, onOpen, cardWidth }
                 {
                   color: state.lastMessage
                     ? state.lastRole === "assistant" ? "rgba(240,240,255,0.9)" : "rgba(240,240,255,0.55)"
-                    : "rgba(240,240,255,0.4)",
+                    : `${provider.color}50`,
                 },
               ]}
               numberOfLines={3}
@@ -186,7 +185,6 @@ function SynthesisCard({ synthesis, onClose, stale }: { synthesis: SynthesisStat
         end={{ x: 1, y: 1 }}
         style={StyleSheet.absoluteFill}
       />
-
       <View style={styles.synthHeader}>
         <LinearGradient
           colors={stale ? ["rgba(255,255,255,0.25)", "rgba(255,255,255,0.15)", "rgba(255,255,255,0.25)"] : [SYNTHESIS_COLOR, "#ff8c00", SYNTHESIS_COLOR]}
@@ -200,14 +198,12 @@ function SynthesisCard({ synthesis, onClose, stale }: { synthesis: SynthesisStat
           <Feather name="x" size={16} color={`${SYNTHESIS_COLOR}80`} />
         </TouchableOpacity>
       </View>
-
       <View style={styles.synthSubtitleRow}>
         <Feather name="git-merge" size={11} color={stale ? "rgba(255,255,255,0.3)" : `${SYNTHESIS_COLOR}70`} />
         <Text style={[styles.synthSubtitle, stale && { color: "rgba(255,255,255,0.3)" }]}>
           {stale ? "Previous round — new responses loading…" : "Consensus across all AI responses"}
         </Text>
       </View>
-
       {synthesis.status === "loading" && synthesis.text.length === 0 ? (
         <View style={styles.synthLoading}>
           <ActivityIndicator size="small" color={SYNTHESIS_COLOR} />
@@ -241,6 +237,28 @@ export default function HomeScreen() {
   const [convIds, setConvIds] = useState<ConvIds>({});
   const [attachment, setAttachment] = useState<Attachment | null>(null);
   const [synthesis, setSynthesis] = useState<SynthesisState>({ status: "idle", text: "", expanded: false });
+
+  // Ambient city-glow pulse — slow neon breath cycling through provider colors
+  const glowPulse = useRef(new Animated.Value(0.4)).current;
+  // Synthesis button breathing — pulses when ready
+  const synthBreath = useRef(new Animated.Value(1)).current;
+
+  useEffect(() => {
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(glowPulse, { toValue: 1, duration: 4000, useNativeDriver: true }),
+        Animated.timing(glowPulse, { toValue: 0.25, duration: 4800, useNativeDriver: true }),
+        Animated.timing(glowPulse, { toValue: 0.7, duration: 3200, useNativeDriver: true }),
+        Animated.timing(glowPulse, { toValue: 0.15, duration: 5000, useNativeDriver: true }),
+      ])
+    ).start();
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(synthBreath, { toValue: 1.02, duration: 2200, useNativeDriver: true }),
+        Animated.timing(synthBreath, { toValue: 0.98, duration: 2000, useNativeDriver: true }),
+      ])
+    ).start();
+  }, []);
 
   const inputRef = useRef<TextInput>(null);
   const activeReaders = useRef<Map<string, ReadableStreamDefaultReader<Uint8Array>>>(new Map());
@@ -353,7 +371,6 @@ export default function HomeScreen() {
   const handleSynthesize = useCallback(async () => {
     if (synthesis.status === "loading") return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-
     const readyProviders = AI_PROVIDERS.filter(
       (p) => selected.has(p.key) && cards[p.key].lastRole === "assistant" && cards[p.key].lastMessage.length > 10
     );
@@ -361,9 +378,7 @@ export default function HomeScreen() {
       Alert.alert("Not enough responses", "Send a prompt to at least 2 AI models first.", [{ text: "OK" }]);
       return;
     }
-
     setSynthesis({ status: "loading", text: "", expanded: true });
-
     try {
       const responses = readyProviders.map((p) => ({ name: p.name, content: cards[p.key].lastMessage }));
       const synthesisBody: { question: string; responses: typeof responses; imageBase64?: string; imageMimeType?: string } = {
@@ -438,7 +453,6 @@ export default function HomeScreen() {
     inputRef.current?.blur();
     if (text) lastPromptRef.current = text;
     try {
-      // Server-side quota check + increment before any streaming begins
       const trackRes = await authFetch(`${BASE_URL}/api/prompt/track`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -454,7 +468,14 @@ export default function HomeScreen() {
         );
         return;
       }
-      if (!trackRes.ok) throw new Error(`track ${trackRes.status}`);
+      if (trackRes.status === 401) {
+        Alert.alert("Sign in required", "Please sign in to send prompts.", [{ text: "OK" }]);
+        return;
+      }
+      if (!trackRes.ok) {
+        Alert.alert("Server error", `Something went wrong (${trackRes.status}). Try again.`, [{ text: "OK" }]);
+        return;
+      }
 
       const isFirstMessage = AI_PROVIDERS.every((p) => !convIds[p.key]);
       const ids = await getOrCreateConvIds();
@@ -467,8 +488,8 @@ export default function HomeScreen() {
         if (ids[key]) streamForProvider(key, ids[key], text, pendingAttachment?.base64, pendingAttachment?.mimeType);
       });
       refreshQuota();
-    } catch (err: any) {
-      Alert.alert("Connection failed", "Could not reach the server.", [{ text: "OK" }]);
+    } catch {
+      Alert.alert("Connection failed", "Could not reach the server. Check your internet connection.", [{ text: "OK" }]);
     }
   };
 
@@ -524,14 +545,14 @@ export default function HomeScreen() {
   const selectedProviders = AI_PROVIDERS.filter((p) => selected.has(p.key));
   const canSend = (message.trim().length > 0 || !!attachment) && selected.size > 0 && !anyStreaming;
   const canSynthesize = !anyStreaming && AI_PROVIDERS.filter((p) => selected.has(p.key) && cards[p.key].lastRole === "assistant" && cards[p.key].lastMessage.length > 10).length >= 2;
-  const hasSomeResponse = AI_PROVIDERS.some((p) => cards[p.key].lastRole === "assistant" && cards[p.key].lastMessage.length > 0);
   const topPad = Platform.OS === "web" ? 52 : insets.top;
   const bottomPad = Platform.OS === "web" ? 24 : insets.bottom;
 
+  const synthReady = canSynthesize || synthesis.status !== "idle";
+  const synthOpacity = synthReady ? 1 : 0.3;
+
   const rows: (AiProvider | null)[][] = [];
   for (let i = 0; i < AI_PROVIDERS.length; i += 2) rows.push([AI_PROVIDERS[i], AI_PROVIDERS[i + 1] ?? null]);
-
-  const listFooter = <View style={{ paddingBottom: 4 }} />;
 
   return (
     <ImageBackground source={BG} style={styles.bg} resizeMode="cover" imageStyle={BG_FOCAL}>
@@ -541,7 +562,25 @@ export default function HomeScreen() {
         style={StyleSheet.absoluteFill}
         pointerEvents="none"
       />
+
+      {/* Ambient neon city glow — breathes slowly to simulate distant signage */}
+      <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFill, { opacity: glowPulse }]}>
+        <LinearGradient
+          colors={[
+            "transparent",
+            "transparent",
+            "rgba(124,95,255,0.06)",
+            "rgba(255,107,71,0.05)",
+            "rgba(0,229,176,0.05)",
+          ]}
+          locations={[0, 0.48, 0.70, 0.85, 1]}
+          style={StyleSheet.absoluteFill}
+        />
+      </Animated.View>
+
       <KeyboardAvoidingView style={styles.container} behavior="padding">
+
+        {/* ── HEADER ── */}
         <View style={[styles.header, { paddingTop: topPad + 14 }]}>
           <View style={styles.logoRow}>
             <View style={styles.logoMark}>
@@ -569,121 +608,8 @@ export default function HomeScreen() {
           </View>
         </View>
 
-        {hasSomeResponse && (
-          <View style={styles.synthesisTop}>
-            {synthesis.expanded && (
-              <SynthesisCard synthesis={synthesis} onClose={() => setSynthesis((s) => ({ ...s, expanded: false }))} stale={anyStreaming && synthesis.status === "done"} />
-            )}
-            <TouchableOpacity
-              onPress={
-                synthesis.expanded
-                  ? () => setSynthesis((s) => ({ ...s, expanded: false }))
-                  : synthesis.status === "done" || synthesis.status === "loading"
-                    ? () => setSynthesis((s) => ({ ...s, expanded: true }))
-                    : handleSynthesize
-              }
-              disabled={!canSynthesize && synthesis.status === "idle"}
-              style={[
-                styles.synthesizeBtn,
-                synthesis.expanded && { borderColor: `${SYNTHESIS_COLOR}70` },
-                !canSynthesize && synthesis.status === "idle" && { opacity: 0.45 },
-                Platform.OS === "web" ? { boxShadow: `0 0 18px ${SYNTHESIS_COLOR_GLOW}` } as object : {},
-              ]}
-              activeOpacity={0.75}
-            >
-              <BlurView intensity={22} tint="dark" style={StyleSheet.absoluteFill} pointerEvents="none" />
-              <LinearGradient
-                colors={[`${SYNTHESIS_COLOR}20`, `${SYNTHESIS_COLOR}05`]}
-                style={StyleSheet.absoluteFill}
-                pointerEvents="none"
-              />
-              <Text style={styles.synthesizeBtnIcon}>✦</Text>
-              <View style={styles.synthesizeBtnContent}>
-                <Text style={[styles.synthesizeBtnTitle, Platform.OS === "web" ? { textShadow: `0 0 20px ${SYNTHESIS_COLOR}` } as object : {}]}>
-                  {synthesis.status === "loading" ? "Synthesizing…" : "Synthesize"}
-                </Text>
-                <Text style={styles.synthesizeBtnSub}>
-                  {synthesis.expanded && synthesis.status !== "idle"
-                    ? "Tap to collapse"
-                    : synthesis.status === "done"
-                      ? "Tap to reveal consensus"
-                      : synthesis.status === "error"
-                        ? "Tap to retry"
-                        : `Consensus across ${AI_PROVIDERS.filter((p) => selected.has(p.key) && cards[p.key].lastRole === "assistant").length} AI responses`}
-                </Text>
-              </View>
-              {synthesis.status === "loading" ? (
-                <ActivityIndicator size="small" color={SYNTHESIS_COLOR} />
-              ) : (
-                <Feather name={synthesis.expanded ? "chevron-up" : "chevron-down"} size={16} color={`${SYNTHESIS_COLOR}90`} />
-              )}
-            </TouchableOpacity>
-          </View>
-        )}
-
-        <FlatList
-          data={rows}
-          keyExtractor={(_, i) => String(i)}
-          renderItem={({ item: row }) => (
-            <View style={styles.row}>
-              {row.map((p, i) =>
-                p ? (
-                  <AiCard key={p.key} provider={p} state={cards[p.key]} selected={selected.has(p.key)} onToggleSelect={() => toggleSelect(p.key)} onOpen={() => openThread(p)} cardWidth={cardWidth} />
-                ) : (
-                  <View key={`empty-${i}`} style={{ width: cardWidth }} />
-                )
-              )}
-            </View>
-          )}
-          contentContainerStyle={styles.grid}
-          ListHeaderComponent={
-            AI_PROVIDERS.every((p) => !cards[p.key].lastMessage) ? (
-              <View style={styles.firstTimeHint}>
-                <Text style={styles.firstTimeTitle}>Ask anything. Get every answer at once.</Text>
-                <View style={styles.firstTimeModels}>
-                  {AI_PROVIDERS.map((p) => (
-                    <View key={p.key} style={[styles.firstTimeChip, { borderColor: `${p.color}40`, backgroundColor: `${p.color}0f` }]}>
-                      <View style={[styles.firstTimeDot, { backgroundColor: p.color }]} />
-                      <Text style={[styles.firstTimeChipText, { color: `${p.color}cc` }]}>{p.name}</Text>
-                    </View>
-                  ))}
-                </View>
-                <Text style={styles.firstTimeSub}>Type a prompt below. Tap any card to open the full thread. Use the chips below to include or exclude a model.</Text>
-              </View>
-            ) : null
-          }
-          ListFooterComponent={listFooter}
-          showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
-        />
-
-        <View style={[styles.bottomBar, { paddingBottom: bottomPad + 8 }]}>
-          <BlurView intensity={40} tint="dark" style={StyleSheet.absoluteFill} pointerEvents="none" />
-          <View pointerEvents="none" style={[StyleSheet.absoluteFill, { backgroundColor: "rgba(7,7,20,0.6)", borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: "rgba(255,255,255,0.08)" }]} />
-
-          <QuotaBar quota={quota} />
-
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipRow}>
-            {AI_PROVIDERS.map((p) => (
-              <TouchableOpacity
-                key={p.key}
-                onPress={() => toggleSelect(p.key)}
-                style={[
-                  styles.providerChip,
-                  {
-                    backgroundColor: selected.has(p.key) ? `${p.color}18` : "rgba(255,255,255,0.05)",
-                    borderColor: selected.has(p.key) ? `${p.color}70` : "rgba(255,255,255,0.1)",
-                  },
-                  selected.has(p.key) && Platform.OS === "web" ? { boxShadow: `0 0 10px ${p.colorGlow}` } as object : {},
-                ]}
-                activeOpacity={0.7}
-              >
-                <View style={[styles.chipDot, { backgroundColor: selected.has(p.key) ? p.color : "rgba(255,255,255,0.35)" }]} />
-                <Text style={[styles.chipLabel, { color: selected.has(p.key) ? p.color : "rgba(255,255,255,0.45)" }]}>{p.name}</Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
-
+        {/* ── INPUT — pinned at top, never covered by keyboard ── */}
+        <View style={styles.inputSection}>
           {attachment && (
             <View style={styles.attachmentRow}>
               <Image source={{ uri: attachment.uri }} style={styles.attachmentThumb} />
@@ -695,15 +621,22 @@ export default function HomeScreen() {
               </Text>
             </View>
           )}
-
           <View style={styles.inputRow}>
+            <BlurView intensity={30} tint="dark" style={StyleSheet.absoluteFill} pointerEvents="none" />
+            <View pointerEvents="none" style={[StyleSheet.absoluteFill, { backgroundColor: "rgba(7,7,20,0.45)", borderRadius: 18, borderWidth: 1, borderColor: "rgba(255,255,255,0.13)" }]} />
             <TouchableOpacity onPress={pickImage} style={styles.attachBtn} activeOpacity={0.7} disabled={anyStreaming}>
               <Feather name="paperclip" size={18} color={attachment ? "rgba(255,255,255,0.9)" : "rgba(255,255,255,0.4)"} />
             </TouchableOpacity>
             <TextInput
               ref={inputRef}
               style={styles.input}
-              placeholder={selectedProviders.length === AI_PROVIDERS.length ? "Ask All AI Models…" : selectedProviders.length === 0 ? "Select a model…" : `Ask ${selectedProviders.map(p => p.name).join(", ")}…`}
+              placeholder={
+                selectedProviders.length === AI_PROVIDERS.length
+                  ? "Ask All AI Models…"
+                  : selectedProviders.length === 0
+                    ? "Select a model first…"
+                    : `Ask ${selectedProviders.map(p => p.name).join(", ")}…`
+              }
               placeholderTextColor="rgba(255,255,255,0.3)"
               value={message}
               onChangeText={setMessage}
@@ -732,6 +665,106 @@ export default function HomeScreen() {
             )}
           </View>
         </View>
+
+        {/* ── SYNTHESIS — always visible, grayed when not ready ── */}
+        <View style={styles.synthesisSection}>
+          {synthesis.expanded && (
+            <SynthesisCard
+              synthesis={synthesis}
+              onClose={() => setSynthesis((s) => ({ ...s, expanded: false }))}
+              stale={anyStreaming && synthesis.status === "done"}
+            />
+          )}
+          <Animated.View style={synthReady ? { transform: [{ scale: synthBreath }] } : undefined}>
+            <TouchableOpacity
+              onPress={
+                synthesis.expanded
+                  ? () => setSynthesis((s) => ({ ...s, expanded: false }))
+                  : synthesis.status === "done" || synthesis.status === "loading"
+                    ? () => setSynthesis((s) => ({ ...s, expanded: true }))
+                    : handleSynthesize
+              }
+              disabled={!canSynthesize && synthesis.status === "idle"}
+              style={[
+                styles.synthesizeBtn,
+                { opacity: synthOpacity },
+                synthesis.expanded && { borderColor: `${SYNTHESIS_COLOR}70` },
+                Platform.OS === "web" && synthReady ? { boxShadow: `0 0 18px ${SYNTHESIS_COLOR_GLOW}` } as object : {},
+              ]}
+              activeOpacity={0.75}
+            >
+              <BlurView intensity={22} tint="dark" style={StyleSheet.absoluteFill} pointerEvents="none" />
+              <LinearGradient
+                colors={synthReady ? [`${SYNTHESIS_COLOR}20`, `${SYNTHESIS_COLOR}05`] : ["rgba(255,255,255,0.03)", "transparent"]}
+                style={StyleSheet.absoluteFill}
+                pointerEvents="none"
+              />
+              <Text style={[styles.synthesizeBtnIcon, !synthReady && { color: "rgba(255,255,255,0.5)" }]}>✦</Text>
+              <View style={styles.synthesizeBtnContent}>
+                <Text style={[styles.synthesizeBtnTitle, !synthReady && { color: "rgba(255,255,255,0.5)" }, Platform.OS === "web" && synthReady ? { textShadow: `0 0 20px ${SYNTHESIS_COLOR}` } as object : {}]}>
+                  {synthesis.status === "loading" ? "Synthesizing…" : "Synthesize"}
+                </Text>
+                <Text style={[styles.synthesizeBtnSub, !synthReady && { color: "rgba(255,255,255,0.2)" }]}>
+                  {synthesis.expanded && synthesis.status !== "idle"
+                    ? "Tap to collapse"
+                    : synthesis.status === "done"
+                      ? "Tap to reveal consensus"
+                      : synthesis.status === "error"
+                        ? "Tap to retry"
+                        : canSynthesize
+                          ? `Consensus across ${AI_PROVIDERS.filter((p) => selected.has(p.key) && cards[p.key].lastRole === "assistant").length} AI responses`
+                          : "Send a prompt to unlock"}
+                </Text>
+              </View>
+              {synthesis.status === "loading" ? (
+                <ActivityIndicator size="small" color={SYNTHESIS_COLOR} />
+              ) : (
+                <Feather
+                  name={synthesis.expanded ? "chevron-up" : "chevron-down"}
+                  size={16}
+                  color={synthReady ? `${SYNTHESIS_COLOR}90` : "rgba(255,255,255,0.2)"}
+                />
+              )}
+            </TouchableOpacity>
+          </Animated.View>
+        </View>
+
+        {/* ── CARDS GRID ── */}
+        <FlatList
+          data={rows}
+          keyExtractor={(_, i) => String(i)}
+          renderItem={({ item: row }) => (
+            <View style={styles.row}>
+              {row.map((p, i) =>
+                p ? (
+                  <AiCard
+                    key={p.key}
+                    provider={p}
+                    state={cards[p.key]}
+                    selected={selected.has(p.key)}
+                    onToggleSelect={() => toggleSelect(p.key)}
+                    onOpen={() => openThread(p)}
+                    cardWidth={cardWidth}
+                  />
+                ) : (
+                  <View key={`empty-${i}`} style={{ width: cardWidth }} />
+                )
+              )}
+            </View>
+          )}
+          contentContainerStyle={styles.grid}
+          ListFooterComponent={<View style={{ paddingBottom: 4 }} />}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+        />
+
+        {/* ── BOTTOM — quota bar only ── */}
+        <View style={[styles.bottomBar, { paddingBottom: bottomPad + 8 }]}>
+          <BlurView intensity={40} tint="dark" style={StyleSheet.absoluteFill} pointerEvents="none" />
+          <View pointerEvents="none" style={[StyleSheet.absoluteFill, { backgroundColor: "rgba(7,7,20,0.6)", borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: "rgba(255,255,255,0.08)" }]} />
+          <QuotaBar quota={quota} />
+        </View>
+
       </KeyboardAvoidingView>
     </ImageBackground>
   );
@@ -743,7 +776,7 @@ const styles = StyleSheet.create({
 
   header: {
     flexDirection: "row", alignItems: "center", justifyContent: "space-between",
-    paddingHorizontal: 20, paddingBottom: 16,
+    paddingHorizontal: 20, paddingBottom: 12,
   },
   logoRow: { flexDirection: "row", alignItems: "center", gap: 10 },
   logoMark: {
@@ -763,81 +796,41 @@ const styles = StyleSheet.create({
   },
   newChatText: { fontSize: 13, fontFamily: "Inter_500Medium", color: "rgba(255,255,255,0.6)" },
 
-  grid: { paddingHorizontal: 16, gap: CARD_GAP, paddingBottom: 12 },
-  row: { flexDirection: "row", gap: CARD_GAP },
-
-  firstTimeHint: {
-    marginBottom: 14,
-    paddingHorizontal: 4,
-    paddingTop: 6,
-    gap: 12,
-    alignItems: "center",
+  inputSection: {
+    paddingHorizontal: 16, paddingBottom: 8, gap: 6,
   },
-  firstTimeTitle: {
-    fontSize: 18,
-    fontFamily: "Inter_700Bold",
-    color: "#e8e8f4",
-    letterSpacing: -0.4,
-    textAlign: "center",
+  inputRow: {
+    flexDirection: "row", alignItems: "flex-end", gap: 8,
+    borderRadius: 18,
+    paddingLeft: 12, paddingRight: 6, paddingVertical: 6,
+    overflow: "hidden",
+    minHeight: 50,
   },
-  firstTimeModels: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 6,
-    justifyContent: "center",
+  attachBtn: { width: 32, height: 32, alignItems: "center", justifyContent: "center" },
+  input: {
+    flex: 1, fontSize: 15, fontFamily: "Inter_400Regular",
+    color: "#f0f0ff", maxHeight: 100, lineHeight: 21, paddingVertical: 4,
   },
-  firstTimeChip: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 5,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 20,
-    borderWidth: 1,
-  },
-  firstTimeDot: { width: 6, height: 6, borderRadius: 3 },
-  firstTimeChipText: { fontSize: 11, fontFamily: "Inter_500Medium" },
-  firstTimeSub: {
-    fontSize: 13,
-    fontFamily: "Inter_400Regular",
-    color: "rgba(255,255,255,0.35)",
-    textAlign: "center",
-    lineHeight: 19,
-    paddingHorizontal: 16,
-  },
-
-  card: {
-    borderRadius: 20,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.35,
-    shadowRadius: 10,
-    elevation: 6,
-  },
-  cardTop: {
-    height: 40,
-    alignItems: "center",
-    justifyContent: "center",
-    paddingHorizontal: 10,
-    position: "relative",
-  },
-  cardProviderName: {
-    fontSize: 13, fontFamily: "Inter_700Bold", letterSpacing: 0.2, textAlign: "center",
-  },
-  checkbox: {
-    position: "absolute", top: 10, right: 10,
-    width: 20, height: 20, borderRadius: 10, borderWidth: 1.5,
+  sendBtn: {
+    width: 36, height: 36, borderRadius: 10,
     alignItems: "center", justifyContent: "center",
   },
-  cardBody: { padding: 10, paddingTop: 6, gap: 4 },
-  previewRow: { minHeight: 54 },
-  streamingRow: { flexDirection: "row", alignItems: "flex-start", gap: 6 },
-  previewText: { fontSize: 12, fontFamily: "Inter_400Regular", lineHeight: 18 },
+  attachmentRow: {
+    flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 4,
+  },
+  attachmentThumb: { width: 32, height: 32, borderRadius: 7 },
+  removeBtn: {
+    width: 18, height: 18, borderRadius: 9, backgroundColor: "rgba(255,68,102,0.8)",
+    alignItems: "center", justifyContent: "center",
+  },
+  attachmentLabel: { fontSize: 12, fontFamily: "Inter_400Regular", color: "rgba(255,255,255,0.5)", flex: 1 },
 
+  synthesisSection: {
+    paddingHorizontal: 16, paddingBottom: 8, gap: 4,
+  },
   synthesizeBtn: {
     flexDirection: "row", alignItems: "center", gap: 10,
-    marginHorizontal: 0, marginTop: 4, marginBottom: 4,
-    paddingHorizontal: 18, paddingVertical: 14,
+    paddingHorizontal: 18, paddingVertical: 13,
     borderRadius: 18, borderWidth: 1, borderColor: `${SYNTHESIS_COLOR}35`,
     overflow: "hidden",
   },
@@ -849,25 +842,13 @@ const styles = StyleSheet.create({
   },
   synthesizeBtnSub: { fontSize: 11, fontFamily: "Inter_400Regular", color: "rgba(255,200,0,0.5)", textAlign: "center" },
 
-  synthCard: {
-    borderRadius: 22,
-    marginTop: 4,
-  },
-  synthesisTop: {
-    paddingHorizontal: 16,
-    paddingBottom: 6,
-    gap: 4,
-  },
+  synthCard: { borderRadius: 22, marginBottom: 4 },
   synthHeader: {
     flexDirection: "row", alignItems: "center", justifyContent: "space-between",
     paddingHorizontal: 16, paddingTop: 16, paddingBottom: 8,
   },
-  synthBadge: {
-    paddingHorizontal: 12, paddingVertical: 5, borderRadius: 20,
-  },
-  synthBadgeText: {
-    fontSize: 11, fontFamily: "Inter_700Bold", letterSpacing: 2.5, color: "#000",
-  },
+  synthBadge: { paddingHorizontal: 12, paddingVertical: 5, borderRadius: 20 },
+  synthBadgeText: { fontSize: 11, fontFamily: "Inter_700Bold", letterSpacing: 2.5, color: "#000" },
   synthSubtitleRow: {
     flexDirection: "row", alignItems: "center", gap: 5,
     paddingHorizontal: 16, paddingBottom: 12,
@@ -878,45 +859,34 @@ const styles = StyleSheet.create({
   synthError: { fontSize: 13, fontFamily: "Inter_400Regular", color: "#ff4466", padding: 16 },
   synthScroll: { maxHeight: 260 },
 
+  grid: { paddingHorizontal: 16, gap: CARD_GAP, paddingBottom: 12 },
+  row: { flexDirection: "row", gap: CARD_GAP },
+
+  card: {
+    borderRadius: 20,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.35,
+    shadowRadius: 10,
+    elevation: 6,
+  },
+  cardTop: {
+    height: 40, alignItems: "center", justifyContent: "center",
+    paddingHorizontal: 10, position: "relative",
+  },
+  cardProviderName: { fontSize: 13, fontFamily: "Inter_700Bold", letterSpacing: 0.2, textAlign: "center" },
+  checkbox: {
+    position: "absolute", top: 10, right: 10,
+    width: 20, height: 20, borderRadius: 10, borderWidth: 1.5,
+    alignItems: "center", justifyContent: "center",
+  },
+  cardBody: { padding: 10, paddingTop: 6, gap: 4 },
+  previewRow: { minHeight: 54 },
+  streamingRow: { flexDirection: "row", alignItems: "flex-start", gap: 6 },
+  previewText: { fontSize: 12, fontFamily: "Inter_400Regular", lineHeight: 18 },
+
   bottomBar: {
-    paddingTop: 10, paddingHorizontal: 14, gap: 8,
+    paddingTop: 8, paddingHorizontal: 14,
     overflow: "hidden",
-  },
-  chipRow: { flexDirection: "row", gap: 6, paddingBottom: 2 },
-  providerChip: {
-    flexDirection: "row", alignItems: "center", gap: 5,
-    paddingHorizontal: 9, paddingVertical: 6, borderRadius: 20, borderWidth: 1,
-    flexShrink: 0,
-  },
-  chipDot: { width: 5, height: 5, borderRadius: 3 },
-  chipLabel: { fontSize: 11, fontFamily: "Inter_500Medium" },
-
-  attachmentRow: {
-    flexDirection: "row", alignItems: "center", gap: 8,
-    paddingHorizontal: 4,
-  },
-  attachmentThumb: { width: 32, height: 32, borderRadius: 7 },
-  removeBtn: {
-    width: 18, height: 18, borderRadius: 9, backgroundColor: "rgba(255,68,102,0.8)",
-    alignItems: "center", justifyContent: "center",
-  },
-  attachmentLabel: { fontSize: 12, fontFamily: "Inter_400Regular", color: "rgba(255,255,255,0.5)", flex: 1 },
-
-  inputRow: {
-    flexDirection: "row", alignItems: "flex-end", gap: 8,
-    borderRadius: 16,
-    paddingLeft: 12, paddingRight: 6, paddingVertical: 6,
-    backgroundColor: "rgba(255,255,255,0.09)",
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.13)",
-  },
-  attachBtn: { width: 32, height: 32, alignItems: "center", justifyContent: "center" },
-  input: {
-    flex: 1, fontSize: 15, fontFamily: "Inter_400Regular",
-    color: "#f0f0ff", maxHeight: 100, lineHeight: 21, paddingVertical: 3,
-  },
-  sendBtn: {
-    width: 36, height: 36, borderRadius: 10,
-    alignItems: "center", justifyContent: "center",
   },
 });
