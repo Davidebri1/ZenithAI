@@ -31,7 +31,7 @@ import {
 import { authFetch } from "@/constants/apiAuth";
 
 const BG = require("../../assets/images/bg-alley.png");
-const BG_FOCAL: object = { transform: [{ scale: 1.2 }, { translateY: -60 }] };
+const BG_FOCAL: object = { transform: [{ scale: 1.5 }, { translateY: -200 }] };
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 const CARD_GAP = 10;
 

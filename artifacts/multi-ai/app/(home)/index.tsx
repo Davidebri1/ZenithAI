@@ -35,7 +35,7 @@ import { saveSession, CONV_IDS_KEY } from "@/constants/sessions";
 
 const CARD_GAP = 10;
 const BG = require("../../assets/images/bg-alley.png");
-const BG_FOCAL: object = { transform: [{ scale: 1.2 }, { translateY: -60 }] };
+const BG_FOCAL: object = { transform: [{ scale: 1.5 }, { translateY: -200 }] };
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
 interface ConvIds { [key: string]: number; }

@@ -32,7 +32,7 @@ import { AI_PROVIDERS, BASE_URL } from "@/constants/aiConfig";
 import { CONV_IDS_KEY, formatMessageTime } from "@/constants/sessions";
 
 const BG = require("../../assets/images/bg-alley.png");
-const BG_FOCAL: object = { transform: [{ scale: 1.2 }, { translateY: -60 }] };
+const BG_FOCAL: object = { transform: [{ scale: 1.5 }, { translateY: -200 }] };
 
 interface Message {
   role: "user" | "assistant";

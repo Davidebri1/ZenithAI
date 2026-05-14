@@ -21,7 +21,7 @@ import { authFetch } from "@/constants/apiAuth";
 import { BASE_URL } from "@/constants/aiConfig";
 
 const BG = require("../../assets/images/bg-alley.png");
-const BG_FOCAL: object = { transform: [{ scale: 1.2 }, { translateY: -60 }] };
+const BG_FOCAL: object = { transform: [{ scale: 1.5 }, { translateY: -200 }] };
 const ACCENT = "#22c55e";
 const ACCENT_GLOW = "#22c55e55";
 

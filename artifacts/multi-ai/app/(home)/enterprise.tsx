@@ -24,7 +24,7 @@ import { authFetch } from "@/constants/apiAuth";
 import { BASE_URL, AI_PROVIDERS } from "@/constants/aiConfig";
 
 const BG = require("../../assets/images/bg-alley.png");
-const BG_FOCAL: object = { transform: [{ scale: 1.2 }, { translateY: -60 }] };
+const BG_FOCAL: object = { transform: [{ scale: 1.5 }, { translateY: -200 }] };
 const { width: SW } = Dimensions.get("window");
 
 const GOLD = "#f59e0b";

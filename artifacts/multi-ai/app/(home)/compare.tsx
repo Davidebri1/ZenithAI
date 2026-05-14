@@ -22,7 +22,7 @@ import { AI_PROVIDERS, BASE_URL } from "@/constants/aiConfig";
 import { CONV_IDS_KEY } from "@/constants/sessions";
 
 const BG = require("../../assets/images/bg-alley.png");
-const BG_FOCAL: object = { transform: [{ scale: 1.2 }, { translateY: -60 }] };
+const BG_FOCAL: object = { transform: [{ scale: 1.5 }, { translateY: -200 }] };
 const { width: SW } = Dimensions.get("window");
 const PANEL_GAP = 8;
 const PANEL_W = (SW - 32 - PANEL_GAP) / 2;
