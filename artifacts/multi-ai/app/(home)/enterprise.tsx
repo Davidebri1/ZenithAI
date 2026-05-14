@@ -83,7 +83,7 @@ const ENTERPRISE_FEATURES = [
   { icon: "trending-up", title: "Usage Analytics", desc: "Per-user and team-level prompt analytics dashboard" },
   { icon: "cpu", title: "Custom Models", desc: "Bring your own fine-tuned or private AI endpoints" },
   { icon: "lock", title: "Data Privacy", desc: "No training on your data, SOC2 Type II available" },
-  { icon: "zap", title: "API Access", desc: "Programmatic access to all models via unified REST API" },
+  { icon: "zap", title: "API Access", desc: "Programmatic access to All AI Models via unified REST API" },
 ];
 
 const LOGOS = ["Acme Corp", "Nexus AI", "BuildFast", "Vertex Labs", "DataMind", "ShiftOps"];

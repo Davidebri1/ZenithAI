@@ -686,7 +686,7 @@ export default function HomeScreen() {
             <TextInput
               ref={inputRef}
               style={styles.input}
-              placeholder={selectedProviders.length === AI_PROVIDERS.length ? "Ask all AIs…" : selectedProviders.length === 0 ? "Select an AI…" : `Ask ${selectedProviders.map(p => p.name).join(", ")}…`}
+              placeholder={selectedProviders.length === AI_PROVIDERS.length ? "Ask All AI Models…" : selectedProviders.length === 0 ? "Select a model…" : `Ask ${selectedProviders.map(p => p.name).join(", ")}…`}
               placeholderTextColor="rgba(255,255,255,0.3)"
               value={message}
               onChangeText={setMessage}
