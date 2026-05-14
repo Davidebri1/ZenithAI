@@ -482,29 +482,23 @@ export default function HomeScreen() {
     router.push({ pathname: "/thread", params: { key: provider.key, convId: String(cards[provider.key].conversationId ?? convIds[provider.key] ?? "") } });
   };
 
-  const handleNewChat = () => {
-    Alert.alert("Start New Chat?", "Current session will be saved to History.", [
-      { text: "Cancel", style: "cancel" },
-      {
-        text: "New Chat",
-        style: "destructive",
-        onPress: async () => {
-          const currentIds = convIds;
-          if (Object.keys(currentIds).length > 0) await saveSession(sessionTitleRef.current || "Untitled session", currentIds);
-          sessionTitleRef.current = "";
-          lastPromptRef.current = "";
-          activeReaders.current.forEach((reader) => { try { reader.cancel(); } catch {} });
-          activeReaders.current.clear();
-          await AsyncStorage.removeItem(CONV_IDS_KEY);
-          setConvIds({});
-          setCards(Object.fromEntries(AI_PROVIDERS.map((p) => [p.key, makeDefaultCard()])));
-          setSelected(new Set(AI_PROVIDERS.map((p) => p.key)));
-          setSynthesis({ status: "idle", text: "", expanded: false });
-          setMessage("");
-          setAttachment(null);
-        },
-      },
-    ]);
+  const handleNewChat = async () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    const currentIds = convIds;
+    if (Object.keys(currentIds).length > 0) {
+      await saveSession(sessionTitleRef.current || "Untitled session", currentIds);
+    }
+    sessionTitleRef.current = "";
+    lastPromptRef.current = "";
+    activeReaders.current.forEach((reader) => { try { reader.cancel(); } catch {} });
+    activeReaders.current.clear();
+    await AsyncStorage.removeItem(CONV_IDS_KEY);
+    setConvIds({});
+    setCards(Object.fromEntries(AI_PROVIDERS.map((p) => [p.key, makeDefaultCard()])));
+    setSelected(new Set(AI_PROVIDERS.map((p) => p.key)));
+    setSynthesis({ status: "idle", text: "", expanded: false });
+    setMessage("");
+    setAttachment(null);
   };
 
   const anyStreaming = Object.values(cards).some((c) => c.streaming);
@@ -680,8 +674,6 @@ export default function HomeScreen() {
           )}
 
           <View style={styles.inputRow}>
-            <BlurView intensity={20} tint="dark" style={StyleSheet.absoluteFill} pointerEvents="none" />
-            <View pointerEvents="none" style={[StyleSheet.absoluteFill, { backgroundColor: "rgba(255,255,255,0.04)", borderRadius: 16, borderWidth: 1, borderColor: "rgba(255,255,255,0.1)" }]} />
             <TouchableOpacity onPress={pickImage} style={styles.attachBtn} activeOpacity={0.7} disabled={anyStreaming}>
               <Feather name="paperclip" size={18} color={attachment ? AI_PROVIDERS[0].color : "rgba(255,255,255,0.4)"} />
             </TouchableOpacity>
@@ -902,8 +894,11 @@ const styles = StyleSheet.create({
 
   inputRow: {
     flexDirection: "row", alignItems: "flex-end", gap: 8,
-    borderRadius: 16, overflow: "hidden",
+    borderRadius: 16,
     paddingLeft: 12, paddingRight: 6, paddingVertical: 6,
+    backgroundColor: "rgba(255,255,255,0.09)",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.13)",
   },
   attachBtn: { width: 32, height: 32, alignItems: "center", justifyContent: "center" },
   input: {
