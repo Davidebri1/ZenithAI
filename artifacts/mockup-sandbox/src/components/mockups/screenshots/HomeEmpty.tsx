@@ -18,8 +18,7 @@ export default function HomeEmpty() {
     }}>
       <div style={{
         position: "absolute", inset: 0,
-        background: "linear-gradient(180deg, rgba(7,7,26,0.55) 0%, rgba(7,7,26,0.82) 50%, #07071a 100%)",
-        backgroundImage: "url('/alley-bg.jpg')", backgroundSize: "cover", backgroundPosition: "center",
+        backgroundImage: "url('/__mockup/bg-alley.png')", backgroundSize: "cover", backgroundPosition: "center",
         zIndex: 0,
       }} />
       <div style={{
