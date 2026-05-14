@@ -22,7 +22,7 @@ import { useColors } from "@/hooks/useColors";
 import { AI_PROVIDERS, BASE_URL } from "@/constants/aiConfig";
 import { getSessions, CONV_IDS_KEY, formatMessageTime, type Session } from "@/constants/sessions";
 
-const BG = require("../assets/images/bg-alley.png");
+const BG = require("../assets/images/bg-brick.png");
 
 interface SearchResult {
   id: number;

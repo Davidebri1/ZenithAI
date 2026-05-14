@@ -31,7 +31,7 @@ import { AI_PROVIDERS, BASE_URL, SYNTHESIS_COLOR, SYNTHESIS_COLOR_GLOW, type AiP
 import { saveSession, CONV_IDS_KEY } from "@/constants/sessions";
 
 const CARD_GAP = 10;
-const BG = require("../assets/images/bg-alley.png");
+const BG = require("../assets/images/bg-brick.png");
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
 interface ConvIds { [key: string]: number; }
@@ -494,10 +494,11 @@ export default function HomeScreen() {
           ]}
           activeOpacity={0.75}
         >
-          <BlurView intensity={22} tint="dark" style={StyleSheet.absoluteFill} />
+          <BlurView intensity={22} tint="dark" style={StyleSheet.absoluteFill} pointerEvents="none" />
           <LinearGradient
             colors={[`${SYNTHESIS_COLOR}20`, `${SYNTHESIS_COLOR}05`]}
             style={StyleSheet.absoluteFill}
+            pointerEvents="none"
           />
           <Text style={styles.synthesizeBtnIcon}>✦</Text>
           <View style={styles.synthesizeBtnContent}>
@@ -524,9 +525,10 @@ export default function HomeScreen() {
   return (
     <ImageBackground source={BG} style={styles.bg} resizeMode="cover">
       <LinearGradient
-        colors={["rgba(7,7,13,0.25)", "rgba(7,7,13,0.55)", "rgba(7,7,13,0.88)", "rgba(7,7,13,0.97)"]}
-        locations={[0, 0.35, 0.68, 1]}
+        colors={["rgba(5,3,8,0.72)", "rgba(7,7,13,0.18)", "rgba(7,7,13,0.45)", "rgba(7,7,13,0.88)", "rgba(7,7,13,0.98)"]}
+        locations={[0, 0.12, 0.45, 0.78, 1]}
         style={StyleSheet.absoluteFill}
+        pointerEvents="none"
       />
       <KeyboardAvoidingView style={styles.container} behavior="padding">
         <View style={[styles.header, { paddingTop: topPad + 14 }]}>
@@ -585,8 +587,8 @@ export default function HomeScreen() {
         />
 
         <View style={[styles.bottomBar, { paddingBottom: bottomPad + 8 }]}>
-          <BlurView intensity={40} tint="dark" style={StyleSheet.absoluteFill} />
-          <View style={[StyleSheet.absoluteFill, { backgroundColor: "rgba(7,7,20,0.6)", borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: "rgba(255,255,255,0.08)" }]} />
+          <BlurView intensity={40} tint="dark" style={StyleSheet.absoluteFill} pointerEvents="none" />
+          <View pointerEvents="none" style={[StyleSheet.absoluteFill, { backgroundColor: "rgba(7,7,20,0.6)", borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: "rgba(255,255,255,0.08)" }]} />
 
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipRow}>
             {AI_PROVIDERS.map((p) => (
@@ -622,8 +624,8 @@ export default function HomeScreen() {
           )}
 
           <View style={styles.inputRow}>
-            <BlurView intensity={20} tint="dark" style={StyleSheet.absoluteFill} />
-            <View style={[StyleSheet.absoluteFill, { backgroundColor: "rgba(255,255,255,0.04)", borderRadius: 16, borderWidth: 1, borderColor: "rgba(255,255,255,0.1)" }]} />
+            <BlurView intensity={20} tint="dark" style={StyleSheet.absoluteFill} pointerEvents="none" />
+            <View pointerEvents="none" style={[StyleSheet.absoluteFill, { backgroundColor: "rgba(255,255,255,0.04)", borderRadius: 16, borderWidth: 1, borderColor: "rgba(255,255,255,0.1)" }]} />
             <TouchableOpacity onPress={pickImage} style={styles.attachBtn} activeOpacity={0.7} disabled={anyStreaming}>
               <Feather name="paperclip" size={18} color={attachment ? AI_PROVIDERS[0].color : "rgba(255,255,255,0.4)"} />
             </TouchableOpacity>

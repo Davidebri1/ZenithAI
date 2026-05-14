@@ -1,5 +1,4 @@
 uploads = []
-outputs = []
 
 [[generated]]
 id = "IBSAe2M0H0nJne8_KkH_s"
@@ -12,3 +11,15 @@ id = "LvVHblKQO34xqAXVFOOsN"
 uri = "file://artifacts/multi-ai/assets/images/bg-alley.png"
 type = "image"
 title = "noir cyberpunk alleyway background"
+
+[[generated]]
+id = "A9jvLD94AwDS6BMeJ-iBg"
+uri = "file://artifacts/multi-ai/assets/images/bg-brick.png"
+type = "image"
+title = "generated_image"
+
+[[outputs]]
+id = "hISodbmZBYOc8_0Sq7hf2"
+uri = "file://artifacts/multi-ai/assets/images/bg-brick.png"
+type = "image"
+title = "New brick wall background"
