@@ -39,7 +39,7 @@ interface Product {
 }
 
 const FEATURES = [
-  { icon: "zap", label: "Unlimited prompts across all 8 AI models" },
+  { icon: "zap", label: "Unlimited prompts across all AI models" },
   { icon: "layers", label: "Simultaneous GPT, Claude, Gemini, Grok, DeepSeek, Mistral, Llama & Qwen" },
   { icon: "cpu", label: "Synthesis — AI-powered cross-model summary" },
   { icon: "search", label: "Search across all your conversations" },
@@ -131,7 +131,7 @@ export default function UpgradeScreen() {
           </View>
           <Text style={styles.successTitle}>Welcome to Pro</Text>
           <Text style={styles.successSub}>
-            You now have unlimited prompts across all 8 AI models. Start asking.
+            You now have unlimited prompts across all AI models. Start asking.
           </Text>
           <TouchableOpacity onPress={() => router.replace("/(home)")} style={styles.successCTA} activeOpacity={0.85}>
             <LinearGradient colors={[ACCENT, "#16a34a"]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.successCTAGrad}>
@@ -169,7 +169,7 @@ export default function UpgradeScreen() {
                   <Feather name="zap" size={28} color={ACCENT} />
                 </LinearGradient>
               </View>
-              <Text style={styles.heroTitle}>Unlock all 8 AIs</Text>
+              <Text style={styles.heroTitle}>Unlock all AIs</Text>
               <Text style={styles.heroSub}>
                 Compare GPT, Claude, Gemini, Grok, DeepSeek, Mistral, Llama & Qwen side by side — unlimited.
               </Text>

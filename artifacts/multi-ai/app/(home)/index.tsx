@@ -622,7 +622,7 @@ export default function HomeScreen() {
           ListHeaderComponent={
             AI_PROVIDERS.every((p) => !cards[p.key].lastMessage) ? (
               <View style={styles.firstTimeHint}>
-                <Text style={styles.firstTimeTitle}>Ask anything. Get 8 answers at once.</Text>
+                <Text style={styles.firstTimeTitle}>Ask anything. Get every answer at once.</Text>
                 <View style={styles.firstTimeModels}>
                   {AI_PROVIDERS.map((p) => (
                     <View key={p.key} style={[styles.firstTimeChip, { borderColor: `${p.color}40`, backgroundColor: `${p.color}0f` }]}>
@@ -686,7 +686,7 @@ export default function HomeScreen() {
             <TextInput
               ref={inputRef}
               style={styles.input}
-              placeholder={`Ask ${selectedProviders.length} AI${selectedProviders.length !== 1 ? "s" : ""}…`}
+              placeholder={selectedProviders.length === AI_PROVIDERS.length ? "Ask all AIs…" : selectedProviders.length === 0 ? "Select an AI…" : `Ask ${selectedProviders.map(p => p.name).join(", ")}…`}
               placeholderTextColor="rgba(255,255,255,0.3)"
               value={message}
               onChangeText={setMessage}

@@ -47,7 +47,7 @@ const TIERS = [
     period: "/mo",
     seats: "1 user",
     prompts: "Unlimited",
-    models: "All 8 models",
+    models: "All models",
     support: "In-app support",
     highlight: false,
     cta: "Get Started",
@@ -58,7 +58,7 @@ const TIERS = [
     period: "/mo",
     seats: "Up to 5 users",
     prompts: "Unlimited",
-    models: "All 8 models",
+    models: "All models",
     support: "Priority support",
     highlight: true,
     badge: "Most Popular",
@@ -70,7 +70,7 @@ const TIERS = [
     period: "",
     seats: "Unlimited seats",
     prompts: "Unlimited",
-    models: "All 8 models + custom",
+    models: "All models + custom",
     support: "Dedicated CSM",
     highlight: false,
     cta: "Contact Sales",
@@ -83,7 +83,7 @@ const ENTERPRISE_FEATURES = [
   { icon: "trending-up", title: "Usage Analytics", desc: "Per-user and team-level prompt analytics dashboard" },
   { icon: "cpu", title: "Custom Models", desc: "Bring your own fine-tuned or private AI endpoints" },
   { icon: "lock", title: "Data Privacy", desc: "No training on your data, SOC2 Type II available" },
-  { icon: "zap", title: "API Access", desc: "Programmatic access to all 8 models via unified REST API" },
+  { icon: "zap", title: "API Access", desc: "Programmatic access to all models via unified REST API" },
 ];
 
 const LOGOS = ["Acme Corp", "Nexus AI", "BuildFast", "Vertex Labs", "DataMind", "ShiftOps"];

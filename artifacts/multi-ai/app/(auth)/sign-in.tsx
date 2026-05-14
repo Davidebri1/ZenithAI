@@ -133,7 +133,7 @@ export default function SignInScreen() {
               <Text style={styles.logoText}>Zenith</Text>
             </View>
             <Text style={styles.heroTitle}>Welcome back</Text>
-            <Text style={styles.heroSubtitle}>Sign in to compare all 8 AIs</Text>
+            <Text style={styles.heroSubtitle}>Sign in to compare all AIs</Text>
           </View>
 
           <View style={[styles.card, { marginHorizontal: 24, marginTop: 28 }]}>
