@@ -129,18 +129,19 @@ function AiCard({ provider, state, selected, onToggleSelect, onOpen, cardWidth }
       >
         <Text style={[styles.cardProviderName, { color: provider.color }]}>{provider.name}</Text>
 
-        {!selected && (
-          <TouchableOpacity
-            onPress={(e) => { e.stopPropagation?.(); onToggleSelect(); }}
-            hitSlop={{ top: 8, right: 8, bottom: 8, left: 8 }}
-            style={[styles.checkbox, { backgroundColor: "rgba(0,0,0,0.4)", borderColor: `${provider.color}50` }]}
-            activeOpacity={0.7}
-          />
-        )}
-
-        {state.hasUnread && !state.streaming && (
-          <View style={[styles.unreadDot, { backgroundColor: provider.color }]} />
-        )}
+        <TouchableOpacity
+          onPress={(e) => { e.stopPropagation?.(); onToggleSelect(); }}
+          hitSlop={{ top: 8, right: 8, bottom: 8, left: 8 }}
+          style={[
+            styles.checkbox,
+            selected
+              ? { backgroundColor: provider.color, borderColor: provider.color }
+              : { backgroundColor: "rgba(0,0,0,0.35)", borderColor: "rgba(255,255,255,0.28)" },
+          ]}
+          activeOpacity={0.7}
+        >
+          {selected && <Feather name="check" size={12} color="#000" />}
+        </TouchableOpacity>
       </LinearGradient>
 
       <View style={styles.cardBody}>
@@ -828,8 +829,6 @@ const styles = StyleSheet.create({
     width: 20, height: 20, borderRadius: 10, borderWidth: 1.5,
     alignItems: "center", justifyContent: "center",
   },
-  unreadDot: { position: "absolute", bottom: 6, right: 10, width: 7, height: 7, borderRadius: 4 },
-
   cardBody: { padding: 10, paddingTop: 6, gap: 4 },
   previewRow: { minHeight: 54 },
   streamingRow: { flexDirection: "row", alignItems: "flex-start", gap: 6 },
