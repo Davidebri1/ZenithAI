@@ -24,6 +24,7 @@ import { Feather } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Haptics from "expo-haptics";
 import * as ImagePicker from "expo-image-picker";
+import Markdown from "react-native-markdown-display";
 import { authFetch } from "@/constants/apiAuth";
 
 import { useColors } from "@/hooks/useColors";
@@ -67,6 +68,24 @@ function cardGlowStyle(color: string, selected: boolean) {
   if (!selected || Platform.OS !== "web") return {};
   return { boxShadow: `0 0 0 1.5px ${color}, 0 0 28px ${color}55` } as object;
 }
+
+const SYNTH_MD: Record<string, object> = {
+  body: { color: "rgba(255,240,200,0.9)", fontFamily: "Inter_400Regular", fontSize: 14, lineHeight: 22, backgroundColor: "transparent" },
+  paragraph: { marginTop: 0, marginBottom: 6 },
+  strong: { fontFamily: "Inter_700Bold", color: "rgba(255,255,255,0.95)" },
+  em: { fontStyle: "italic", color: "rgba(255,240,200,0.8)" },
+  heading1: { fontFamily: "Inter_700Bold", fontSize: 18, color: "rgba(255,255,255,0.95)", marginBottom: 6, marginTop: 8 },
+  heading2: { fontFamily: "Inter_700Bold", fontSize: 15, color: "rgba(255,255,255,0.95)", marginBottom: 4, marginTop: 6 },
+  heading3: { fontFamily: "Inter_700Bold", fontSize: 14, color: "rgba(255,255,255,0.9)", marginBottom: 3, marginTop: 4 },
+  code_inline: { fontFamily: Platform.OS === "ios" ? "Menlo" : "monospace", fontSize: 12, backgroundColor: "rgba(0,0,0,0.45)", color: SYNTHESIS_COLOR, borderRadius: 4 },
+  fence: { backgroundColor: "rgba(0,0,0,0.5)", borderRadius: 8, borderWidth: 1, borderColor: `${SYNTHESIS_COLOR}35`, padding: 10, marginVertical: 8 },
+  code_block: { fontFamily: Platform.OS === "ios" ? "Menlo" : "monospace", fontSize: 12, color: "rgba(255,255,255,0.85)" },
+  blockquote: { backgroundColor: "rgba(255,183,0,0.06)", borderLeftColor: `${SYNTHESIS_COLOR}50`, borderLeftWidth: 3, paddingLeft: 10, marginLeft: 0 },
+  hr: { backgroundColor: "rgba(255,255,255,0.12)", height: 1, marginVertical: 10 },
+  bullet_list: { marginBottom: 6 },
+  ordered_list: { marginBottom: 6 },
+  list_item: { marginBottom: 2 },
+};
 
 
 interface AiCardProps {
@@ -195,13 +214,10 @@ function SynthesisCard({ synthesis, onClose, stale }: { synthesis: SynthesisStat
       ) : synthesis.status === "error" ? (
         <Text style={styles.synthError}>Synthesis failed. Please try again.</Text>
       ) : (
-        <ScrollView style={styles.synthScroll} showsVerticalScrollIndicator={false} nestedScrollEnabled>
-          <Text style={styles.synthText}>
-            {synthesis.text}
-            {synthesis.status === "loading" && (
-              <Text style={[styles.synthCursor, { color: SYNTHESIS_COLOR }]}> ▋</Text>
-            )}
-          </Text>
+        <ScrollView style={styles.synthScroll} contentContainerStyle={{ padding: 16, paddingTop: 0 }} showsVerticalScrollIndicator={false} nestedScrollEnabled>
+          <Markdown style={SYNTH_MD}>
+            {synthesis.text + (synthesis.status === "loading" ? " ▋" : "")}
+          </Markdown>
         </ScrollView>
       )}
     </View>
@@ -228,6 +244,7 @@ export default function HomeScreen() {
   const activeReaders = useRef<Map<string, ReadableStreamDefaultReader<Uint8Array>>>(new Map());
   const sessionTitleRef = useRef<string>("");
   const lastPromptRef = useRef<string>("");
+  const lastAttachmentRef = useRef<Attachment | null>(null);
 
   const updateCard = useCallback((key: string, patch: Partial<CardState>) =>
     setCards((prev) => ({ ...prev, [key]: { ...prev[key], ...patch } })), []);
@@ -347,10 +364,18 @@ export default function HomeScreen() {
 
     try {
       const responses = readyProviders.map((p) => ({ name: p.name, content: cards[p.key].lastMessage }));
+      const synthesisBody: { question: string; responses: typeof responses; imageBase64?: string; imageMimeType?: string } = {
+        question: lastPromptRef.current || "the question",
+        responses,
+      };
+      if (lastAttachmentRef.current) {
+        synthesisBody.imageBase64 = lastAttachmentRef.current.base64;
+        synthesisBody.imageMimeType = lastAttachmentRef.current.mimeType;
+      }
       const res = await authFetch(`${BASE_URL}/api/synthesize`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ question: lastPromptRef.current || "the question", responses }),
+        body: JSON.stringify(synthesisBody),
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const reader = res.body?.getReader();
@@ -433,6 +458,7 @@ export default function HomeScreen() {
       const ids = await getOrCreateConvIds();
       if (isFirstMessage && !sessionTitleRef.current) sessionTitleRef.current = text || "[Image]";
       const pendingAttachment = attachment;
+      lastAttachmentRef.current = pendingAttachment;
       setMessage("");
       setAttachment(null);
       [...selected].forEach((key) => {
@@ -851,12 +877,6 @@ const styles = StyleSheet.create({
   synthLoadingText: { fontSize: 13, fontFamily: "Inter_400Regular", color: `${SYNTHESIS_COLOR}80` },
   synthError: { fontSize: 13, fontFamily: "Inter_400Regular", color: "#ff4466", padding: 16 },
   synthScroll: { maxHeight: 260 },
-  synthText: {
-    fontSize: 14, fontFamily: "Inter_400Regular", lineHeight: 22,
-    color: "rgba(255,240,200,0.9)",
-    padding: 16, paddingTop: 0,
-  },
-  synthCursor: { fontFamily: "Inter_700Bold" },
 
   bottomBar: {
     paddingTop: 10, paddingHorizontal: 14, gap: 8,
