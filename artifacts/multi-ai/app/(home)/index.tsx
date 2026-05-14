@@ -550,7 +550,7 @@ export default function HomeScreen() {
               onPress={
                 synthesis.expanded
                   ? () => setSynthesis((s) => ({ ...s, expanded: false }))
-                  : synthesis.status !== "idle"
+                  : synthesis.status === "done" || synthesis.status === "loading"
                     ? () => setSynthesis((s) => ({ ...s, expanded: true }))
                     : handleSynthesize
               }
@@ -577,9 +577,11 @@ export default function HomeScreen() {
                 <Text style={styles.synthesizeBtnSub}>
                   {synthesis.expanded && synthesis.status !== "idle"
                     ? "Tap to collapse"
-                    : synthesis.status !== "idle"
+                    : synthesis.status === "done"
                       ? "Tap to reveal consensus"
-                      : `Consensus across ${AI_PROVIDERS.filter((p) => selected.has(p.key) && cards[p.key].lastRole === "assistant").length} AI responses`}
+                      : synthesis.status === "error"
+                        ? "Tap to retry"
+                        : `Consensus across ${AI_PROVIDERS.filter((p) => selected.has(p.key) && cards[p.key].lastRole === "assistant").length} AI responses`}
                 </Text>
               </View>
               {synthesis.status === "loading" ? (
