@@ -43,7 +43,7 @@ export const AI_PROVIDERS: AiProvider[] = [
   {
     key: "grok",
     name: "Grok",
-    model: "4.20",
+    model: "3 Beta",
     initial: "G",
     color: "#00d4ff",
     colorLight: "#00d4ff12",
@@ -53,7 +53,7 @@ export const AI_PROVIDERS: AiProvider[] = [
   {
     key: "deepseek",
     name: "DeepSeek",
-    model: "V4 Flash",
+    model: "V3",
     initial: "D",
     color: "#4d6bfe",
     colorLight: "#4d6bfe12",
@@ -63,7 +63,7 @@ export const AI_PROVIDERS: AiProvider[] = [
   {
     key: "mistral",
     name: "Mistral",
-    model: "Large",
+    model: "Large 24",
     initial: "M",
     color: "#ffc400",
     colorLight: "#ffc40012",
@@ -83,7 +83,7 @@ export const AI_PROVIDERS: AiProvider[] = [
   {
     key: "qwen",
     name: "Qwen",
-    model: "3.6 Plus",
+    model: "3 235B",
     initial: "Q",
     color: "#69ff47",
     colorLight: "#69ff4712",

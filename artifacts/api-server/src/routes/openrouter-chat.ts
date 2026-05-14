@@ -6,11 +6,11 @@ import { openrouter } from "@workspace/integrations-openrouter-ai";
 const router = Router();
 
 const MODEL_MAP: Record<string, string> = {
-  grok: "x-ai/grok-4.20",
-  deepseek: "deepseek/deepseek-v4-flash",
-  mistral: "mistralai/mistral-large-2512",
+  grok: "x-ai/grok-3-beta",
+  deepseek: "deepseek/deepseek-chat-v3-0324",
+  mistral: "mistralai/mistral-large-2411",
   llama: "meta-llama/llama-4-maverick",
-  qwen: "qwen/qwen3.6-plus",
+  qwen: "qwen/qwen3-235b-a22b",
 };
 
 function getModel(provider: string): string | null {

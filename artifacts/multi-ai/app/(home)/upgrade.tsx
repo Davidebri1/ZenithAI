@@ -9,6 +9,7 @@ import {
   ImageBackground,
   Modal,
   Platform,
+  Alert,
 } from "react-native";
 import { WebView } from "react-native-webview";
 import { LinearGradient } from "expo-linear-gradient";
