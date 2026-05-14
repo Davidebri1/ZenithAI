@@ -297,6 +297,16 @@ export default function UpgradeScreen() {
                   <ActivityIndicator color={ACCENT} size="large" />
                 </View>
               )}
+              onError={() => {
+                setCheckoutUrl(null);
+                Alert.alert("Connection error", "Could not load checkout. Please check your connection and try again.");
+              }}
+              onHttpError={(e) => {
+                if (e.nativeEvent.statusCode >= 500) {
+                  setCheckoutUrl(null);
+                  Alert.alert("Checkout unavailable", "Something went wrong. Please try again in a moment.");
+                }
+              }}
             />
           )}
         </View>

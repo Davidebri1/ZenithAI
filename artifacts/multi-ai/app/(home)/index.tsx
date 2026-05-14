@@ -464,6 +464,14 @@ export default function HomeScreen() {
   const handleStop = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     activeReaders.current.forEach((reader) => { try { reader.cancel(); } catch {} });
+    activeReaders.current.clear();
+    setCards((prev) => {
+      const next = { ...prev };
+      for (const key of Object.keys(next)) {
+        if (next[key].streaming) next[key] = { ...next[key], streaming: false, streamingText: "" };
+      }
+      return next;
+    });
   };
 
   const toggleSelect = (key: string) => {
@@ -582,13 +590,13 @@ export default function HomeScreen() {
             <TouchableOpacity onPress={() => router.push("/(home)/enterprise")} style={styles.headerBtn} activeOpacity={0.7}>
               <Feather name="star" size={17} color="#f59e0b" />
             </TouchableOpacity>
-            <TouchableOpacity onPress={() => router.push("/compare")} style={styles.headerBtn} activeOpacity={0.7}>
+            <TouchableOpacity onPress={() => router.push("/(home)/compare")} style={styles.headerBtn} activeOpacity={0.7}>
               <Feather name="columns" size={17} color="rgba(255,255,255,0.6)" />
             </TouchableOpacity>
-            <TouchableOpacity onPress={() => router.push("/search")} style={styles.headerBtn} activeOpacity={0.7}>
+            <TouchableOpacity onPress={() => router.push("/(home)/search")} style={styles.headerBtn} activeOpacity={0.7}>
               <Feather name="search" size={17} color="rgba(255,255,255,0.6)" />
             </TouchableOpacity>
-            <TouchableOpacity onPress={() => router.push("/history")} style={styles.headerBtn} activeOpacity={0.7}>
+            <TouchableOpacity onPress={() => router.push("/(home)/history")} style={styles.headerBtn} activeOpacity={0.7}>
               <Feather name="clock" size={17} color="rgba(255,255,255,0.6)" />
             </TouchableOpacity>
             <TouchableOpacity onPress={handleNewChat} style={styles.newChatBtn} activeOpacity={0.7}>

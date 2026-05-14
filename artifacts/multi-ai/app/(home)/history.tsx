@@ -132,7 +132,7 @@ export default function HistoryScreen() {
           </TouchableOpacity>
           <Text style={styles.title}>History</Text>
           <TouchableOpacity
-            onPress={() => router.push("/search")}
+            onPress={() => router.push("/(home)/search")}
             style={styles.iconBtn}
             activeOpacity={0.7}
           >

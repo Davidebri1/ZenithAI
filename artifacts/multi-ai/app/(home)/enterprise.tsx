@@ -12,6 +12,7 @@ import {
   ImageBackground,
   Dimensions,
   ActivityIndicator,
+  Alert,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { BlurView } from "expo-blur";
@@ -105,13 +106,17 @@ export default function EnterpriseScreen() {
     if (!name.trim() || !message.trim()) return;
     setContactState("sending");
     try {
-      await authFetch(`${BASE_URL}/api/contact`, {
+      const res = await authFetch(`${BASE_URL}/api/contact`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name: name.trim(), company: company.trim(), message: message.trim(), email: userEmail }),
       });
-    } catch {}
-    setContactState("sent");
+      if (!res.ok) throw new Error("Failed");
+      setContactState("sent");
+    } catch {
+      setContactState("idle");
+      Alert.alert("Failed to send", "Please check your connection and try again.");
+    }
   }
 
   function handleCloseContact() {

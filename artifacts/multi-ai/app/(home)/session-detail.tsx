@@ -215,8 +215,7 @@ export default function SessionDetailScreen() {
   const handleResume = async () => {
     if (!session) return;
     await AsyncStorage.setItem(CONV_IDS_KEY, JSON.stringify(session.convIds));
-    router.back();
-    router.back();
+    router.navigate("/(home)");
   };
 
   const handleTogglePrivate = async () => {

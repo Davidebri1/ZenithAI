@@ -29,6 +29,7 @@ router.get("/gemini/conversations", async (req, res) => {
 router.post("/gemini/conversations/:id/messages", async (req, res) => {
   try {
     const id = parseInt(req.params.id, 10);
+    if (isNaN(id) || id <= 0) { res.status(400).json({ error: "Invalid conversation id" }); return; }
     const { content, imageBase64, imageMimeType } = req.body as {
       content: string;
       imageBase64?: string;
