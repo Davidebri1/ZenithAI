@@ -251,8 +251,8 @@ export default function ThreadScreen() {
       />
       <KeyboardAvoidingView style={styles.container} behavior="padding">
         <View style={[styles.header, { paddingTop: topPad + 10 }]}>
-          <BlurView intensity={30} tint="dark" style={StyleSheet.absoluteFill} />
-          <View style={[StyleSheet.absoluteFill, { backgroundColor: "rgba(7,7,20,0.55)", borderBottomWidth: 1, borderBottomColor: `${provider.color}20` }]} />
+          <BlurView intensity={30} tint="dark" style={StyleSheet.absoluteFill} pointerEvents="none" />
+          <View pointerEvents="none" style={[StyleSheet.absoluteFill, { backgroundColor: "rgba(7,7,20,0.55)", borderBottomWidth: 1, borderBottomColor: `${provider.color}20` }]} />
           <TouchableOpacity onPress={() => router.back()} style={styles.backBtn} activeOpacity={0.7}>
             <Feather name="chevron-down" size={24} color="#e8e8f4" />
           </TouchableOpacity>
@@ -374,8 +374,8 @@ export default function ThreadScreen() {
         </View>
 
         <View style={[styles.replyBar, { paddingBottom: bottomPad + 8 }]}>
-          <BlurView intensity={40} tint="dark" style={StyleSheet.absoluteFill} />
-          <View style={[StyleSheet.absoluteFill, { backgroundColor: "rgba(7,7,20,0.6)", borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: "rgba(255,255,255,0.08)" }]} />
+          <BlurView intensity={40} tint="dark" style={StyleSheet.absoluteFill} pointerEvents="none" />
+          <View pointerEvents="none" style={[StyleSheet.absoluteFill, { backgroundColor: "rgba(7,7,20,0.6)", borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: "rgba(255,255,255,0.08)" }]} />
           {attachment && (
             <View style={styles.attachmentPreview}>
               <Image source={{ uri: attachment.uri }} style={styles.attachmentPreviewImg} />
@@ -386,8 +386,8 @@ export default function ThreadScreen() {
             </View>
           )}
           <View style={styles.inputRow}>
-            <BlurView intensity={20} tint="dark" style={StyleSheet.absoluteFill} />
-            <View style={[StyleSheet.absoluteFill, { backgroundColor: "rgba(255,255,255,0.04)", borderRadius: 16, borderWidth: 1, borderColor: "rgba(255,255,255,0.1)" }]} />
+            <BlurView intensity={20} tint="dark" style={StyleSheet.absoluteFill} pointerEvents="none" />
+            <View pointerEvents="none" style={[StyleSheet.absoluteFill, { backgroundColor: "rgba(255,255,255,0.04)", borderRadius: 16, borderWidth: 1, borderColor: "rgba(255,255,255,0.1)" }]} />
             <TouchableOpacity onPress={pickImage} style={styles.attachBtn} activeOpacity={0.7} disabled={streaming}>
               <Feather name="paperclip" size={18} color={attachment ? provider.color : "rgba(255,255,255,0.4)"} />
             </TouchableOpacity>
