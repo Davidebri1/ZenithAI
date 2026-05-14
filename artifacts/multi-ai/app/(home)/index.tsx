@@ -621,6 +621,22 @@ export default function HomeScreen() {
             </View>
           )}
           contentContainerStyle={styles.grid}
+          ListHeaderComponent={
+            AI_PROVIDERS.every((p) => !cards[p.key].lastMessage) ? (
+              <View style={styles.firstTimeHint}>
+                <Text style={styles.firstTimeTitle}>Ask anything. Get 8 answers at once.</Text>
+                <View style={styles.firstTimeModels}>
+                  {AI_PROVIDERS.map((p) => (
+                    <View key={p.key} style={[styles.firstTimeChip, { borderColor: `${p.color}40`, backgroundColor: `${p.color}0f` }]}>
+                      <View style={[styles.firstTimeDot, { backgroundColor: p.color }]} />
+                      <Text style={[styles.firstTimeChipText, { color: `${p.color}cc` }]}>{p.name}</Text>
+                    </View>
+                  ))}
+                </View>
+                <Text style={styles.firstTimeSub}>Type a prompt below. Tap any card to open the full thread. Long-press a card to deselect a model.</Text>
+              </View>
+            ) : null
+          }
           ListFooterComponent={listFooter}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
@@ -729,6 +745,46 @@ const styles = StyleSheet.create({
 
   grid: { paddingHorizontal: 16, gap: CARD_GAP, paddingBottom: 12 },
   row: { flexDirection: "row", gap: CARD_GAP },
+
+  firstTimeHint: {
+    marginBottom: 14,
+    paddingHorizontal: 4,
+    paddingTop: 6,
+    gap: 12,
+    alignItems: "center",
+  },
+  firstTimeTitle: {
+    fontSize: 18,
+    fontFamily: "Inter_700Bold",
+    color: "#e8e8f4",
+    letterSpacing: -0.4,
+    textAlign: "center",
+  },
+  firstTimeModels: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 6,
+    justifyContent: "center",
+  },
+  firstTimeChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 20,
+    borderWidth: 1,
+  },
+  firstTimeDot: { width: 6, height: 6, borderRadius: 3 },
+  firstTimeChipText: { fontSize: 11, fontFamily: "Inter_500Medium" },
+  firstTimeSub: {
+    fontSize: 13,
+    fontFamily: "Inter_400Regular",
+    color: "rgba(255,255,255,0.35)",
+    textAlign: "center",
+    lineHeight: 19,
+    paddingHorizontal: 16,
+  },
 
   card: {
     borderRadius: 20,

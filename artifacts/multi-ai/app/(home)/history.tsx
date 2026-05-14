@@ -8,14 +8,13 @@ import {
   Platform,
   Alert,
   ImageBackground,
+  Pressable,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { BlurView } from "expo-blur";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter, useFocusEffect } from "expo-router";
 import { Feather } from "@expo/vector-icons";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-
 import { useColors } from "@/hooks/useColors";
 import { AI_PROVIDERS } from "@/constants/aiConfig";
 import {
@@ -23,7 +22,6 @@ import {
   deleteSession,
   clearAllSessions,
   formatSessionDate,
-  CONV_IDS_KEY,
   type Session,
 } from "@/constants/sessions";
 
@@ -39,17 +37,11 @@ export default function HistoryScreen() {
     useCallback(() => { getSessions().then(setSessions); }, [])
   );
 
-  const handleRestore = (session: Session) => {
-    Alert.alert("Restore Session?", "This will replace your current conversation.", [
-      { text: "Cancel", style: "cancel" },
-      {
-        text: "Restore",
-        onPress: async () => {
-          await AsyncStorage.setItem(CONV_IDS_KEY, JSON.stringify(session.convIds));
-          router.back();
-        },
-      },
-    ]);
+  const handleOpen = (session: Session) => {
+    router.push({
+      pathname: "/(home)/session-detail",
+      params: { sessionId: session.id },
+    });
   };
 
   const handleDelete = (id: string) => {
@@ -117,10 +109,9 @@ export default function HistoryScreen() {
             contentContainerStyle={[styles.list, { paddingBottom: insets.bottom + 20 }]}
             showsVerticalScrollIndicator={false}
             renderItem={({ item }) => (
-              <TouchableOpacity
-                onPress={() => handleRestore(item)}
-                style={styles.card}
-                activeOpacity={0.75}
+              <Pressable
+                onPress={() => handleOpen(item)}
+                style={({ pressed }) => [styles.card, { opacity: pressed ? 0.85 : 1 }]}
               >
                 <BlurView intensity={22} tint="dark" style={StyleSheet.absoluteFill} />
                 <View style={[StyleSheet.absoluteFill, { backgroundColor: "rgba(7,7,20,0.55)", borderRadius: 18, borderWidth: 1, borderColor: "rgba(255,255,255,0.08)" }]} />
@@ -147,11 +138,12 @@ export default function HistoryScreen() {
                   </View>
                   <Text style={styles.sessionTitle} numberOfLines={2}>{item.title}</Text>
                   <View style={styles.restoreRow}>
-                    <Feather name="rotate-ccw" size={12} color="rgba(255,255,255,0.3)" />
-                    <Text style={styles.restoreHint}>Tap to restore</Text>
+                    <Feather name="eye" size={12} color="rgba(255,255,255,0.3)" />
+                    <Text style={styles.restoreHint}>Tap to view</Text>
+                    <Feather name="chevron-right" size={12} color="rgba(255,255,255,0.2)" />
                   </View>
                 </View>
-              </TouchableOpacity>
+              </Pressable>
             )}
           />
         )}

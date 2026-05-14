@@ -4,7 +4,7 @@ uploads = []
 id = "IBSAe2M0H0nJne8_KkH_s"
 uri = "file://artifacts/multi-ai/assets/images/icon.png"
 type = "image"
-title = "multi-ai app icon"
+title = "zenith app icon"
 
 [[generated]]
 id = "LvVHblKQO34xqAXVFOOsN"
@@ -17,6 +17,12 @@ id = "A9jvLD94AwDS6BMeJ-iBg"
 uri = "file://artifacts/multi-ai/assets/images/bg-brick.png"
 type = "image"
 title = "generated_image"
+
+[[generated]]
+id = "yPZNP9hdFiJfsp8VJQzw0"
+uri = "file://artifacts/multi-ai/assets/images/splash-icon.png"
+type = "image"
+title = "zenith splash icon"
 
 [[outputs]]
 id = "hISodbmZBYOc8_0Sq7hf2"
