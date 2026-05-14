@@ -24,14 +24,14 @@ import { Feather } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Haptics from "expo-haptics";
 import * as ImagePicker from "expo-image-picker";
-import { fetch } from "expo/fetch";
+import { authFetch } from "@/constants/apiAuth";
 
 import { useColors } from "@/hooks/useColors";
 import { AI_PROVIDERS, BASE_URL, SYNTHESIS_COLOR, SYNTHESIS_COLOR_GLOW, type AiProvider } from "@/constants/aiConfig";
 import { saveSession, CONV_IDS_KEY } from "@/constants/sessions";
 
 const CARD_GAP = 10;
-const BG = require("../assets/images/bg-alley.png");
+const BG = require("../../assets/images/bg-alley.png");
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
 interface ConvIds { [key: string]: number; }
@@ -247,7 +247,7 @@ export default function HomeScreen() {
 
   const loadLastMessage = useCallback(async (key: string, convId: number) => {
     try {
-      const res = await fetch(`${BASE_URL}/api/conversations/${convId}/messages`);
+      const res = await authFetch(`${BASE_URL}/api/conversations/${convId}/messages`);
       if (!res.ok) return;
       const msgs = (await res.json()) as Array<{ role: string; content: string }>;
       if (msgs.length > 0) {
@@ -278,7 +278,7 @@ export default function HomeScreen() {
     const missing = AI_PROVIDERS.filter((p) => !existing[p.key]);
     const results = await Promise.all(
       missing.map(async (p) => {
-        const res = await fetch(`${BASE_URL}/api/${p.key}/conversations`, {
+        const res = await authFetch(`${BASE_URL}/api/${p.key}/conversations`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ title: "My Conversations" }),
@@ -302,7 +302,7 @@ export default function HomeScreen() {
     try {
       const body: Record<string, string> = { content };
       if (imageBase64) { body.imageBase64 = imageBase64; body.imageMimeType = imageMimeType || "image/jpeg"; }
-      const res = await fetch(`${BASE_URL}/api/${key}/conversations/${convId}/messages`, {
+      const res = await authFetch(`${BASE_URL}/api/${key}/conversations/${convId}/messages`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
@@ -360,7 +360,7 @@ export default function HomeScreen() {
 
     try {
       const responses = readyProviders.map((p) => ({ name: p.name, content: cards[p.key].lastMessage }));
-      const res = await fetch(`${BASE_URL}/api/synthesize`, {
+      const res = await authFetch(`${BASE_URL}/api/synthesize`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ question: lastPromptRef.current || "the question", responses }),

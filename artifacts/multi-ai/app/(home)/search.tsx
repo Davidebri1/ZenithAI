@@ -16,13 +16,13 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { Feather } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { fetch } from "expo/fetch";
+import { authFetch } from "@/constants/apiAuth";
 
 import { useColors } from "@/hooks/useColors";
 import { AI_PROVIDERS, BASE_URL } from "@/constants/aiConfig";
 import { getSessions, CONV_IDS_KEY, formatMessageTime, type Session } from "@/constants/sessions";
 
-const BG = require("../assets/images/bg-alley.png");
+const BG = require("../../assets/images/bg-alley.png");
 
 interface SearchResult {
   id: number;

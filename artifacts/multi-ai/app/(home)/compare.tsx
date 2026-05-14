@@ -16,12 +16,12 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { Feather } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { fetch } from "expo/fetch";
+import { authFetch } from "@/constants/apiAuth";
 
 import { AI_PROVIDERS, BASE_URL } from "@/constants/aiConfig";
 import { CONV_IDS_KEY } from "@/constants/sessions";
 
-const BG = require("../assets/images/bg-alley.png");
+const BG = require("../../assets/images/bg-alley.png");
 const { width: SW } = Dimensions.get("window");
 const PANEL_GAP = 8;
 const PANEL_W = (SW - 32 - PANEL_GAP) / 2;
@@ -73,7 +73,7 @@ export default function CompareScreen() {
       await Promise.all(
         withConv.map(async (p) => {
           try {
-            const res = await fetch(`${BASE_URL}/api/conversations/${convIds[p.key]}/messages`);
+            const res = await authFetch(`${BASE_URL}/api/conversations/${convIds[p.key]}/messages`);
             if (!res.ok) throw new Error("Failed");
             const msgs = (await res.json()) as ConvMessage[];
             setProviderState((prev) => ({

@@ -5,6 +5,8 @@ import {
   Inter_700Bold,
   useFonts,
 } from "@expo-google-fonts/inter";
+import { ClerkProvider, ClerkLoaded } from "@clerk/expo";
+import { tokenCache } from "@clerk/expo/token-cache";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
@@ -19,6 +21,9 @@ SplashScreen.preventAutoHideAsync();
 
 const queryClient = new QueryClient();
 
+const publishableKey = process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY!;
+const proxyUrl = process.env.EXPO_PUBLIC_CLERK_PROXY_URL || undefined;
+
 function RootLayoutNav() {
   const colors = useColors();
   return (
@@ -28,11 +33,8 @@ function RootLayoutNav() {
         contentStyle: { backgroundColor: colors.background },
       }}
     >
-      <Stack.Screen name="index" options={{ animation: "none" }} />
-      <Stack.Screen name="thread" options={{ animation: "slide_from_bottom", presentation: "modal" }} />
-      <Stack.Screen name="history" options={{ animation: "slide_from_right" }} />
-      <Stack.Screen name="search" options={{ animation: "slide_from_right" }} />
-      <Stack.Screen name="compare" options={{ animation: "slide_from_bottom", presentation: "modal" }} />
+      <Stack.Screen name="(home)" options={{ animation: "none" }} />
+      <Stack.Screen name="(auth)" options={{ animation: "fade" }} />
     </Stack>
   );
 }
@@ -52,16 +54,24 @@ export default function RootLayout() {
   if (!fontsLoaded && !fontError) return null;
 
   return (
-    <SafeAreaProvider>
-      <ErrorBoundary>
-        <QueryClientProvider client={queryClient}>
-          <GestureHandlerRootView style={{ flex: 1 }}>
-            <KeyboardProvider>
-              <RootLayoutNav />
-            </KeyboardProvider>
-          </GestureHandlerRootView>
-        </QueryClientProvider>
-      </ErrorBoundary>
-    </SafeAreaProvider>
+    <ClerkProvider
+      publishableKey={publishableKey}
+      tokenCache={tokenCache}
+      proxyUrl={proxyUrl}
+    >
+      <ClerkLoaded>
+        <SafeAreaProvider>
+          <ErrorBoundary>
+            <QueryClientProvider client={queryClient}>
+              <GestureHandlerRootView style={{ flex: 1 }}>
+                <KeyboardProvider>
+                  <RootLayoutNav />
+                </KeyboardProvider>
+              </GestureHandlerRootView>
+            </QueryClientProvider>
+          </ErrorBoundary>
+        </SafeAreaProvider>
+      </ClerkLoaded>
+    </ClerkProvider>
   );
 }

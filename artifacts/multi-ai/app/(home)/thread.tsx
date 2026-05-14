@@ -19,7 +19,7 @@ import { BlurView } from "expo-blur";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { Feather } from "@expo/vector-icons";
-import { fetch } from "expo/fetch";
+import { authFetch } from "@/constants/apiAuth";
 import * as Haptics from "expo-haptics";
 import * as Clipboard from "expo-clipboard";
 import * as ImagePicker from "expo-image-picker";
@@ -31,7 +31,7 @@ import { useColors } from "@/hooks/useColors";
 import { AI_PROVIDERS, BASE_URL } from "@/constants/aiConfig";
 import { CONV_IDS_KEY, formatMessageTime } from "@/constants/sessions";
 
-const BG = require("../assets/images/bg-alley.png");
+const BG = require("../../assets/images/bg-alley.png");
 
 interface Message {
   role: "user" | "assistant";
@@ -93,7 +93,7 @@ export default function ThreadScreen() {
     }
     if (!id) { setLoading(false); return; }
     try {
-      const res = await fetch(`${BASE_URL}/api/conversations/${id}/messages`);
+      const res = await authFetch(`${BASE_URL}/api/conversations/${id}/messages`);
       if (!res.ok) throw new Error("Failed");
       const data = (await res.json()) as Array<{ role: string; content: string; createdAt?: string }>;
       setMessages(data.map((m) => ({ role: m.role as "user" | "assistant", content: m.content, createdAt: m.createdAt })));
@@ -108,7 +108,7 @@ export default function ThreadScreen() {
       const stored = await AsyncStorage.getItem(CONV_IDS_KEY);
       if (stored) { const ids = JSON.parse(stored) as Record<string, number>; if (ids[provider.key]) { setConvId(ids[provider.key]); return ids[provider.key]; } }
     } catch {}
-    const res = await fetch(`${BASE_URL}/api/${provider.key}/conversations`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ title: "My Conversations" }) });
+    const res = await authFetch(`${BASE_URL}/api/${provider.key}/conversations`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ title: "My Conversations" }) });
     if (!res.ok) throw new Error("Failed to create");
     const data = (await res.json()) as { id: number };
     const newId = data.id;
@@ -148,7 +148,7 @@ export default function ThreadScreen() {
       const id = await getOrCreateConvId();
       const body: Record<string, string> = { content: text };
       if (pendingAttachment?.base64) { body.imageBase64 = pendingAttachment.base64; body.imageMimeType = pendingAttachment.mimeType; }
-      const res = await fetch(`${BASE_URL}/api/${provider.key}/conversations/${id}/messages`, {
+      const res = await authFetch(`${BASE_URL}/api/${provider.key}/conversations/${id}/messages`, {
         method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body),
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
