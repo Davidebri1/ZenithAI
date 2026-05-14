@@ -2,6 +2,9 @@ import { users } from "@workspace/db/schema";
 import { eq, sql } from "drizzle-orm";
 import { db } from "@workspace/db";
 
+export const FREE_PROMPTS_LIMIT = 10;
+export const PRO_PROMPTS_LIMIT = 250;
+
 export class Storage {
   async getProduct(productId: string) {
     const result = await db.execute(
@@ -62,6 +65,41 @@ export class Storage {
       sql`SELECT * FROM stripe.customers WHERE id = ${stripeCustomerId}`
     );
     return result.rows[0] || null;
+  }
+
+  async getUserByStripeCustomerId(stripeCustomerId: string) {
+    const [user] = await db
+      .select()
+      .from(users)
+      .where(eq(users.stripeCustomerId, stripeCustomerId));
+    return user ?? null;
+  }
+
+  async activateProPlan(userId: string) {
+    const [user] = await db
+      .update(users)
+      .set({ plan: "pro", promptsLimit: PRO_PROMPTS_LIMIT, updatedAt: new Date() })
+      .where(eq(users.id, userId))
+      .returning();
+    return user;
+  }
+
+  async deactivateProPlan(userId: string) {
+    const [user] = await db
+      .update(users)
+      .set({ plan: "free", promptsLimit: FREE_PROMPTS_LIMIT, updatedAt: new Date() })
+      .where(eq(users.id, userId))
+      .returning();
+    return user;
+  }
+
+  async resetMonthlyUsage(userId: string) {
+    const [user] = await db
+      .update(users)
+      .set({ promptsUsed: 0, updatedAt: new Date() })
+      .where(eq(users.id, userId))
+      .returning();
+    return user;
   }
 
   async getUser(id: string) {
