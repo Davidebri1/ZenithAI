@@ -8,6 +8,7 @@ import openrouterChatRouter from "./openrouter-chat";
 import synthesizeRouter from "./synthesize";
 import searchRouter from "./search";
 import stripeRouter from "./stripe";
+import contactRouter from "./contact";
 import { requireAuth } from "../middlewares/requireAuth";
 
 const router: IRouter = Router();
@@ -17,6 +18,7 @@ router.use(healthRouter);
 // Stripe routes (authenticated)
 router.use(requireAuth);
 router.use(stripeRouter);
+router.use(contactRouter);
 
 // All other authenticated routes
 router.use(promptRouter);

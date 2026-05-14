@@ -1,15 +1,16 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   View,
   Text,
   StyleSheet,
   TouchableOpacity,
   ScrollView,
-  Linking,
   ActivityIndicator,
   ImageBackground,
+  Modal,
   Platform,
 } from "react-native";
+import { WebView } from "react-native-webview";
 import { LinearGradient } from "expo-linear-gradient";
 import { BlurView } from "expo-blur";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -53,6 +54,8 @@ export default function UpgradeScreen() {
   const [selectedInterval, setSelectedInterval] = useState<"month" | "year">("year");
   const [loading, setLoading] = useState(true);
   const [checkoutLoading, setCheckoutLoading] = useState(false);
+  const [checkoutUrl, setCheckoutUrl] = useState<string | null>(null);
+  const [checkoutSuccess, setCheckoutSuccess] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -95,7 +98,7 @@ export default function UpgradeScreen() {
         body: JSON.stringify({ priceId: selectedPrice.id }),
       });
       const { url } = await res.json();
-      if (url) await Linking.openURL(url);
+      if (url) setCheckoutUrl(url);
     } catch (e) {
       console.error("Checkout error", e);
     } finally {
@@ -103,130 +106,202 @@ export default function UpgradeScreen() {
     }
   }
 
-  return (
-    <ImageBackground source={BG} style={StyleSheet.absoluteFill} resizeMode="cover">
-      <LinearGradient
-        colors={["rgba(7,7,20,0.88)", "rgba(7,7,20,0.72)", "rgba(7,7,20,0.92)"]}
-        style={StyleSheet.absoluteFill}
-      />
+  const handleWebViewNav = useCallback((navState: { url: string }) => {
+    if (navState.url.includes("checkout=success")) {
+      setCheckoutUrl(null);
+      setCheckoutSuccess(true);
+    } else if (navState.url.includes("checkout=cancel")) {
+      setCheckoutUrl(null);
+    }
+  }, []);
 
-      <View style={[styles.container, { paddingTop: insets.top + 8, paddingBottom: insets.bottom + 16 }]}>
-        {/* Header */}
-        <View style={styles.header}>
-          <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-            <Feather name="x" size={22} color="rgba(240,240,255,0.7)" />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>OneAI Pro</Text>
-          <View style={{ width: 36 }} />
-        </View>
-
-        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scroll}>
-          {/* Hero */}
-          <View style={styles.hero}>
-            <View style={[styles.heroBadge, Platform.OS === "web" ? { boxShadow: `0 0 32px ${ACCENT_GLOW}` } as object : {}]}>
-              <LinearGradient colors={[`${ACCENT}30`, `${ACCENT}08`]} style={styles.heroBadgeGrad}>
-                <Feather name="zap" size={28} color={ACCENT} />
-              </LinearGradient>
-            </View>
-            <Text style={styles.heroTitle}>Unlock all 8 AIs</Text>
-            <Text style={styles.heroSub}>
-              Compare GPT, Claude, Gemini, Grok, DeepSeek, Mistral, Llama & Qwen side by side — unlimited.
-            </Text>
+  if (checkoutSuccess) {
+    return (
+      <ImageBackground source={BG} style={StyleSheet.absoluteFill} resizeMode="cover">
+        <LinearGradient
+          colors={["rgba(7,7,20,0.92)", "rgba(7,7,20,0.80)", "rgba(7,7,20,0.95)"]}
+          style={StyleSheet.absoluteFill}
+        />
+        <View style={[styles.container, styles.successContainer, { paddingTop: insets.top + 8, paddingBottom: insets.bottom + 24 }]}>
+          <View style={[styles.successIcon, Platform.OS === "web" ? { boxShadow: `0 0 40px ${ACCENT_GLOW}` } as object : {}]}>
+            <LinearGradient colors={[`${ACCENT}30`, `${ACCENT}08`]} style={styles.successIconGrad}>
+              <Feather name="check" size={36} color={ACCENT} />
+            </LinearGradient>
           </View>
-
-          {/* Interval toggle */}
-          <View style={styles.toggleRow}>
-            <TouchableOpacity
-              onPress={() => setSelectedInterval("month")}
-              style={[styles.toggleBtn, selectedInterval === "month" && styles.toggleBtnActive]}
-            >
-              <Text style={[styles.toggleLabel, selectedInterval === "month" && styles.toggleLabelActive]}>
-                Monthly
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              onPress={() => setSelectedInterval("year")}
-              style={[styles.toggleBtn, selectedInterval === "year" && styles.toggleBtnActive]}
-            >
-              <Text style={[styles.toggleLabel, selectedInterval === "year" && styles.toggleLabelActive]}>
-                Yearly
-              </Text>
-              {savings && (
-                <View style={styles.savingsBadge}>
-                  <Text style={styles.savingsText}>-{savings}%</Text>
-                </View>
-              )}
-            </TouchableOpacity>
-          </View>
-
-          {/* Price card */}
-          <View style={[styles.priceCard, Platform.OS === "web" ? { boxShadow: `0 0 0 1px ${ACCENT}40, 0 0 40px ${ACCENT}18` } as object : {}]}>
-            <BlurView intensity={28} tint="dark" style={StyleSheet.absoluteFill} />
-            <View style={[StyleSheet.absoluteFill, { backgroundColor: "rgba(7,7,20,0.55)", borderRadius: 20, borderWidth: 1, borderColor: `${ACCENT}40` }]} />
-            <LinearGradient colors={[`${ACCENT}22`, `${ACCENT}00`]} style={[StyleSheet.absoluteFill, { borderRadius: 20 }]} />
-
-            <View style={styles.priceContent}>
-              {loading ? (
-                <ActivityIndicator color={ACCENT} />
-              ) : selectedPrice ? (
-                <>
-                  <Text style={styles.priceName}>{proProduct?.name ?? "OneAI Pro"}</Text>
-                  <Text style={styles.priceAmount}>
-                    ${(selectedPrice.unit_amount / 100).toFixed(0)}
-                    <Text style={styles.pricePer}>/{selectedInterval === "year" ? "year" : "month"}</Text>
-                  </Text>
-                  {monthlyEquiv && (
-                    <Text style={styles.priceEquiv}>{monthlyEquiv} — billed annually</Text>
-                  )}
-                </>
-              ) : (
-                <Text style={styles.priceAmount}>$14.99/mo</Text>
-              )}
-            </View>
-          </View>
-
-          {/* CTA */}
-          <TouchableOpacity
-            onPress={handleCheckout}
-            disabled={checkoutLoading || !selectedPrice}
-            activeOpacity={0.85}
-            style={styles.ctaWrap}
-          >
-            <LinearGradient colors={[ACCENT, "#16a34a"]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.cta}>
-              {checkoutLoading ? (
-                <ActivityIndicator color="#000" />
-              ) : (
-                <Text style={styles.ctaText}>Start Pro — {selectedInterval === "year" ? "Best Value" : "Monthly"}</Text>
-              )}
+          <Text style={styles.successTitle}>Welcome to Pro</Text>
+          <Text style={styles.successSub}>
+            You now have unlimited prompts across all 8 AI models. Start asking.
+          </Text>
+          <TouchableOpacity onPress={() => router.replace("/(home)")} style={styles.successCTA} activeOpacity={0.85}>
+            <LinearGradient colors={[ACCENT, "#16a34a"]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.successCTAGrad}>
+              <Text style={styles.successCTAText}>Start comparing</Text>
             </LinearGradient>
           </TouchableOpacity>
+        </View>
+      </ImageBackground>
+    );
+  }
 
-          <Text style={styles.finePrint}>Cancel anytime. Secure checkout via Stripe.</Text>
+  return (
+    <>
+      <ImageBackground source={BG} style={StyleSheet.absoluteFill} resizeMode="cover">
+        <LinearGradient
+          colors={["rgba(7,7,20,0.88)", "rgba(7,7,20,0.72)", "rgba(7,7,20,0.92)"]}
+          style={StyleSheet.absoluteFill}
+        />
 
-          {/* Features */}
-          <View style={[styles.featuresCard, { overflow: "hidden" }]}>
-            <BlurView intensity={18} tint="dark" style={StyleSheet.absoluteFill} />
-            <View style={[StyleSheet.absoluteFill, { backgroundColor: "rgba(7,7,20,0.50)", borderRadius: 16, borderWidth: 1, borderColor: "rgba(255,255,255,0.06)" }]} />
-            <View style={styles.featuresContent}>
-              <Text style={styles.featuresTitle}>Everything included</Text>
-              {FEATURES.map((f) => (
-                <View key={f.icon} style={styles.featureRow}>
-                  <View style={[styles.featureIcon, { backgroundColor: `${ACCENT}18` }]}>
-                    <Feather name={f.icon as any} size={14} color={ACCENT} />
+        <View style={[styles.container, { paddingTop: insets.top + 8, paddingBottom: insets.bottom + 16 }]}>
+          {/* Header */}
+          <View style={styles.header}>
+            <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+              <Feather name="x" size={22} color="rgba(240,240,255,0.7)" />
+            </TouchableOpacity>
+            <Text style={styles.headerTitle}>OneAI Pro</Text>
+            <View style={{ width: 36 }} />
+          </View>
+
+          <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scroll}>
+            {/* Hero */}
+            <View style={styles.hero}>
+              <View style={[styles.heroBadge, Platform.OS === "web" ? { boxShadow: `0 0 32px ${ACCENT_GLOW}` } as object : {}]}>
+                <LinearGradient colors={[`${ACCENT}30`, `${ACCENT}08`]} style={styles.heroBadgeGrad}>
+                  <Feather name="zap" size={28} color={ACCENT} />
+                </LinearGradient>
+              </View>
+              <Text style={styles.heroTitle}>Unlock all 8 AIs</Text>
+              <Text style={styles.heroSub}>
+                Compare GPT, Claude, Gemini, Grok, DeepSeek, Mistral, Llama & Qwen side by side — unlimited.
+              </Text>
+            </View>
+
+            {/* Interval toggle */}
+            <View style={styles.toggleRow}>
+              <TouchableOpacity
+                onPress={() => setSelectedInterval("month")}
+                style={[styles.toggleBtn, selectedInterval === "month" && styles.toggleBtnActive]}
+              >
+                <Text style={[styles.toggleLabel, selectedInterval === "month" && styles.toggleLabelActive]}>
+                  Monthly
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => setSelectedInterval("year")}
+                style={[styles.toggleBtn, selectedInterval === "year" && styles.toggleBtnActive]}
+              >
+                <Text style={[styles.toggleLabel, selectedInterval === "year" && styles.toggleLabelActive]}>
+                  Yearly
+                </Text>
+                {savings && (
+                  <View style={styles.savingsBadge}>
+                    <Text style={styles.savingsText}>-{savings}%</Text>
                   </View>
-                  <Text style={styles.featureLabel}>{f.label}</Text>
-                </View>
-              ))}
+                )}
+              </TouchableOpacity>
+            </View>
+
+            {/* Price card */}
+            <View style={[styles.priceCard, Platform.OS === "web" ? { boxShadow: `0 0 0 1px ${ACCENT}40, 0 0 40px ${ACCENT}18` } as object : {}]}>
+              <BlurView intensity={28} tint="dark" style={StyleSheet.absoluteFill} />
+              <View style={[StyleSheet.absoluteFill, { backgroundColor: "rgba(7,7,20,0.55)", borderRadius: 20, borderWidth: 1, borderColor: `${ACCENT}40` }]} />
+              <LinearGradient colors={[`${ACCENT}22`, `${ACCENT}00`]} style={[StyleSheet.absoluteFill, { borderRadius: 20 }]} />
+
+              <View style={styles.priceContent}>
+                {loading ? (
+                  <ActivityIndicator color={ACCENT} />
+                ) : selectedPrice ? (
+                  <>
+                    <Text style={styles.priceName}>{proProduct?.name ?? "OneAI Pro"}</Text>
+                    <Text style={styles.priceAmount}>
+                      ${(selectedPrice.unit_amount / 100).toFixed(0)}
+                      <Text style={styles.pricePer}>/{selectedInterval === "year" ? "year" : "month"}</Text>
+                    </Text>
+                    {monthlyEquiv && (
+                      <Text style={styles.priceEquiv}>{monthlyEquiv} — billed annually</Text>
+                    )}
+                  </>
+                ) : (
+                  <Text style={styles.priceAmount}>$14.99/mo</Text>
+                )}
+              </View>
+            </View>
+
+            {/* CTA */}
+            <TouchableOpacity
+              onPress={handleCheckout}
+              disabled={checkoutLoading || !selectedPrice}
+              activeOpacity={0.85}
+              style={styles.ctaWrap}
+            >
+              <LinearGradient colors={[ACCENT, "#16a34a"]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.cta}>
+                {checkoutLoading ? (
+                  <ActivityIndicator color="#000" />
+                ) : (
+                  <Text style={styles.ctaText}>Start Pro — {selectedInterval === "year" ? "Best Value" : "Monthly"}</Text>
+                )}
+              </LinearGradient>
+            </TouchableOpacity>
+
+            <Text style={styles.finePrint}>Cancel anytime. Secure checkout — stays right here in the app.</Text>
+
+            {/* Features */}
+            <View style={[styles.featuresCard, { overflow: "hidden" }]}>
+              <BlurView intensity={18} tint="dark" style={StyleSheet.absoluteFill} />
+              <View style={[StyleSheet.absoluteFill, { backgroundColor: "rgba(7,7,20,0.50)", borderRadius: 16, borderWidth: 1, borderColor: "rgba(255,255,255,0.06)" }]} />
+              <View style={styles.featuresContent}>
+                <Text style={styles.featuresTitle}>Everything included</Text>
+                {FEATURES.map((f) => (
+                  <View key={f.icon} style={styles.featureRow}>
+                    <View style={[styles.featureIcon, { backgroundColor: `${ACCENT}18` }]}>
+                      <Feather name={f.icon as any} size={14} color={ACCENT} />
+                    </View>
+                    <Text style={styles.featureLabel}>{f.label}</Text>
+                  </View>
+                ))}
+              </View>
+            </View>
+
+            {/* Free tier reminder */}
+            <View style={styles.freeTier}>
+              <Text style={styles.freeTierText}>Free plan: 10 prompts to try OneAI</Text>
+            </View>
+          </ScrollView>
+        </View>
+      </ImageBackground>
+
+      {/* In-app Stripe checkout — never leaves the app */}
+      <Modal
+        visible={!!checkoutUrl}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={() => setCheckoutUrl(null)}
+      >
+        <View style={styles.webviewContainer}>
+          <View style={[styles.webviewHeader, { paddingTop: insets.top + 4 }]}>
+            <TouchableOpacity onPress={() => setCheckoutUrl(null)} style={styles.webviewClose} activeOpacity={0.7}>
+              <Feather name="x" size={20} color="rgba(240,240,255,0.7)" />
+            </TouchableOpacity>
+            <Text style={styles.webviewTitle}>Secure Checkout</Text>
+            <View style={styles.webviewSecure}>
+              <Feather name="lock" size={12} color={ACCENT} />
+              <Text style={styles.webviewSecureText}>Stripe</Text>
             </View>
           </View>
-
-          {/* Free tier reminder */}
-          <View style={styles.freeTier}>
-            <Text style={styles.freeTierText}>Free plan: 10 prompts to try OneAI</Text>
-          </View>
-        </ScrollView>
-      </View>
-    </ImageBackground>
+          {checkoutUrl && (
+            <WebView
+              source={{ uri: checkoutUrl }}
+              onNavigationStateChange={handleWebViewNav}
+              style={styles.webview}
+              startInLoadingState
+              renderLoading={() => (
+                <View style={styles.webviewLoading}>
+                  <ActivityIndicator color={ACCENT} size="large" />
+                </View>
+              )}
+            />
+          )}
+        </View>
+      </Modal>
+    </>
   );
 }
 
@@ -272,4 +347,32 @@ const styles = StyleSheet.create({
   featureLabel: { color: "rgba(240,240,255,0.75)", fontSize: 13, flex: 1 },
   freeTier: { alignItems: "center", marginTop: 4 },
   freeTierText: { color: "rgba(240,240,255,0.3)", fontSize: 12 },
+
+  // Success state
+  successContainer: { flex: 1, alignItems: "center", justifyContent: "center", paddingHorizontal: 32 },
+  successIcon: { width: 80, height: 80, borderRadius: 40, overflow: "hidden", marginBottom: 24 },
+  successIconGrad: { flex: 1, alignItems: "center", justifyContent: "center" },
+  successTitle: { color: "#f0f0ff", fontSize: 28, fontWeight: "800", textAlign: "center", marginBottom: 12 },
+  successSub: { color: "rgba(240,240,255,0.55)", fontSize: 15, textAlign: "center", lineHeight: 22, marginBottom: 32 },
+  successCTA: { borderRadius: 16, overflow: "hidden", width: "100%" },
+  successCTAGrad: { paddingVertical: 16, alignItems: "center" },
+  successCTAText: { color: "#000", fontSize: 16, fontWeight: "800" },
+
+  // WebView modal
+  webviewContainer: { flex: 1, backgroundColor: "#07070d" },
+  webviewHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 16,
+    paddingBottom: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: "rgba(255,255,255,0.06)",
+  },
+  webviewClose: { width: 36, height: 36, alignItems: "center", justifyContent: "center" },
+  webviewTitle: { color: "#f0f0ff", fontSize: 15, fontWeight: "700" },
+  webviewSecure: { flexDirection: "row", alignItems: "center", gap: 4 },
+  webviewSecureText: { color: ACCENT, fontSize: 12, fontWeight: "600" },
+  webview: { flex: 1 },
+  webviewLoading: { position: "absolute", inset: 0, alignItems: "center", justifyContent: "center", backgroundColor: "#07070d" } as any,
 });

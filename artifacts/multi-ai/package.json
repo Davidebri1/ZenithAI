@@ -61,6 +61,7 @@
   },
   "dependencies": {
     "expo-clipboard": "^8.0.8",
-    "react-native-markdown-display": "^7.0.2"
+    "react-native-markdown-display": "^7.0.2",
+    "react-native-webview": "13.15.0"
   }
 }
