@@ -29,3 +29,15 @@ id = "hISodbmZBYOc8_0Sq7hf2"
 uri = "file://artifacts/multi-ai/assets/images/bg-brick.png"
 type = "image"
 title = "New noir background"
+
+[[outputs]]
+id = "39kcNog79uog9t9UjFL6T"
+uri = "file://artifacts/multi-ai/assets/images/icon.png"
+type = "image"
+title = "App Icon (1024×1024)"
+
+[[outputs]]
+id = "8hprNKPCWBHq8q-t37nhp"
+uri = "file://artifacts/multi-ai/assets/images/splash-icon.png"
+type = "image"
+title = "Splash Screen (1024×1024)"
