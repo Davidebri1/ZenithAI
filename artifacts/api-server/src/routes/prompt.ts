@@ -4,7 +4,6 @@ import { conversations, messages } from "@workspace/db";
 import { eq, asc } from "drizzle-orm";
 import { storage } from "../storage";
 import { getAuth } from "@clerk/express";
-import { sendEmail, quotaWarningEmail, quotaExhaustedEmail } from "../emailClient";
 
 const router = Router();
 
