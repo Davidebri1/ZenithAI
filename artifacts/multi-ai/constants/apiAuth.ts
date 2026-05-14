@@ -19,5 +19,5 @@ export async function authFetch(url: string, options: RequestInit = {}): Promise
     Object.assign(headers, existing);
   }
   if (token) headers["Authorization"] = `Bearer ${token}`;
-  return expoFetch(url, { ...options, headers });
+  return expoFetch(url, { ...options, headers } as Parameters<typeof expoFetch>[1]);
 }

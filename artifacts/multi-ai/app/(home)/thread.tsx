@@ -134,8 +134,23 @@ export default function ThreadScreen() {
     const text = reply.trim();
     if ((!text && !attachment) || streaming) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    setStreaming(true);
 
+    try {
+      const trackRes = await authFetch(`${BASE_URL}/api/prompt/track`, { method: "POST", headers: { "Content-Type": "application/json" } });
+      if (trackRes.status === 402) {
+        Alert.alert(
+          "No prompts remaining",
+          "You've used all your free prompts. Upgrade to Pro for 250 prompts/month.",
+          [
+            { text: "Not now", style: "cancel" },
+            { text: "Upgrade to Pro", onPress: () => router.push("/(home)/upgrade") },
+          ]
+        );
+        return;
+      }
+    } catch {}
+
+    setStreaming(true);
     const now = new Date().toISOString();
     const userMsg: Message = { role: "user", content: text, createdAt: now, attachmentUri: attachment?.uri };
     const assistantMsg: Message = { role: "assistant", content: "", streaming: true };
