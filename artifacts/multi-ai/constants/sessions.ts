@@ -8,6 +8,7 @@ export interface Session {
   title: string;
   createdAt: string;
   convIds: Record<string, number>;
+  isPrivate?: boolean;
 }
 
 export async function getSessions(): Promise<Session[]> {
@@ -30,6 +31,7 @@ export async function saveSession(
     title,
     createdAt: new Date().toISOString(),
     convIds,
+    isPrivate: false,
   };
   sessions.unshift(session);
   if (sessions.length > 100) sessions.splice(100);
@@ -42,6 +44,34 @@ export async function deleteSession(id: string): Promise<void> {
     SESSIONS_KEY,
     JSON.stringify(sessions.filter((s) => s.id !== id))
   );
+}
+
+export async function toggleSessionPrivate(id: string): Promise<boolean> {
+  const sessions = await getSessions();
+  let newPrivate = false;
+  const updated = sessions.map((s) => {
+    if (s.id === id) {
+      newPrivate = !s.isPrivate;
+      return { ...s, isPrivate: newPrivate };
+    }
+    return s;
+  });
+  await AsyncStorage.setItem(SESSIONS_KEY, JSON.stringify(updated));
+  return newPrivate;
+}
+
+export async function clearSessionsByFilter(
+  filter: "public" | "private" | "all"
+): Promise<void> {
+  if (filter === "all") {
+    await AsyncStorage.removeItem(SESSIONS_KEY);
+    return;
+  }
+  const sessions = await getSessions();
+  const kept = sessions.filter((s) =>
+    filter === "private" ? !s.isPrivate : s.isPrivate
+  );
+  await AsyncStorage.setItem(SESSIONS_KEY, JSON.stringify(kept));
 }
 
 export async function clearAllSessions(): Promise<void> {

@@ -9,7 +9,7 @@ import {
   Dimensions,
   ActivityIndicator,
   ImageBackground,
-  ScrollView,
+  Alert,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { BlurView } from "expo-blur";
@@ -20,7 +20,14 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 
 import { useColors } from "@/hooks/useColors";
 import { AI_PROVIDERS, BASE_URL, type AiProvider } from "@/constants/aiConfig";
-import { getSessions, CONV_IDS_KEY, formatSessionDate, type Session } from "@/constants/sessions";
+import {
+  getSessions,
+  deleteSession,
+  toggleSessionPrivate,
+  CONV_IDS_KEY,
+  formatSessionDate,
+  type Session,
+} from "@/constants/sessions";
 import { authFetch } from "@/constants/apiAuth";
 
 const BG = require("../../assets/images/bg-alley.png");
@@ -142,6 +149,7 @@ export default function SessionDetailScreen() {
   const [session, setSession] = useState<Session | null>(null);
   const [snapshots, setSnapshots] = useState<ProviderSnapshot[]>([]);
   const [loadingSession, setLoadingSession] = useState(true);
+  const [isPrivate, setIsPrivate] = useState(false);
 
   const cardWidth = (SCREEN_WIDTH - 32 - CARD_GAP) / 2;
 
@@ -154,6 +162,7 @@ export default function SessionDetailScreen() {
     const sessions = await getSessions();
     const found = sessions.find((s) => s.id === id) ?? null;
     setSession(found);
+    setIsPrivate(found?.isPrivate ?? false);
     setLoadingSession(false);
     if (!found) return;
 
@@ -208,6 +217,28 @@ export default function SessionDetailScreen() {
     await AsyncStorage.setItem(CONV_IDS_KEY, JSON.stringify(session.convIds));
     router.back();
     router.back();
+  };
+
+  const handleTogglePrivate = async () => {
+    if (!session) return;
+    const nowPrivate = await toggleSessionPrivate(session.id);
+    setIsPrivate(nowPrivate);
+    setSession((s) => s ? { ...s, isPrivate: nowPrivate } : s);
+  };
+
+  const handleDelete = () => {
+    if (!session) return;
+    Alert.alert("Delete Session?", "This cannot be undone.", [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Delete",
+        style: "destructive",
+        onPress: async () => {
+          await deleteSession(session.id);
+          router.back();
+        },
+      },
+    ]);
   };
 
   const handleOpenThread = (snap: ProviderSnapshot) => {
@@ -291,14 +322,47 @@ export default function SessionDetailScreen() {
           </TouchableOpacity>
 
           <View style={styles.headerMid}>
-            <Text style={styles.headerTitle} numberOfLines={1}>
-              {session.title}
-            </Text>
+            <View style={styles.headerTitleRow}>
+              <Text style={styles.headerTitle} numberOfLines={1}>
+                {session.title}
+              </Text>
+              {isPrivate && (
+                <View style={styles.privatePill}>
+                  <Feather name="lock" size={10} color="#a78bfa" />
+                  <Text style={styles.privatePillText}>Private</Text>
+                </View>
+              )}
+            </View>
             <Text style={styles.headerDate}>
               {formatSessionDate(session.createdAt)}
             </Text>
           </View>
 
+          {/* Lock / Unlock */}
+          <TouchableOpacity
+            onPress={handleTogglePrivate}
+            style={styles.iconBtn}
+            activeOpacity={0.7}
+            hitSlop={{ top: 8, right: 8, bottom: 8, left: 8 }}
+          >
+            <Feather
+              name={isPrivate ? "lock" : "unlock"}
+              size={18}
+              color={isPrivate ? "#a78bfa" : "rgba(255,255,255,0.4)"}
+            />
+          </TouchableOpacity>
+
+          {/* Delete */}
+          <TouchableOpacity
+            onPress={handleDelete}
+            style={styles.iconBtn}
+            activeOpacity={0.7}
+            hitSlop={{ top: 8, right: 8, bottom: 8, left: 8 }}
+          >
+            <Feather name="trash-2" size={18} color="rgba(255,80,80,0.6)" />
+          </TouchableOpacity>
+
+          {/* Resume */}
           <TouchableOpacity
             onPress={handleResume}
             style={styles.resumeBtn}
@@ -377,17 +441,43 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     zIndex: 1,
   },
-  headerMid: { flex: 1, zIndex: 1, gap: 2 },
+  headerMid: { flex: 1, zIndex: 1, gap: 2, minWidth: 0 },
+  headerTitleRow: { flexDirection: "row", alignItems: "center", gap: 7, flexWrap: "nowrap" },
   headerTitle: {
-    fontSize: 17,
+    fontSize: 16,
     fontFamily: "Inter_600SemiBold",
     color: "#e8e8f4",
     letterSpacing: -0.2,
+    flexShrink: 1,
+  },
+  privatePill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    backgroundColor: "rgba(167,139,250,0.15)",
+    borderWidth: 1,
+    borderColor: "rgba(167,139,250,0.3)",
+    borderRadius: 10,
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    flexShrink: 0,
+  },
+  privatePillText: {
+    fontSize: 10,
+    fontFamily: "Inter_600SemiBold",
+    color: "#a78bfa",
   },
   headerDate: {
     fontSize: 12,
     fontFamily: "Inter_400Regular",
     color: "rgba(255,255,255,0.4)",
+  },
+  iconBtn: {
+    width: 34,
+    height: 34,
+    alignItems: "center",
+    justifyContent: "center",
+    zIndex: 1,
   },
   resumeBtn: {
     flexDirection: "row",
