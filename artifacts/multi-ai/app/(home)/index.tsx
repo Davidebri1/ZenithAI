@@ -171,14 +171,14 @@ function AiCard({ provider, state, selected, onToggleSelect, onOpen, cardWidth }
   );
 }
 
-function SynthesisCard({ synthesis, onClose }: { synthesis: SynthesisState; onClose: () => void }) {
+function SynthesisCard({ synthesis, onClose, stale }: { synthesis: SynthesisState; onClose: () => void; stale?: boolean }) {
   if (!synthesis.expanded) return null;
   return (
     <View style={[styles.synthCard, { overflow: "hidden" }]}>
       <BlurView intensity={32} tint="dark" style={StyleSheet.absoluteFill} />
-      <View style={[StyleSheet.absoluteFill, { backgroundColor: "rgba(7,7,20,0.60)", borderRadius: 22, borderWidth: 1, borderColor: `${SYNTHESIS_COLOR}40` }]} />
+      <View style={[StyleSheet.absoluteFill, { backgroundColor: "rgba(7,7,20,0.60)", borderRadius: 22, borderWidth: 1, borderColor: stale ? "rgba(255,255,255,0.12)" : `${SYNTHESIS_COLOR}40` }]} />
       <LinearGradient
-        colors={[`${SYNTHESIS_COLOR}30`, `${SYNTHESIS_COLOR}08`, "transparent"]}
+        colors={stale ? ["rgba(255,255,255,0.05)", "transparent"] : [`${SYNTHESIS_COLOR}30`, `${SYNTHESIS_COLOR}08`, "transparent"]}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         style={StyleSheet.absoluteFill}
@@ -186,7 +186,7 @@ function SynthesisCard({ synthesis, onClose }: { synthesis: SynthesisState; onCl
 
       <View style={styles.synthHeader}>
         <LinearGradient
-          colors={[SYNTHESIS_COLOR, "#ff8c00", SYNTHESIS_COLOR]}
+          colors={stale ? ["rgba(255,255,255,0.25)", "rgba(255,255,255,0.15)", "rgba(255,255,255,0.25)"] : [SYNTHESIS_COLOR, "#ff8c00", SYNTHESIS_COLOR]}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 0 }}
           style={styles.synthBadge}
@@ -199,8 +199,10 @@ function SynthesisCard({ synthesis, onClose }: { synthesis: SynthesisState; onCl
       </View>
 
       <View style={styles.synthSubtitleRow}>
-        <Feather name="git-merge" size={11} color={`${SYNTHESIS_COLOR}70`} />
-        <Text style={styles.synthSubtitle}>Consensus across all AI responses</Text>
+        <Feather name="git-merge" size={11} color={stale ? "rgba(255,255,255,0.3)" : `${SYNTHESIS_COLOR}70`} />
+        <Text style={[styles.synthSubtitle, stale && { color: "rgba(255,255,255,0.3)" }]}>
+          {stale ? "Previous round — new responses loading…" : "Consensus across all AI responses"}
+        </Text>
       </View>
 
       {synthesis.status === "loading" && synthesis.text.length === 0 ? (
@@ -425,7 +427,6 @@ export default function HomeScreen() {
 
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     inputRef.current?.blur();
-    setSynthesis({ status: "idle", text: "", expanded: false });
     if (text) lastPromptRef.current = text;
     try {
       // Server-side quota check + increment before any streaming begins
@@ -555,7 +556,7 @@ export default function HomeScreen() {
           )}
         </TouchableOpacity>
       )}
-      {synthesis.expanded && <SynthesisCard synthesis={synthesis} onClose={() => setSynthesis((s) => ({ ...s, expanded: false }))} />}
+      {synthesis.expanded && <SynthesisCard synthesis={synthesis} onClose={() => setSynthesis((s) => ({ ...s, expanded: false }))} stale={anyStreaming && synthesis.status === "done"} />}
     </View>
   );
 
