@@ -21,7 +21,7 @@ import { Feather } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useUser } from "@clerk/expo";
 import { authFetch } from "@/constants/apiAuth";
-import { BASE_URL } from "@/constants/aiConfig";
+import { BASE_URL, AI_PROVIDERS } from "@/constants/aiConfig";
 
 const BG = require("../../assets/images/bg-alley.png");
 const { width: SW } = Dimensions.get("window");
@@ -29,16 +29,7 @@ const { width: SW } = Dimensions.get("window");
 const GOLD = "#f59e0b";
 const ACCENT = "#22c55e";
 
-const MODELS = [
-  { name: "GPT", color: "#74aa9c" },
-  { name: "Claude", color: "#d97757" },
-  { name: "Gemini", color: "#4285f4" },
-  { name: "Grok", color: "#e2e8f0" },
-  { name: "DeepSeek", color: "#4f9cf9" },
-  { name: "Mistral", color: "#f97316" },
-  { name: "Llama", color: "#a855f7" },
-  { name: "Qwen", color: "#06b6d4" },
-];
+const MODELS = AI_PROVIDERS.map((p) => ({ name: p.name, color: p.color }));
 
 const TIERS = [
   {
@@ -164,7 +155,7 @@ export default function EnterpriseScreen() {
                   </View>
                 ))}
               </View>
-              <Text style={styles.heroTitle}>One prompt.{"\n"}Eight answers.</Text>
+              <Text style={styles.heroTitle}>One prompt.{"\n"}All the answers.</Text>
               <Text style={styles.heroSub}>
                 Compare every major AI model side by side. Stop guessing which one is best — see them all at once.
               </Text>

@@ -547,7 +547,13 @@ export default function HomeScreen() {
               <SynthesisCard synthesis={synthesis} onClose={() => setSynthesis((s) => ({ ...s, expanded: false }))} stale={anyStreaming && synthesis.status === "done"} />
             )}
             <TouchableOpacity
-              onPress={synthesis.expanded ? () => setSynthesis((s) => ({ ...s, expanded: !s.expanded })) : handleSynthesize}
+              onPress={
+                synthesis.expanded
+                  ? () => setSynthesis((s) => ({ ...s, expanded: false }))
+                  : synthesis.status !== "idle"
+                    ? () => setSynthesis((s) => ({ ...s, expanded: true }))
+                    : handleSynthesize
+              }
               disabled={!canSynthesize && synthesis.status === "idle"}
               style={[
                 styles.synthesizeBtn,
@@ -662,7 +668,7 @@ export default function HomeScreen() {
 
           <View style={styles.inputRow}>
             <TouchableOpacity onPress={pickImage} style={styles.attachBtn} activeOpacity={0.7} disabled={anyStreaming}>
-              <Feather name="paperclip" size={18} color={attachment ? AI_PROVIDERS[0].color : "rgba(255,255,255,0.4)"} />
+              <Feather name="paperclip" size={18} color={attachment ? "rgba(255,255,255,0.9)" : "rgba(255,255,255,0.4)"} />
             </TouchableOpacity>
             <TextInput
               ref={inputRef}
@@ -686,8 +692,8 @@ export default function HomeScreen() {
                 disabled={!canSend}
                 style={[
                   styles.sendBtn,
-                  { backgroundColor: canSend ? AI_PROVIDERS[0].color : "rgba(255,255,255,0.08)" },
-                  canSend && Platform.OS === "web" ? { boxShadow: `0 0 14px ${AI_PROVIDERS[0].colorGlow}` } as object : {},
+                  { backgroundColor: canSend ? "rgba(255,255,255,0.92)" : "rgba(255,255,255,0.08)" },
+                  canSend && Platform.OS === "web" ? { boxShadow: "0 0 14px rgba(255,255,255,0.25)" } as object : {},
                 ]}
                 activeOpacity={0.7}
               >
@@ -783,7 +789,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: 10,
-    paddingTop: 10,
     position: "relative",
   },
   cardProviderName: {

@@ -163,7 +163,7 @@ export default function SearchScreen() {
 
         {loading ? (
           <View style={styles.center}>
-            <ActivityIndicator size="large" color={AI_PROVIDERS[0].color} />
+            <ActivityIndicator size="large" color="rgba(255,255,255,0.6)" />
           </View>
         ) : !searched ? (
           <View style={styles.center}>
