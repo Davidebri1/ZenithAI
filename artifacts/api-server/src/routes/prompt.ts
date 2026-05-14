@@ -4,6 +4,7 @@ import { conversations, messages } from "@workspace/db";
 import { eq, asc } from "drizzle-orm";
 import { storage } from "../storage";
 import { getAuth } from "@clerk/express";
+import { sendEmail, quotaWarningEmail, quotaExhaustedEmail } from "../emailClient";
 
 const router = Router();
 
@@ -42,7 +43,19 @@ router.post("/prompt/multi", async (req, res) => {
     const [geminiConv] = await db.insert(conversations).values({ title }).returning();
 
     if (userId) {
-      await storage.incrementPromptsUsed(userId);
+      const updated = await storage.incrementPromptsUsed(userId);
+      if (updated?.email) {
+        const used = updated.promptsUsed;
+        const limit = updated.promptsLimit;
+        const pct = used / limit;
+        if (used >= limit) {
+          const tpl = quotaExhaustedEmail();
+          sendEmail({ to: updated.email, ...tpl });
+        } else if (pct >= 0.8 && pct < 1) {
+          const tpl = quotaWarningEmail({ used, limit });
+          sendEmail({ to: updated.email, ...tpl });
+        }
+      }
     }
 
     res.json({

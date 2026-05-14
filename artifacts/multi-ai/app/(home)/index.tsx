@@ -578,6 +578,9 @@ export default function HomeScreen() {
             </Text>
           </View>
           <View style={styles.headerActions}>
+            <TouchableOpacity onPress={() => router.push("/(home)/enterprise")} style={styles.headerBtn} activeOpacity={0.7}>
+              <Feather name="star" size={17} color="#f59e0b" />
+            </TouchableOpacity>
             <TouchableOpacity onPress={() => router.push("/compare")} style={styles.headerBtn} activeOpacity={0.7}>
               <Feather name="columns" size={17} color="rgba(255,255,255,0.6)" />
             </TouchableOpacity>
