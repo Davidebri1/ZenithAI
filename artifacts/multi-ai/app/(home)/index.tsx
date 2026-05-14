@@ -109,20 +109,14 @@ function AiCard({ provider, state, selected, onToggleSelect, onOpen, cardWidth }
       >
         <Text style={[styles.cardProviderName, { color: provider.color }]}>{provider.name}</Text>
 
-        <TouchableOpacity
-          onPress={(e) => { e.stopPropagation?.(); onToggleSelect(); }}
-          hitSlop={{ top: 8, right: 8, bottom: 8, left: 8 }}
-          style={[
-            styles.checkbox,
-            {
-              backgroundColor: selected ? provider.color : "rgba(0,0,0,0.4)",
-              borderColor: selected ? provider.color : `${provider.color}50`,
-            },
-          ]}
-          activeOpacity={0.7}
-        >
-          {selected && <Feather name="check" size={10} color="#000" />}
-        </TouchableOpacity>
+        {!selected && (
+          <TouchableOpacity
+            onPress={(e) => { e.stopPropagation?.(); onToggleSelect(); }}
+            hitSlop={{ top: 8, right: 8, bottom: 8, left: 8 }}
+            style={[styles.checkbox, { backgroundColor: "rgba(0,0,0,0.4)", borderColor: `${provider.color}50` }]}
+            activeOpacity={0.7}
+          />
+        )}
 
         {state.hasUnread && !state.streaming && (
           <View style={[styles.unreadDot, { backgroundColor: provider.color }]} />
@@ -618,7 +612,7 @@ export default function HomeScreen() {
                     </View>
                   ))}
                 </View>
-                <Text style={styles.firstTimeSub}>Type a prompt below. Tap any card to open the full thread. Long-press a card to deselect a model.</Text>
+                <Text style={styles.firstTimeSub}>Type a prompt below. Tap any card to open the full thread. Use the chips below to include or exclude a model.</Text>
               </View>
             ) : null
           }
@@ -786,13 +780,14 @@ const styles = StyleSheet.create({
   },
   cardTop: {
     height: 40,
+    alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: 10,
     paddingTop: 10,
     position: "relative",
   },
   cardProviderName: {
-    fontSize: 13, fontFamily: "Inter_700Bold", letterSpacing: 0.2,
+    fontSize: 13, fontFamily: "Inter_700Bold", letterSpacing: 0.2, textAlign: "center",
   },
   checkbox: {
     position: "absolute", top: 10, right: 10,
