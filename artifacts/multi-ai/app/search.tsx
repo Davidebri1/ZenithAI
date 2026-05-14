@@ -8,8 +8,10 @@ import {
   FlatList,
   ActivityIndicator,
   Platform,
+  ImageBackground,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
+import { BlurView } from "expo-blur";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { Feather } from "@expo/vector-icons";
@@ -19,6 +21,8 @@ import { fetch } from "expo/fetch";
 import { useColors } from "@/hooks/useColors";
 import { AI_PROVIDERS, BASE_URL } from "@/constants/aiConfig";
 import { getSessions, CONV_IDS_KEY, formatMessageTime, type Session } from "@/constants/sessions";
+
+const BG = require("../assets/images/bg-alley.png");
 
 interface SearchResult {
   id: number;
@@ -42,10 +46,10 @@ function getExcerpt(content: string, query: string): string {
   return (start > 0 ? "…" : "") + content.slice(start, end) + (end < content.length ? "…" : "");
 }
 
-function HighlightText({ text, query, baseColor, highlightColor }: {
-  text: string; query: string; baseColor: string; highlightColor: string;
+function HighlightText({ text, query, highlightColor }: {
+  text: string; query: string; highlightColor: string;
 }) {
-  if (!query) return <Text style={{ color: baseColor, fontSize: 14, lineHeight: 21 }}>{text}</Text>;
+  if (!query) return <Text style={styles.resultText}>{text}</Text>;
   const parts: { text: string; match: boolean }[] = [];
   const lower = text.toLowerCase();
   const qLower = query.toLowerCase();
@@ -59,11 +63,11 @@ function HighlightText({ text, query, baseColor, highlightColor }: {
   }
   if (pos < text.length) parts.push({ text: text.slice(pos), match: false });
   return (
-    <Text style={{ fontSize: 14, lineHeight: 21 }}>
+    <Text style={styles.resultText}>
       {parts.map((p, i) =>
         p.match
           ? <Text key={i} style={{ color: highlightColor, fontFamily: "Inter_600SemiBold" }}>{p.text}</Text>
-          : <Text key={i} style={{ color: baseColor }}>{p.text}</Text>
+          : <Text key={i}>{p.text}</Text>
       )}
     </Text>
   );
@@ -123,139 +127,137 @@ export default function SearchScreen() {
   const topPad = Platform.OS === "web" ? 52 : insets.top;
 
   return (
-    <View style={[styles.container, { backgroundColor: c.background }]}>
+    <ImageBackground source={BG} style={styles.bg} resizeMode="cover">
       <LinearGradient
-        colors={["#0f0f1e", c.background]}
-        start={{ x: 0.5, y: 0 }}
-        end={{ x: 0.5, y: 1 }}
-        style={[styles.header, { paddingTop: topPad + 10, borderBottomColor: c.border }]}
-      >
-        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn} activeOpacity={0.7}>
-          <Feather name="arrow-left" size={22} color={c.foreground} />
-        </TouchableOpacity>
-        <View style={[styles.searchBox, { backgroundColor: c.secondary, borderColor: c.border }]}>
-          <Feather name="search" size={15} color={c.mutedForeground} />
-          <TextInput
-            style={[styles.searchInput, { color: c.foreground }]}
-            placeholder="Search all conversations…"
-            placeholderTextColor={c.mutedForeground}
-            value={query}
-            onChangeText={handleChangeText}
-            autoFocus
-            returnKeyType="search"
-            onSubmitEditing={() => doSearch(query)}
-          />
-          {query.length > 0 && (
-            <TouchableOpacity onPress={() => { setQuery(""); setResults([]); setSearched(false); }} activeOpacity={0.7}>
-              <Feather name="x" size={15} color={c.mutedForeground} />
-            </TouchableOpacity>
-          )}
-        </View>
-      </LinearGradient>
-
-      {loading ? (
-        <View style={styles.center}>
-          <ActivityIndicator size="large" color={AI_PROVIDERS[0].color} />
-        </View>
-      ) : !searched ? (
-        <View style={styles.center}>
-          <View style={[styles.hintIcon, { borderColor: c.border }]}>
-            <Feather name="search" size={28} color={c.mutedForeground} style={{ opacity: 0.4 }} />
+        colors={["rgba(7,7,13,0.65)", "rgba(7,7,13,0.88)", "rgba(7,7,13,0.97)"]}
+        style={StyleSheet.absoluteFill}
+      />
+      <View style={styles.container}>
+        <View style={[styles.header, { paddingTop: topPad + 10 }]}>
+          <BlurView intensity={30} tint="dark" style={StyleSheet.absoluteFill} />
+          <View style={[StyleSheet.absoluteFill, { backgroundColor: "rgba(7,7,20,0.5)", borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: "rgba(255,255,255,0.08)" }]} />
+          <TouchableOpacity onPress={() => router.back()} style={styles.backBtn} activeOpacity={0.7}>
+            <Feather name="arrow-left" size={22} color="#e8e8f4" />
+          </TouchableOpacity>
+          <View style={styles.searchBox}>
+            <BlurView intensity={20} tint="dark" style={StyleSheet.absoluteFill} />
+            <View style={[StyleSheet.absoluteFill, { backgroundColor: "rgba(255,255,255,0.05)", borderRadius: 14, borderWidth: 1, borderColor: "rgba(255,255,255,0.1)" }]} />
+            <Feather name="search" size={15} color="rgba(255,255,255,0.4)" style={{ zIndex: 1 }} />
+            <TextInput
+              style={styles.searchInput}
+              placeholder="Search all conversations…"
+              placeholderTextColor="rgba(255,255,255,0.3)"
+              value={query}
+              onChangeText={handleChangeText}
+              autoFocus
+              returnKeyType="search"
+              onSubmitEditing={() => doSearch(query)}
+            />
+            {query.length > 0 && (
+              <TouchableOpacity onPress={() => { setQuery(""); setResults([]); setSearched(false); }} activeOpacity={0.7} style={{ zIndex: 1 }}>
+                <Feather name="x" size={15} color="rgba(255,255,255,0.4)" />
+              </TouchableOpacity>
+            )}
           </View>
-          <Text style={[styles.hintText, { color: c.mutedForeground }]}>Search across all AI conversations</Text>
         </View>
-      ) : results.length === 0 ? (
-        <View style={styles.center}>
-          <Text style={[styles.hintText, { color: c.mutedForeground }]}>No results for "{query}"</Text>
-        </View>
-      ) : (
-        <FlatList
-          data={results}
-          keyExtractor={(r) => String(r.id)}
-          contentContainerStyle={[styles.list, { paddingBottom: insets.bottom + 20 }]}
-          showsVerticalScrollIndicator={false}
-          renderItem={({ item: r }) => (
-            <TouchableOpacity
-              onPress={() => handleRestore(r)}
-              style={[styles.card, { backgroundColor: c.card, borderColor: c.border }]}
-              activeOpacity={0.75}
-              disabled={!r.session}
-            >
-              <View style={styles.cardTop}>
-                {r.provider ? (
-                  <View style={[
-                    styles.providerBadge,
-                    { backgroundColor: `${r.provider.color}15`, borderColor: `${r.provider.color}40` },
-                  ]}>
-                    <View style={[styles.badgeDot, { backgroundColor: r.provider.color }]} />
-                    <Text style={[styles.badgeName, { color: r.provider.color }]}>{r.provider.name}</Text>
+
+        {loading ? (
+          <View style={styles.center}>
+            <ActivityIndicator size="large" color={AI_PROVIDERS[0].color} />
+          </View>
+        ) : !searched ? (
+          <View style={styles.center}>
+            <View style={styles.hintIcon}>
+              <Feather name="search" size={28} color="rgba(255,255,255,0.2)" />
+            </View>
+            <Text style={styles.hintText}>Search across all AI conversations</Text>
+          </View>
+        ) : results.length === 0 ? (
+          <View style={styles.center}>
+            <Text style={styles.hintText}>No results for "{query}"</Text>
+          </View>
+        ) : (
+          <FlatList
+            data={results}
+            keyExtractor={(r) => String(r.id)}
+            contentContainerStyle={[styles.list, { paddingBottom: insets.bottom + 20 }]}
+            showsVerticalScrollIndicator={false}
+            renderItem={({ item: r }) => (
+              <TouchableOpacity
+                onPress={() => handleRestore(r)}
+                style={styles.card}
+                activeOpacity={0.75}
+                disabled={!r.session}
+              >
+                <BlurView intensity={22} tint="dark" style={StyleSheet.absoluteFill} />
+                <View style={[StyleSheet.absoluteFill, { backgroundColor: "rgba(7,7,20,0.55)", borderRadius: 16, borderWidth: 1, borderColor: "rgba(255,255,255,0.08)" }]} />
+                <View style={styles.cardContent}>
+                  <View style={styles.cardTop}>
+                    {r.provider ? (
+                      <View style={[styles.providerBadge, { backgroundColor: `${r.provider.color}15`, borderColor: `${r.provider.color}40` }]}>
+                        <View style={[styles.badgeDot, { backgroundColor: r.provider.color }]} />
+                        <Text style={[styles.badgeName, { color: r.provider.color }]}>{r.provider.name}</Text>
+                      </View>
+                    ) : (
+                      <View style={[styles.providerBadge, { backgroundColor: "rgba(255,255,255,0.05)", borderColor: "rgba(255,255,255,0.1)" }]}>
+                        <Text style={[styles.badgeName, { color: "rgba(255,255,255,0.4)" }]}>Unknown</Text>
+                      </View>
+                    )}
+                    <View style={[styles.roleTag, { borderColor: "rgba(255,255,255,0.1)" }]}>
+                      <Text style={styles.roleTagText}>{r.role === "user" ? "You" : "AI"}</Text>
+                    </View>
+                    <Text style={styles.timeText}>{formatMessageTime(r.createdAt)}</Text>
                   </View>
-                ) : (
-                  <View style={[styles.providerBadge, { backgroundColor: c.secondary, borderColor: c.border }]}>
-                    <Text style={[styles.badgeName, { color: c.mutedForeground }]}>Unknown</Text>
-                  </View>
-                )}
-                <View style={[styles.roleTag, { borderColor: c.border }]}>
-                  <Text style={[styles.roleTagText, { color: c.mutedForeground }]}>
-                    {r.role === "user" ? "You" : "AI"}
-                  </Text>
+
+                  {r.session && (
+                    <Text style={styles.sessionTitle} numberOfLines={1}>{r.session.title}</Text>
+                  )}
+
+                  <HighlightText
+                    text={getExcerpt(r.content, query)}
+                    query={query}
+                    highlightColor={r.provider?.color ?? AI_PROVIDERS[0].color}
+                  />
+
+                  {r.session && (
+                    <View style={styles.restoreRow}>
+                      <Feather name="rotate-ccw" size={11} color="rgba(255,255,255,0.3)" />
+                      <Text style={styles.restoreLabel}>Tap to restore session</Text>
+                    </View>
+                  )}
                 </View>
-                <Text style={[styles.timeText, { color: c.mutedForeground }]}>
-                  {formatMessageTime(r.createdAt)}
-                </Text>
-              </View>
-
-              {r.session && (
-                <Text style={[styles.sessionTitle, { color: c.mutedForeground }]} numberOfLines={1}>
-                  {r.session.title}
-                </Text>
-              )}
-
-              <HighlightText
-                text={getExcerpt(r.content, query)}
-                query={query}
-                baseColor={c.foreground}
-                highlightColor={r.provider?.color ?? AI_PROVIDERS[0].color}
-              />
-
-              {r.session && (
-                <View style={styles.restoreRow}>
-                  <Feather name="rotate-ccw" size={11} color={c.mutedForeground} />
-                  <Text style={[styles.restoreLabel, { color: c.mutedForeground }]}>Tap to restore session</Text>
-                </View>
-              )}
-            </TouchableOpacity>
-          )}
-        />
-      )}
-    </View>
+              </TouchableOpacity>
+            )}
+          />
+        )}
+      </View>
+    </ImageBackground>
   );
 }
 
 const styles = StyleSheet.create({
+  bg: { flex: 1 },
   container: { flex: 1 },
   header: {
     flexDirection: "row", alignItems: "center",
     paddingHorizontal: 12, paddingBottom: 14, gap: 10,
-    borderBottomWidth: StyleSheet.hairlineWidth,
+    overflow: "hidden",
   },
-  backBtn: { width: 34, height: 34, alignItems: "center", justifyContent: "center" },
+  backBtn: { width: 34, height: 34, alignItems: "center", justifyContent: "center", zIndex: 1 },
   searchBox: {
     flex: 1, flexDirection: "row", alignItems: "center",
     paddingHorizontal: 12, paddingVertical: 10,
-    borderRadius: 14, borderWidth: 1, gap: 8,
+    borderRadius: 14, gap: 8, overflow: "hidden",
   },
-  searchInput: { flex: 1, fontSize: 15, fontFamily: "Inter_400Regular" },
+  searchInput: { flex: 1, fontSize: 15, fontFamily: "Inter_400Regular", color: "#f0f0ff", zIndex: 1 },
 
   center: { flex: 1, alignItems: "center", justifyContent: "center", gap: 16, paddingBottom: 80 },
-  hintIcon: { width: 72, height: 72, borderRadius: 36, borderWidth: 1, alignItems: "center", justifyContent: "center" },
-  hintText: { fontSize: 15, fontFamily: "Inter_400Regular", textAlign: "center", paddingHorizontal: 48 },
+  hintIcon: { width: 72, height: 72, borderRadius: 36, borderWidth: 1, borderColor: "rgba(255,255,255,0.1)", alignItems: "center", justifyContent: "center" },
+  hintText: { fontSize: 15, fontFamily: "Inter_400Regular", textAlign: "center", paddingHorizontal: 48, color: "rgba(255,255,255,0.4)" },
 
   list: { padding: 16, gap: 10 },
-  card: {
-    borderRadius: 16, borderWidth: 1, padding: 14, gap: 8,
-    shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.3, shadowRadius: 6, elevation: 3,
-  },
+  card: { borderRadius: 16, overflow: "hidden", shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.4, shadowRadius: 8, elevation: 4 },
+  cardContent: { padding: 14, gap: 8 },
   cardTop: { flexDirection: "row", alignItems: "center", gap: 8 },
   providerBadge: {
     flexDirection: "row", alignItems: "center", gap: 5,
@@ -264,9 +266,10 @@ const styles = StyleSheet.create({
   badgeDot: { width: 5, height: 5, borderRadius: 3 },
   badgeName: { fontSize: 12, fontFamily: "Inter_500Medium" },
   roleTag: { paddingHorizontal: 7, paddingVertical: 3, borderRadius: 8, borderWidth: 1 },
-  roleTagText: { fontSize: 11, fontFamily: "Inter_400Regular" },
-  timeText: { fontSize: 11, fontFamily: "Inter_400Regular", marginLeft: "auto" },
-  sessionTitle: { fontSize: 12, fontFamily: "Inter_400Regular", fontStyle: "italic" },
+  roleTagText: { fontSize: 11, fontFamily: "Inter_400Regular", color: "rgba(255,255,255,0.4)" },
+  timeText: { fontSize: 11, fontFamily: "Inter_400Regular", marginLeft: "auto", color: "rgba(255,255,255,0.4)" },
+  sessionTitle: { fontSize: 12, fontFamily: "Inter_400Regular", fontStyle: "italic", color: "rgba(255,255,255,0.4)" },
+  resultText: { fontSize: 14, lineHeight: 21, color: "rgba(240,240,255,0.85)" },
   restoreRow: { flexDirection: "row", alignItems: "center", gap: 5 },
-  restoreLabel: { fontSize: 12, fontFamily: "Inter_400Regular" },
+  restoreLabel: { fontSize: 12, fontFamily: "Inter_400Regular", color: "rgba(255,255,255,0.3)" },
 });

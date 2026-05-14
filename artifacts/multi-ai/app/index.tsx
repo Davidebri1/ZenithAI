@@ -12,8 +12,10 @@ import {
   ActivityIndicator,
   Alert,
   Image,
+  ImageBackground,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
+import { BlurView } from "expo-blur";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter, useFocusEffect } from "expo-router";
 import { KeyboardAvoidingView } from "react-native-keyboard-controller";
@@ -28,6 +30,7 @@ import { AI_PROVIDERS, BASE_URL, type AiProvider } from "@/constants/aiConfig";
 import { saveSession, CONV_IDS_KEY } from "@/constants/sessions";
 
 const CARD_GAP = 10;
+const BG = require("../assets/images/bg-alley.png");
 
 interface ConvIds { [key: string]: number; }
 
@@ -52,7 +55,7 @@ function makeDefaultCard(): CardState {
 
 function cardGlowStyle(color: string, selected: boolean) {
   if (!selected || Platform.OS !== "web") return {};
-  return { boxShadow: `0 0 0 1.5px ${color}, 0 0 32px ${color}50` } as object;
+  return { boxShadow: `0 0 0 1.5px ${color}, 0 0 28px ${color}55` } as object;
 }
 
 interface AiCardProps {
@@ -77,28 +80,29 @@ function AiCard({ provider, state, selected, onToggleSelect, onOpen, cardWidth }
         styles.card,
         {
           width: cardWidth,
-          backgroundColor: c.card,
-          borderColor: selected ? provider.color : c.border,
+          borderColor: selected ? `${provider.color}cc` : "rgba(255,255,255,0.08)",
           borderWidth: 1,
-          opacity: pressed ? 0.88 : 1,
+          opacity: pressed ? 0.85 : 1,
+          overflow: "hidden",
           ...cardGlowStyle(provider.color, selected),
         },
       ]}
     >
+      <BlurView intensity={28} tint="dark" style={StyleSheet.absoluteFill} />
+      <View style={[StyleSheet.absoluteFill, { backgroundColor: "rgba(7,7,20,0.52)" }]} />
+
       <LinearGradient
-        colors={[`${provider.color}22`, `${provider.color}00`]}
+        colors={[`${provider.color}28`, `${provider.color}00`]}
         start={{ x: 0.5, y: 0 }}
         end={{ x: 0.5, y: 1 }}
         style={styles.cardTop}
       >
         <View style={[
           styles.aiCircleOuter,
-          { borderColor: `${provider.color}70` },
-          Platform.OS === "web" ? { boxShadow: `0 0 14px ${provider.colorGlow}` } as object : {},
+          { borderColor: `${provider.color}80` },
+          Platform.OS === "web" ? { boxShadow: `0 0 16px ${provider.colorGlow}` } as object : {},
         ]}>
-          <Text style={[styles.aiInitial, { color: provider.color }]}>
-            {provider.name[0]}
-          </Text>
+          <Text style={[styles.aiInitial, { color: provider.color }]}>{provider.name[0]}</Text>
         </View>
 
         <TouchableOpacity
@@ -107,7 +111,7 @@ function AiCard({ provider, state, selected, onToggleSelect, onOpen, cardWidth }
           style={[
             styles.checkbox,
             {
-              backgroundColor: selected ? provider.color : "transparent",
+              backgroundColor: selected ? provider.color : "rgba(0,0,0,0.4)",
               borderColor: selected ? provider.color : `${provider.color}50`,
             },
           ]}
@@ -123,7 +127,7 @@ function AiCard({ provider, state, selected, onToggleSelect, onOpen, cardWidth }
 
       <View style={styles.cardBody}>
         <View style={styles.cardNameRow}>
-          <Text style={[styles.cardName, { color: c.foreground }]}>{provider.name}</Text>
+          <Text style={[styles.cardName, { color: "#f0f0ff" }]}>{provider.name}</Text>
           <View style={[styles.modelChip, { borderColor: `${provider.color}40` }]}>
             <Text style={[styles.modelChipText, { color: `${provider.color}cc` }]}>{provider.model}</Text>
           </View>
@@ -143,8 +147,8 @@ function AiCard({ provider, state, selected, onToggleSelect, onOpen, cardWidth }
                 styles.previewText,
                 {
                   color: state.lastMessage
-                    ? state.lastRole === "assistant" ? c.foreground : c.mutedForeground
-                    : c.mutedForeground,
+                    ? state.lastRole === "assistant" ? "rgba(240,240,255,0.9)" : "rgba(240,240,255,0.55)"
+                    : "rgba(240,240,255,0.4)",
                 },
               ]}
               numberOfLines={3}
@@ -359,133 +363,146 @@ export default function HomeScreen() {
   for (let i = 0; i < AI_PROVIDERS.length; i += 2) rows.push([AI_PROVIDERS[i], AI_PROVIDERS[i + 1] ?? null]);
 
   return (
-    <KeyboardAvoidingView style={[styles.container, { backgroundColor: c.background }]} behavior="padding">
-      <View style={[styles.header, { paddingTop: topPad + 14 }]}>
-        <View style={styles.logoRow}>
-          <View style={styles.logoDots}>
-            {AI_PROVIDERS.map((p) => (
-              <View
-                key={p.key}
-                style={[
-                  styles.logoDot,
-                  { backgroundColor: p.color },
-                  Platform.OS === "web" ? { boxShadow: `0 0 8px ${p.color}` } as object : {},
-                ]}
-              />
-            ))}
-          </View>
-          <Text style={[styles.appName, { color: c.foreground }]}>
-            Multi<Text style={{ color: AI_PROVIDERS[0].color }}>AI</Text>
-          </Text>
-        </View>
-        <View style={styles.headerActions}>
-          <TouchableOpacity onPress={() => router.push("/search")} style={styles.headerBtn} activeOpacity={0.7}>
-            <Feather name="search" size={17} color={c.mutedForeground} />
-          </TouchableOpacity>
-          <TouchableOpacity onPress={() => router.push("/history")} style={styles.headerBtn} activeOpacity={0.7}>
-            <Feather name="clock" size={17} color={c.mutedForeground} />
-          </TouchableOpacity>
-          <TouchableOpacity onPress={handleNewChat} style={[styles.newChatBtn, { borderColor: c.border }]} activeOpacity={0.7}>
-            <Feather name="plus" size={13} color={c.mutedForeground} />
-            <Text style={[styles.newChatText, { color: c.mutedForeground }]}>New</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-
-      <FlatList
-        data={rows}
-        keyExtractor={(_, i) => String(i)}
-        renderItem={({ item: row }) => (
-          <View style={styles.row}>
-            {row.map((p, i) =>
-              p ? (
-                <AiCard key={p.key} provider={p} state={cards[p.key]} selected={selected.has(p.key)} onToggleSelect={() => toggleSelect(p.key)} onOpen={() => openThread(p)} cardWidth={cardWidth} />
-              ) : (
-                <View key={`empty-${i}`} style={{ width: cardWidth }} />
-              )
-            )}
-          </View>
-        )}
-        contentContainerStyle={styles.grid}
-        showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"
+    <ImageBackground source={BG} style={styles.bg} resizeMode="cover">
+      <LinearGradient
+        colors={["rgba(7,7,13,0.25)", "rgba(7,7,13,0.55)", "rgba(7,7,13,0.88)", "rgba(7,7,13,0.97)"]}
+        locations={[0, 0.35, 0.68, 1]}
+        style={StyleSheet.absoluteFill}
       />
-
-      <View style={[styles.bottomBar, { paddingBottom: bottomPad + 8, backgroundColor: c.background, borderTopColor: c.border }]}>
-        <View style={styles.chipRow}>
-          {AI_PROVIDERS.map((p) => (
-            <TouchableOpacity
-              key={p.key}
-              onPress={() => toggleSelect(p.key)}
-              style={[
-                styles.providerChip,
-                {
-                  backgroundColor: selected.has(p.key) ? `${p.color}18` : "transparent",
-                  borderColor: selected.has(p.key) ? `${p.color}80` : c.border,
-                },
-                selected.has(p.key) && Platform.OS === "web" ? { boxShadow: `0 0 10px ${p.colorGlow}` } as object : {},
-              ]}
-              activeOpacity={0.7}
-            >
-              <View style={[styles.chipDot, { backgroundColor: selected.has(p.key) ? p.color : c.mutedForeground }]} />
-              <Text style={[styles.chipLabel, { color: selected.has(p.key) ? p.color : c.mutedForeground }]}>{p.name}</Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-
-        {attachment && (
-          <View style={styles.attachmentRow}>
-            <Image source={{ uri: attachment.uri }} style={styles.attachmentThumb} />
-            <TouchableOpacity onPress={() => setAttachment(null)} style={[styles.removeBtn, { backgroundColor: c.secondary, borderColor: c.border }]} activeOpacity={0.8}>
-              <Feather name="x" size={12} color={c.foreground} />
-            </TouchableOpacity>
-            <Text style={[styles.attachmentLabel, { color: c.mutedForeground }]}>
-              → {selectedProviders.map((p) => p.name).join(", ")}
+      <KeyboardAvoidingView style={styles.container} behavior="padding">
+        <View style={[styles.header, { paddingTop: topPad + 14 }]}>
+          <View style={styles.logoRow}>
+            <View style={styles.logoDots}>
+              {AI_PROVIDERS.map((p) => (
+                <View
+                  key={p.key}
+                  style={[
+                    styles.logoDot,
+                    { backgroundColor: p.color },
+                    Platform.OS === "web" ? { boxShadow: `0 0 8px ${p.color}` } as object : {},
+                  ]}
+                />
+              ))}
+            </View>
+            <Text style={styles.appName}>
+              Multi<Text style={{ color: AI_PROVIDERS[0].color }}>AI</Text>
             </Text>
           </View>
-        )}
-
-        <View style={[styles.inputRow, { backgroundColor: c.card, borderColor: c.border }]}>
-          <TouchableOpacity onPress={pickImage} style={styles.attachBtn} activeOpacity={0.7} disabled={anyStreaming}>
-            <Feather name="paperclip" size={18} color={attachment ? AI_PROVIDERS[0].color : c.mutedForeground} />
-          </TouchableOpacity>
-          <TextInput
-            ref={inputRef}
-            style={[styles.input, { color: c.foreground }]}
-            placeholder={`Ask ${selectedProviders.map((p) => p.name).join(", ")}…`}
-            placeholderTextColor={c.mutedForeground}
-            value={message}
-            onChangeText={setMessage}
-            multiline
-            maxLength={4000}
-            onSubmitEditing={handleSend}
-            blurOnSubmit={false}
-          />
-          {anyStreaming ? (
-            <TouchableOpacity onPress={handleStop} style={[styles.sendBtn, { backgroundColor: "#ff4466" }]} activeOpacity={0.7}>
-              <Feather name="square" size={14} color="#fff" />
+          <View style={styles.headerActions}>
+            <TouchableOpacity onPress={() => router.push("/search")} style={styles.headerBtn} activeOpacity={0.7}>
+              <Feather name="search" size={17} color="rgba(255,255,255,0.6)" />
             </TouchableOpacity>
-          ) : (
-            <TouchableOpacity
-              onPress={handleSend}
-              disabled={!canSend}
-              style={[
-                styles.sendBtn,
-                { backgroundColor: canSend ? AI_PROVIDERS[0].color : c.secondary },
-                canSend && Platform.OS === "web" ? { boxShadow: `0 0 14px ${AI_PROVIDERS[0].colorGlow}` } as object : {},
-              ]}
-              activeOpacity={0.7}
-            >
-              <Feather name="send" size={16} color={canSend ? "#000" : c.mutedForeground} />
+            <TouchableOpacity onPress={() => router.push("/history")} style={styles.headerBtn} activeOpacity={0.7}>
+              <Feather name="clock" size={17} color="rgba(255,255,255,0.6)" />
             </TouchableOpacity>
-          )}
+            <TouchableOpacity onPress={handleNewChat} style={styles.newChatBtn} activeOpacity={0.7}>
+              <Feather name="plus" size={13} color="rgba(255,255,255,0.6)" />
+              <Text style={styles.newChatText}>New</Text>
+            </TouchableOpacity>
+          </View>
         </View>
-      </View>
-    </KeyboardAvoidingView>
+
+        <FlatList
+          data={rows}
+          keyExtractor={(_, i) => String(i)}
+          renderItem={({ item: row }) => (
+            <View style={styles.row}>
+              {row.map((p, i) =>
+                p ? (
+                  <AiCard key={p.key} provider={p} state={cards[p.key]} selected={selected.has(p.key)} onToggleSelect={() => toggleSelect(p.key)} onOpen={() => openThread(p)} cardWidth={cardWidth} />
+                ) : (
+                  <View key={`empty-${i}`} style={{ width: cardWidth }} />
+                )
+              )}
+            </View>
+          )}
+          contentContainerStyle={styles.grid}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+        />
+
+        <View style={[styles.bottomBar, { paddingBottom: bottomPad + 8 }]}>
+          <BlurView intensity={40} tint="dark" style={StyleSheet.absoluteFill} />
+          <View style={[StyleSheet.absoluteFill, { backgroundColor: "rgba(7,7,20,0.6)", borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: "rgba(255,255,255,0.08)" }]} />
+
+          <View style={styles.chipRow}>
+            {AI_PROVIDERS.map((p) => (
+              <TouchableOpacity
+                key={p.key}
+                onPress={() => toggleSelect(p.key)}
+                style={[
+                  styles.providerChip,
+                  {
+                    backgroundColor: selected.has(p.key) ? `${p.color}18` : "rgba(255,255,255,0.05)",
+                    borderColor: selected.has(p.key) ? `${p.color}70` : "rgba(255,255,255,0.1)",
+                  },
+                  selected.has(p.key) && Platform.OS === "web" ? { boxShadow: `0 0 10px ${p.colorGlow}` } as object : {},
+                ]}
+                activeOpacity={0.7}
+              >
+                <View style={[styles.chipDot, { backgroundColor: selected.has(p.key) ? p.color : "rgba(255,255,255,0.35)" }]} />
+                <Text style={[styles.chipLabel, { color: selected.has(p.key) ? p.color : "rgba(255,255,255,0.45)" }]}>{p.name}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+
+          {attachment && (
+            <View style={styles.attachmentRow}>
+              <Image source={{ uri: attachment.uri }} style={styles.attachmentThumb} />
+              <TouchableOpacity onPress={() => setAttachment(null)} style={styles.removeBtn} activeOpacity={0.8}>
+                <Feather name="x" size={12} color="#fff" />
+              </TouchableOpacity>
+              <Text style={styles.attachmentLabel}>
+                → {selectedProviders.map((p) => p.name).join(", ")}
+              </Text>
+            </View>
+          )}
+
+          <View style={styles.inputRow}>
+            <BlurView intensity={20} tint="dark" style={StyleSheet.absoluteFill} />
+            <View style={[StyleSheet.absoluteFill, { backgroundColor: "rgba(255,255,255,0.04)", borderRadius: 16, borderWidth: 1, borderColor: "rgba(255,255,255,0.1)" }]} />
+            <TouchableOpacity onPress={pickImage} style={styles.attachBtn} activeOpacity={0.7} disabled={anyStreaming}>
+              <Feather name="paperclip" size={18} color={attachment ? AI_PROVIDERS[0].color : "rgba(255,255,255,0.4)"} />
+            </TouchableOpacity>
+            <TextInput
+              ref={inputRef}
+              style={styles.input}
+              placeholder={`Ask ${selectedProviders.map((p) => p.name).join(", ")}…`}
+              placeholderTextColor="rgba(255,255,255,0.3)"
+              value={message}
+              onChangeText={setMessage}
+              multiline
+              maxLength={4000}
+              onSubmitEditing={handleSend}
+              blurOnSubmit={false}
+            />
+            {anyStreaming ? (
+              <TouchableOpacity onPress={handleStop} style={[styles.sendBtn, { backgroundColor: "#ff4466" }]} activeOpacity={0.7}>
+                <Feather name="square" size={14} color="#fff" />
+              </TouchableOpacity>
+            ) : (
+              <TouchableOpacity
+                onPress={handleSend}
+                disabled={!canSend}
+                style={[
+                  styles.sendBtn,
+                  { backgroundColor: canSend ? AI_PROVIDERS[0].color : "rgba(255,255,255,0.08)" },
+                  canSend && Platform.OS === "web" ? { boxShadow: `0 0 14px ${AI_PROVIDERS[0].colorGlow}` } as object : {},
+                ]}
+                activeOpacity={0.7}
+              >
+                <Feather name="send" size={16} color={canSend ? "#000" : "rgba(255,255,255,0.25)"} />
+              </TouchableOpacity>
+            )}
+          </View>
+        </View>
+      </KeyboardAvoidingView>
+    </ImageBackground>
   );
 }
 
 const styles = StyleSheet.create({
+  bg: { flex: 1 },
   container: { flex: 1 },
 
   header: {
@@ -495,26 +512,26 @@ const styles = StyleSheet.create({
   logoRow: { flexDirection: "row", alignItems: "center", gap: 10 },
   logoDots: { flexDirection: "row", gap: 5 },
   logoDot: { width: 8, height: 8, borderRadius: 4 },
-  appName: { fontSize: 24, fontFamily: "Inter_700Bold", letterSpacing: -0.5 },
+  appName: { fontSize: 24, fontFamily: "Inter_700Bold", letterSpacing: -0.5, color: "#f0f0ff" },
   headerActions: { flexDirection: "row", alignItems: "center", gap: 6 },
   headerBtn: { width: 34, height: 34, alignItems: "center", justifyContent: "center" },
   newChatBtn: {
     flexDirection: "row", alignItems: "center", gap: 4,
     paddingHorizontal: 10, paddingVertical: 6,
-    borderRadius: 20, borderWidth: 1,
+    borderRadius: 20, borderWidth: 1, borderColor: "rgba(255,255,255,0.15)",
   },
-  newChatText: { fontSize: 13, fontFamily: "Inter_500Medium" },
+  newChatText: { fontSize: 13, fontFamily: "Inter_500Medium", color: "rgba(255,255,255,0.6)" },
 
   grid: { paddingHorizontal: 16, gap: CARD_GAP, paddingBottom: 12 },
   row: { flexDirection: "row", gap: CARD_GAP },
 
   card: {
-    borderRadius: 20, overflow: "hidden",
+    borderRadius: 20,
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 12,
-    elevation: 6,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.5,
+    shadowRadius: 16,
+    elevation: 8,
   },
   cardTop: {
     height: 88,
@@ -526,6 +543,7 @@ const styles = StyleSheet.create({
     width: 50, height: 50, borderRadius: 25,
     borderWidth: 1.5,
     alignItems: "center", justifyContent: "center",
+    backgroundColor: "rgba(0,0,0,0.3)",
   },
   aiInitial: { fontSize: 22, fontFamily: "Inter_700Bold" },
   checkbox: {
@@ -548,8 +566,7 @@ const styles = StyleSheet.create({
   previewText: { fontSize: 12, fontFamily: "Inter_400Regular", lineHeight: 18 },
 
   bottomBar: {
-    paddingTop: 12, paddingHorizontal: 16, gap: 10,
-    borderTopWidth: StyleSheet.hairlineWidth,
+    paddingTop: 12, paddingHorizontal: 16, gap: 10, overflow: "hidden",
   },
   chipRow: { flexDirection: "row", gap: 6, flexWrap: "wrap" },
   providerChip: {
@@ -562,18 +579,19 @@ const styles = StyleSheet.create({
 
   attachmentRow: { flexDirection: "row", alignItems: "center", gap: 8 },
   attachmentThumb: { width: 40, height: 40, borderRadius: 8 },
-  removeBtn: { width: 20, height: 20, borderRadius: 10, borderWidth: 1, alignItems: "center", justifyContent: "center" },
-  attachmentLabel: { fontSize: 12, fontFamily: "Inter_400Regular", flex: 1 },
+  removeBtn: { width: 20, height: 20, borderRadius: 10, backgroundColor: "rgba(255,255,255,0.15)", alignItems: "center", justifyContent: "center" },
+  attachmentLabel: { fontSize: 12, fontFamily: "Inter_400Regular", flex: 1, color: "rgba(255,255,255,0.5)" },
 
   inputRow: {
     flexDirection: "row", alignItems: "flex-end",
-    borderRadius: 16, borderWidth: 1,
+    borderRadius: 16,
     paddingLeft: 4, paddingRight: 6, paddingVertical: 6, gap: 4,
+    overflow: "hidden",
   },
   attachBtn: { width: 36, height: 38, alignItems: "center", justifyContent: "center" },
   input: {
     flex: 1, fontSize: 15, fontFamily: "Inter_400Regular",
-    maxHeight: 100, lineHeight: 21, paddingVertical: 4,
+    maxHeight: 100, lineHeight: 21, paddingVertical: 4, color: "#f0f0ff",
   },
   sendBtn: { width: 38, height: 38, borderRadius: 11, alignItems: "center", justifyContent: "center" },
 });

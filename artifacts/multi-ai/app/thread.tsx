@@ -10,10 +10,12 @@ import {
   ActivityIndicator,
   Alert,
   Image,
+  ImageBackground,
   NativeSyntheticEvent,
   NativeScrollEvent,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
+import { BlurView } from "expo-blur";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { Feather } from "@expo/vector-icons";
@@ -28,6 +30,8 @@ import Markdown from "react-native-markdown-display";
 import { useColors } from "@/hooks/useColors";
 import { AI_PROVIDERS, BASE_URL } from "@/constants/aiConfig";
 import { CONV_IDS_KEY, formatMessageTime } from "@/constants/sessions";
+
+const BG = require("../assets/images/bg-alley.png");
 
 interface Message {
   role: "user" | "assistant";
@@ -219,221 +223,221 @@ export default function ThreadScreen() {
   const canSend = (reply.trim().length > 0 || !!attachment) && !streaming;
 
   const mdStyles = {
-    body: { color: c.foreground, fontSize: 15, lineHeight: 23 },
+    body: { color: "#e8e8f4", fontSize: 15, lineHeight: 23 },
     paragraph: { marginTop: 0, marginBottom: 6 },
-    heading1: { fontSize: 20, fontWeight: "700" as const, color: c.foreground, marginVertical: 8 },
-    heading2: { fontSize: 18, fontWeight: "600" as const, color: c.foreground, marginVertical: 6 },
-    heading3: { fontSize: 16, fontWeight: "600" as const, color: c.foreground, marginVertical: 4 },
-    strong: { fontWeight: "700" as const, color: c.foreground },
+    heading1: { fontSize: 20, fontWeight: "700" as const, color: "#e8e8f4", marginVertical: 8 },
+    heading2: { fontSize: 18, fontWeight: "600" as const, color: "#e8e8f4", marginVertical: 6 },
+    heading3: { fontSize: 16, fontWeight: "600" as const, color: "#e8e8f4", marginVertical: 4 },
+    strong: { fontWeight: "700" as const, color: "#e8e8f4" },
     em: { fontStyle: "italic" as const },
-    code_inline: { backgroundColor: "#0a0a16", color: provider.color, fontSize: 13, borderRadius: 4, paddingHorizontal: 5 },
-    fence: { backgroundColor: "#0a0a16", borderRadius: 10, padding: 14, marginVertical: 8, borderWidth: 1, borderColor: `${provider.color}30` },
-    code_block: { color: c.foreground, fontSize: 12, fontFamily: Platform.OS === "ios" ? "Courier" : "monospace" },
-    blockquote: { backgroundColor: "#0a0a16", borderLeftWidth: 3, borderLeftColor: provider.color, paddingHorizontal: 14, paddingVertical: 6, marginVertical: 6 },
+    code_inline: { backgroundColor: "rgba(0,0,0,0.4)", color: provider.color, fontSize: 13, borderRadius: 4, paddingHorizontal: 5 },
+    fence: { backgroundColor: "rgba(0,0,0,0.5)", borderRadius: 10, padding: 14, marginVertical: 8, borderWidth: 1, borderColor: `${provider.color}30` },
+    code_block: { color: "#e8e8f4", fontSize: 12, fontFamily: Platform.OS === "ios" ? "Courier" : "monospace" },
+    blockquote: { backgroundColor: "rgba(0,0,0,0.3)", borderLeftWidth: 3, borderLeftColor: provider.color, paddingHorizontal: 14, paddingVertical: 6, marginVertical: 6 },
     bullet_list: { marginVertical: 4 },
     ordered_list: { marginVertical: 4 },
     link: { color: provider.color },
-    table: { borderWidth: 1, borderColor: c.border, marginVertical: 8 },
-    tr: { borderBottomWidth: StyleSheet.hairlineWidth, borderColor: c.border },
-    th: { padding: 8, fontWeight: "600" as const, color: c.foreground },
-    td: { padding: 8, color: c.foreground },
+    table: { borderWidth: 1, borderColor: "rgba(255,255,255,0.1)", marginVertical: 8 },
+    tr: { borderBottomWidth: StyleSheet.hairlineWidth, borderColor: "rgba(255,255,255,0.1)" },
+    th: { padding: 8, fontWeight: "600" as const, color: "#e8e8f4" },
+    td: { padding: 8, color: "#e8e8f4" },
   };
 
   return (
-    <KeyboardAvoidingView style={[styles.container, { backgroundColor: c.background }]} behavior="padding">
+    <ImageBackground source={BG} style={styles.bg} resizeMode="cover">
       <LinearGradient
-        colors={[`${provider.color}18`, c.background]}
-        start={{ x: 0.5, y: 0 }}
-        end={{ x: 0.5, y: 1 }}
-        style={[styles.header, { paddingTop: topPad + 10, borderBottomColor: `${provider.color}25` }]}
-      >
-        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn} activeOpacity={0.7}>
-          <Feather name="chevron-down" size={24} color={c.foreground} />
-        </TouchableOpacity>
-        <View style={styles.headerCenter}>
-          <View style={[
-            styles.headerBadge,
-            { borderColor: `${provider.color}50`, backgroundColor: `${provider.color}12` },
-            Platform.OS === "web" ? { boxShadow: `0 0 16px ${provider.colorGlow}` } as object : {},
-          ]}>
-            <View style={[styles.headerDot, { backgroundColor: provider.color }]} />
-            <Text style={[styles.headerName, { color: provider.color }]}>{provider.name}</Text>
+        colors={["rgba(7,7,13,0.72)", "rgba(7,7,13,0.82)", "rgba(7,7,13,0.92)"]}
+        style={StyleSheet.absoluteFill}
+      />
+      <KeyboardAvoidingView style={styles.container} behavior="padding">
+        <View style={[styles.header, { paddingTop: topPad + 10 }]}>
+          <BlurView intensity={30} tint="dark" style={StyleSheet.absoluteFill} />
+          <View style={[StyleSheet.absoluteFill, { backgroundColor: "rgba(7,7,20,0.55)", borderBottomWidth: 1, borderBottomColor: `${provider.color}20` }]} />
+          <TouchableOpacity onPress={() => router.back()} style={styles.backBtn} activeOpacity={0.7}>
+            <Feather name="chevron-down" size={24} color="#e8e8f4" />
+          </TouchableOpacity>
+          <View style={styles.headerCenter}>
+            <View style={[
+              styles.headerBadge,
+              { borderColor: `${provider.color}50`, backgroundColor: `${provider.color}15` },
+              Platform.OS === "web" ? { boxShadow: `0 0 16px ${provider.colorGlow}` } as object : {},
+            ]}>
+              <View style={[styles.headerDot, { backgroundColor: provider.color }]} />
+              <Text style={[styles.headerName, { color: provider.color }]}>{provider.name}</Text>
+            </View>
+            <Text style={styles.headerModel}>{provider.model}</Text>
           </View>
-          <Text style={[styles.headerModel, { color: c.mutedForeground }]}>{provider.model}</Text>
+          <View style={{ width: 34 }} />
         </View>
-        <View style={{ width: 34 }} />
-      </LinearGradient>
 
-      <View style={styles.scrollContainer}>
-        <ScrollView
-          ref={scrollRef}
-          style={styles.scroll}
-          contentContainerStyle={[styles.scrollContent, { paddingBottom: 20 }]}
-          showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
-          onScroll={handleScroll}
-          scrollEventThrottle={80}
-        >
-          {loading ? (
-            <View style={styles.loadingCenter}>
-              <ActivityIndicator size="large" color={provider.color} />
-            </View>
-          ) : messages.length === 0 ? (
-            <View style={styles.emptyState}>
-              <View style={[
-                styles.emptyRing,
-                { borderColor: `${provider.color}40` },
-                Platform.OS === "web" ? { boxShadow: `0 0 30px ${provider.colorGlow}` } as object : {},
-              ]}>
-                <Text style={[styles.emptyInitial, { color: provider.color }]}>{provider.name[0]}</Text>
+        <View style={styles.scrollContainer}>
+          <ScrollView
+            ref={scrollRef}
+            style={styles.scroll}
+            contentContainerStyle={[styles.scrollContent, { paddingBottom: 20 }]}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+            onScroll={handleScroll}
+            scrollEventThrottle={80}
+          >
+            {loading ? (
+              <View style={styles.loadingCenter}>
+                <ActivityIndicator size="large" color={provider.color} />
               </View>
-              <Text style={[styles.emptyTitle, { color: c.foreground }]}>Chat with {provider.name}</Text>
-              <Text style={[styles.emptySubtitle, { color: c.mutedForeground }]}>
-                Send a message or attach an image to start.
-              </Text>
-            </View>
-          ) : (
-            messages.map((msg, idx) => (
-              <View key={idx} style={msg.role === "user" ? styles.msgRowUser : styles.msgRowAi}>
-                {msg.role === "user" ? (
-                  <View style={styles.userMsgGroup}>
-                    {msg.attachmentUri && (
-                      <Image source={{ uri: msg.attachmentUri }} style={styles.attachmentThumb} />
-                    )}
-                    {msg.content.length > 0 && (
-                      <LinearGradient
-                        colors={[provider.color, provider.colorDark]}
-                        start={{ x: 0, y: 0 }}
-                        end={{ x: 1, y: 1 }}
-                        style={styles.userBubble}
-                      >
-                        <Text style={styles.userText} selectable>{msg.content}</Text>
-                      </LinearGradient>
-                    )}
-                    {msg.createdAt && (
-                      <Text style={[styles.timestamp, styles.timestampRight, { color: c.mutedForeground }]}>
-                        {formatMessageTime(msg.createdAt)}
-                      </Text>
-                    )}
-                  </View>
-                ) : (
-                  <View style={styles.aiMsgGroup}>
-                    <View style={[
-                      styles.aiBubble,
-                      {
-                        backgroundColor: c.card,
-                        borderColor: `${provider.color}20`,
-                        borderLeftColor: `${provider.color}80`,
-                      },
-                    ]}>
-                      {msg.content.length === 0 && msg.streaming ? (
-                        <View style={styles.typingRow}>
-                          <ActivityIndicator size="small" color={provider.color} />
-                          <Text style={[styles.typingText, { color: c.mutedForeground }]}>
-                            {provider.name} is thinking…
-                          </Text>
-                        </View>
-                      ) : (
-                        <Markdown style={mdStyles}>{msg.content}</Markdown>
+            ) : messages.length === 0 ? (
+              <View style={styles.emptyState}>
+                <View style={[
+                  styles.emptyRing,
+                  { borderColor: `${provider.color}50` },
+                  Platform.OS === "web" ? { boxShadow: `0 0 32px ${provider.colorGlow}` } as object : {},
+                ]}>
+                  <Text style={[styles.emptyInitial, { color: provider.color }]}>{provider.name[0]}</Text>
+                </View>
+                <Text style={styles.emptyTitle}>Chat with {provider.name}</Text>
+                <Text style={styles.emptySubtitle}>
+                  Send a message or attach an image to start.
+                </Text>
+              </View>
+            ) : (
+              messages.map((msg, idx) => (
+                <View key={idx} style={msg.role === "user" ? styles.msgRowUser : styles.msgRowAi}>
+                  {msg.role === "user" ? (
+                    <View style={styles.userMsgGroup}>
+                      {msg.attachmentUri && (
+                        <Image source={{ uri: msg.attachmentUri }} style={styles.attachmentThumb} />
                       )}
-                      {msg.streaming && msg.content.length > 0 && (
-                        <View style={[styles.cursor, { backgroundColor: provider.color }]} />
+                      {msg.content.length > 0 && (
+                        <LinearGradient
+                          colors={[provider.color, provider.colorDark]}
+                          start={{ x: 0, y: 0 }}
+                          end={{ x: 1, y: 1 }}
+                          style={styles.userBubble}
+                        >
+                          <Text style={styles.userText} selectable>{msg.content}</Text>
+                        </LinearGradient>
                       )}
-                      {!msg.streaming && msg.content.length > 0 && (
-                        <TouchableOpacity onPress={() => handleCopy(idx, msg.content)} style={styles.copyBtn} activeOpacity={0.7}>
-                          <Feather name={copiedIdx === idx ? "check" : "copy"} size={12} color={copiedIdx === idx ? provider.color : c.mutedForeground} />
-                          <Text style={[styles.copyLabel, { color: copiedIdx === idx ? provider.color : c.mutedForeground }]}>
-                            {copiedIdx === idx ? "Copied" : "Copy"}
-                          </Text>
-                        </TouchableOpacity>
+                      {msg.createdAt && (
+                        <Text style={styles.timestamp}>{formatMessageTime(msg.createdAt)}</Text>
                       )}
                     </View>
-                    {msg.createdAt && !msg.streaming && (
-                      <Text style={[styles.timestamp, styles.timestampLeft, { color: c.mutedForeground }]}>
-                        {formatMessageTime(msg.createdAt)}
-                      </Text>
-                    )}
-                  </View>
-                )}
-              </View>
-            ))
-          )}
-        </ScrollView>
+                  ) : (
+                    <View style={styles.aiMsgGroup}>
+                      <View style={[styles.aiBubble, { borderLeftColor: `${provider.color}80` }]}>
+                        <BlurView intensity={18} tint="dark" style={StyleSheet.absoluteFill} />
+                        <View style={[StyleSheet.absoluteFill, { backgroundColor: "rgba(7,7,20,0.6)", borderRadius: 18, borderBottomLeftRadius: 4, borderWidth: 1, borderColor: "rgba(255,255,255,0.07)", borderLeftWidth: 2, borderLeftColor: `${provider.color}70` }]} />
+                        <View style={{ zIndex: 1 }}>
+                          {msg.content.length === 0 && msg.streaming ? (
+                            <View style={styles.typingRow}>
+                              <ActivityIndicator size="small" color={provider.color} />
+                              <Text style={styles.typingText}>{provider.name} is thinking…</Text>
+                            </View>
+                          ) : (
+                            <Markdown style={mdStyles}>{msg.content}</Markdown>
+                          )}
+                          {msg.streaming && msg.content.length > 0 && (
+                            <View style={[styles.cursor, { backgroundColor: provider.color }]} />
+                          )}
+                          {!msg.streaming && msg.content.length > 0 && (
+                            <TouchableOpacity onPress={() => handleCopy(idx, msg.content)} style={styles.copyBtn} activeOpacity={0.7}>
+                              <Feather name={copiedIdx === idx ? "check" : "copy"} size={12} color={copiedIdx === idx ? provider.color : "rgba(255,255,255,0.35)"} />
+                              <Text style={[styles.copyLabel, { color: copiedIdx === idx ? provider.color : "rgba(255,255,255,0.35)" }]}>
+                                {copiedIdx === idx ? "Copied" : "Copy"}
+                              </Text>
+                            </TouchableOpacity>
+                          )}
+                        </View>
+                      </View>
+                      {msg.createdAt && !msg.streaming && (
+                        <Text style={[styles.timestamp, { alignSelf: "flex-start", marginLeft: 2 }]}>{formatMessageTime(msg.createdAt)}</Text>
+                      )}
+                    </View>
+                  )}
+                </View>
+              ))
+            )}
+          </ScrollView>
 
-        {showScrollBtn && (
-          <TouchableOpacity
-            onPress={() => scrollRef.current?.scrollToEnd({ animated: true })}
-            style={[
-              styles.scrollToBottom,
-              { backgroundColor: c.card, borderColor: `${provider.color}40` },
-              Platform.OS === "web" ? { boxShadow: `0 0 12px ${provider.colorGlow}` } as object : {},
-            ]}
-            activeOpacity={0.8}
-          >
-            <Feather name="chevron-down" size={18} color={provider.color} />
-          </TouchableOpacity>
-        )}
-      </View>
-
-      <View style={[styles.replyBar, { borderTopColor: c.border, paddingBottom: bottomPad + 8, backgroundColor: c.background }]}>
-        {attachment && (
-          <View style={styles.attachmentPreview}>
-            <Image source={{ uri: attachment.uri }} style={styles.attachmentPreviewImg} />
-            <TouchableOpacity onPress={() => setAttachment(null)} style={[styles.removeAttachment, { backgroundColor: c.card, borderColor: c.border }]} activeOpacity={0.8}>
-              <Feather name="x" size={12} color={c.foreground} />
-            </TouchableOpacity>
-            <Text style={[styles.attachmentLabel, { color: c.mutedForeground }]}>Image attached</Text>
-          </View>
-        )}
-        <View style={[styles.inputRow, { backgroundColor: c.card, borderColor: c.border }]}>
-          <TouchableOpacity onPress={pickImage} style={styles.attachBtn} activeOpacity={0.7} disabled={streaming}>
-            <Feather name="paperclip" size={18} color={attachment ? provider.color : c.mutedForeground} />
-          </TouchableOpacity>
-          <TextInput
-            style={[styles.input, { color: c.foreground }]}
-            placeholder={streaming ? "Generating…" : `Reply to ${provider.name}…`}
-            placeholderTextColor={c.mutedForeground}
-            value={reply}
-            onChangeText={setReply}
-            multiline
-            maxLength={4000}
-            onSubmitEditing={handleSend}
-            blurOnSubmit={false}
-            editable={!streaming}
-          />
-          {streaming ? (
-            <TouchableOpacity onPress={handleStop} style={[styles.sendBtn, { backgroundColor: "#ff4466" }]} activeOpacity={0.7}>
-              <Feather name="square" size={14} color="#fff" />
-            </TouchableOpacity>
-          ) : (
+          {showScrollBtn && (
             <TouchableOpacity
-              onPress={handleSend}
-              disabled={!canSend}
+              onPress={() => scrollRef.current?.scrollToEnd({ animated: true })}
               style={[
-                styles.sendBtn,
-                { backgroundColor: canSend ? provider.color : c.secondary },
-                canSend && Platform.OS === "web" ? { boxShadow: `0 0 14px ${provider.colorGlow}` } as object : {},
+                styles.scrollToBottom,
+                { borderColor: `${provider.color}40` },
+                Platform.OS === "web" ? { boxShadow: `0 0 12px ${provider.colorGlow}` } as object : {},
               ]}
-              activeOpacity={0.7}
+              activeOpacity={0.8}
             >
-              <Feather name="send" size={15} color={canSend ? "#000" : c.mutedForeground} />
+              <BlurView intensity={30} tint="dark" style={StyleSheet.absoluteFill} />
+              <Feather name="chevron-down" size={18} color={provider.color} style={{ zIndex: 1 }} />
             </TouchableOpacity>
           )}
         </View>
-      </View>
-    </KeyboardAvoidingView>
+
+        <View style={[styles.replyBar, { paddingBottom: bottomPad + 8 }]}>
+          <BlurView intensity={40} tint="dark" style={StyleSheet.absoluteFill} />
+          <View style={[StyleSheet.absoluteFill, { backgroundColor: "rgba(7,7,20,0.6)", borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: "rgba(255,255,255,0.08)" }]} />
+          {attachment && (
+            <View style={styles.attachmentPreview}>
+              <Image source={{ uri: attachment.uri }} style={styles.attachmentPreviewImg} />
+              <TouchableOpacity onPress={() => setAttachment(null)} style={styles.removeAttachment} activeOpacity={0.8}>
+                <Feather name="x" size={12} color="#fff" />
+              </TouchableOpacity>
+              <Text style={styles.attachmentLabel}>Image attached</Text>
+            </View>
+          )}
+          <View style={styles.inputRow}>
+            <BlurView intensity={20} tint="dark" style={StyleSheet.absoluteFill} />
+            <View style={[StyleSheet.absoluteFill, { backgroundColor: "rgba(255,255,255,0.04)", borderRadius: 16, borderWidth: 1, borderColor: "rgba(255,255,255,0.1)" }]} />
+            <TouchableOpacity onPress={pickImage} style={styles.attachBtn} activeOpacity={0.7} disabled={streaming}>
+              <Feather name="paperclip" size={18} color={attachment ? provider.color : "rgba(255,255,255,0.4)"} />
+            </TouchableOpacity>
+            <TextInput
+              style={styles.input}
+              placeholder={streaming ? "Generating…" : `Reply to ${provider.name}…`}
+              placeholderTextColor="rgba(255,255,255,0.3)"
+              value={reply}
+              onChangeText={setReply}
+              multiline
+              maxLength={4000}
+              onSubmitEditing={handleSend}
+              blurOnSubmit={false}
+              editable={!streaming}
+            />
+            {streaming ? (
+              <TouchableOpacity onPress={handleStop} style={[styles.sendBtn, { backgroundColor: "#ff4466" }]} activeOpacity={0.7}>
+                <Feather name="square" size={14} color="#fff" />
+              </TouchableOpacity>
+            ) : (
+              <TouchableOpacity
+                onPress={handleSend}
+                disabled={!canSend}
+                style={[
+                  styles.sendBtn,
+                  { backgroundColor: canSend ? provider.color : "rgba(255,255,255,0.08)" },
+                  canSend && Platform.OS === "web" ? { boxShadow: `0 0 14px ${provider.colorGlow}` } as object : {},
+                ]}
+                activeOpacity={0.7}
+              >
+                <Feather name="send" size={15} color={canSend ? "#000" : "rgba(255,255,255,0.25)"} />
+              </TouchableOpacity>
+            )}
+          </View>
+        </View>
+      </KeyboardAvoidingView>
+    </ImageBackground>
   );
 }
 
 const styles = StyleSheet.create({
+  bg: { flex: 1 },
   container: { flex: 1 },
   header: {
     flexDirection: "row", alignItems: "center",
     paddingHorizontal: 16, paddingBottom: 14, gap: 12,
-    borderBottomWidth: 1,
+    overflow: "hidden",
   },
-  backBtn: { width: 34, height: 34, alignItems: "center", justifyContent: "center" },
-  headerCenter: { flex: 1, alignItems: "center", gap: 4 },
+  backBtn: { width: 34, height: 34, alignItems: "center", justifyContent: "center", zIndex: 1 },
+  headerCenter: { flex: 1, alignItems: "center", gap: 4, zIndex: 1 },
   headerBadge: {
     flexDirection: "row", alignItems: "center", gap: 7,
     paddingHorizontal: 14, paddingVertical: 6,
@@ -441,7 +445,7 @@ const styles = StyleSheet.create({
   },
   headerDot: { width: 7, height: 7, borderRadius: 4 },
   headerName: { fontSize: 15, fontFamily: "Inter_600SemiBold" },
-  headerModel: { fontSize: 11, fontFamily: "Inter_400Regular", letterSpacing: 0.5 },
+  headerModel: { fontSize: 11, fontFamily: "Inter_400Regular", letterSpacing: 0.5, color: "rgba(255,255,255,0.4)" },
 
   scrollContainer: { flex: 1, position: "relative" },
   scroll: { flex: 1 },
@@ -450,7 +454,7 @@ const styles = StyleSheet.create({
   scrollToBottom: {
     position: "absolute", bottom: 14, right: 16,
     width: 36, height: 36, borderRadius: 18, borderWidth: 1,
-    alignItems: "center", justifyContent: "center",
+    alignItems: "center", justifyContent: "center", overflow: "hidden",
   },
 
   loadingCenter: { flex: 1, alignItems: "center", justifyContent: "center", paddingTop: 80 },
@@ -459,10 +463,11 @@ const styles = StyleSheet.create({
     width: 80, height: 80, borderRadius: 40,
     borderWidth: 2,
     alignItems: "center", justifyContent: "center",
+    backgroundColor: "rgba(0,0,0,0.3)",
   },
   emptyInitial: { fontSize: 28, fontFamily: "Inter_700Bold" },
-  emptyTitle: { fontSize: 20, fontFamily: "Inter_600SemiBold" },
-  emptySubtitle: { fontSize: 14, fontFamily: "Inter_400Regular", textAlign: "center", paddingHorizontal: 48, color: "#525278" },
+  emptyTitle: { fontSize: 20, fontFamily: "Inter_600SemiBold", color: "#e8e8f4" },
+  emptySubtitle: { fontSize: 14, fontFamily: "Inter_400Regular", textAlign: "center", paddingHorizontal: 48, color: "rgba(255,255,255,0.4)" },
 
   msgRowUser: { flexDirection: "row", justifyContent: "flex-end", marginBottom: 4 },
   msgRowAi: { flexDirection: "row", justifyContent: "flex-start", marginBottom: 4 },
@@ -477,31 +482,30 @@ const styles = StyleSheet.create({
   aiBubble: {
     paddingHorizontal: 14, paddingVertical: 12,
     borderRadius: 18, borderBottomLeftRadius: 4,
-    borderWidth: 1, borderLeftWidth: 2, gap: 6,
+    overflow: "hidden",
   },
   typingRow: { flexDirection: "row", alignItems: "center", gap: 10 },
-  typingText: { fontSize: 14, fontFamily: "Inter_400Regular" },
+  typingText: { fontSize: 14, fontFamily: "Inter_400Regular", color: "rgba(255,255,255,0.5)" },
   cursor: { width: 2, height: 16, borderRadius: 1, opacity: 0.9 },
 
-  timestamp: { fontSize: 11, fontFamily: "Inter_400Regular", opacity: 0.5 },
-  timestampLeft: { alignSelf: "flex-start", marginLeft: 2 },
-  timestampRight: { alignSelf: "flex-end", marginRight: 2 },
+  timestamp: { fontSize: 11, fontFamily: "Inter_400Regular", opacity: 0.4, color: "#e8e8f4", alignSelf: "flex-end", marginRight: 2 },
 
-  copyBtn: { flexDirection: "row", alignItems: "center", gap: 5, alignSelf: "flex-start" },
+  copyBtn: { flexDirection: "row", alignItems: "center", gap: 5, alignSelf: "flex-start", marginTop: 6 },
   copyLabel: { fontSize: 12, fontFamily: "Inter_400Regular" },
 
-  replyBar: { paddingTop: 10, paddingHorizontal: 16, borderTopWidth: StyleSheet.hairlineWidth, gap: 8 },
-  attachmentPreview: { flexDirection: "row", alignItems: "center", gap: 10 },
+  replyBar: { paddingTop: 10, paddingHorizontal: 16, gap: 8, overflow: "hidden" },
+  attachmentPreview: { flexDirection: "row", alignItems: "center", gap: 10, zIndex: 1 },
   attachmentPreviewImg: { width: 48, height: 48, borderRadius: 10 },
-  removeAttachment: { width: 20, height: 20, borderRadius: 10, borderWidth: 1, alignItems: "center", justifyContent: "center" },
-  attachmentLabel: { fontSize: 13, fontFamily: "Inter_400Regular" },
+  removeAttachment: { width: 20, height: 20, borderRadius: 10, backgroundColor: "rgba(255,255,255,0.15)", alignItems: "center", justifyContent: "center" },
+  attachmentLabel: { fontSize: 13, fontFamily: "Inter_400Regular", color: "rgba(255,255,255,0.5)" },
 
   inputRow: {
     flexDirection: "row", alignItems: "flex-end",
-    borderRadius: 16, borderWidth: 1,
+    borderRadius: 16,
     paddingLeft: 4, paddingRight: 6, paddingVertical: 6, gap: 4,
+    overflow: "hidden",
   },
-  attachBtn: { width: 36, height: 38, alignItems: "center", justifyContent: "center" },
-  input: { flex: 1, fontSize: 15, fontFamily: "Inter_400Regular", maxHeight: 100, lineHeight: 21, paddingVertical: 4 },
-  sendBtn: { width: 38, height: 38, borderRadius: 11, alignItems: "center", justifyContent: "center" },
+  attachBtn: { width: 36, height: 38, alignItems: "center", justifyContent: "center", zIndex: 1 },
+  input: { flex: 1, fontSize: 15, fontFamily: "Inter_400Regular", maxHeight: 100, lineHeight: 21, paddingVertical: 4, color: "#f0f0ff", zIndex: 1 },
+  sendBtn: { width: 38, height: 38, borderRadius: 11, alignItems: "center", justifyContent: "center", zIndex: 1 },
 });
