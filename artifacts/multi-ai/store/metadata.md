@@ -44,13 +44,16 @@ Pro: Unlimited prompts across All AI Models
 First release. Send one prompt to All AI Models at once, and synthesize a consensus with a single tap.
 
 ## Support URL
-https://FILL_IN_YOUR_DOMAIN/support
+https://YOUR_REPLIT_DOMAIN/dreamtop/support
 
 ## Privacy Policy URL
-https://FILL_IN_YOUR_DOMAIN/privacy
+https://YOUR_REPLIT_DOMAIN/dreamtop/privacy
 
 ## Marketing URL (optional)
-https://FILL_IN_YOUR_DOMAIN
+https://YOUR_REPLIT_DOMAIN/dreamtop/
+
+NOTE: Replace YOUR_REPLIT_DOMAIN with your published Replit domain (e.g. dreamtop.replit.app).
+Both pages are live at /dreamtop/privacy and /dreamtop/support.
 
 ## Category
 Primary: Productivity

@@ -1,4 +1,8 @@
-export default function App() {
+import { Router, Route, Switch } from "wouter";
+import PrivacyPolicy from "./pages/PrivacyPolicy";
+import Support from "./pages/Support";
+
+function MainPage() {
   return (
     <div style={{ fontFamily: "'Inter', 'Helvetica Neue', sans-serif", background: "#050510", minHeight: "100vh", color: "#f0f0ff" }}>
       {/* Nav */}
@@ -47,7 +51,7 @@ export default function App() {
             </div>
             <h3 style={{ fontSize: 28, fontWeight: 800, marginBottom: 12, letterSpacing: "-0.02em" }}>Zenith</h3>
             <p style={{ color: "rgba(240,240,255,0.6)", lineHeight: 1.7, marginBottom: 24, fontSize: 15 }}>
-              Ask one question. Get simultaneous answers from 8 leading AI models — GPT, Claude, Gemini, Grok, DeepSeek, Mistral, Llama, and Qwen — side by side in real time. See how the world's best AI thinks.
+              Ask one question. Get simultaneous answers from All AI Models — GPT, Claude, Gemini, Grok, DeepSeek, Mistral, Llama, and Qwen — side by side in real time. See how the world's best AI thinks.
             </p>
             <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
               {["GPT", "Claude", "Gemini", "Grok", "DeepSeek", "Mistral", "Llama", "Qwen"].map(m => (
@@ -58,9 +62,9 @@ export default function App() {
           <div style={{ background: "rgba(34,197,94,0.05)", border: "1px solid rgba(34,197,94,0.12)", borderRadius: 16, padding: "32px 24px" }}>
             <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
               {[
-                { icon: "🔀", text: "8 AI models respond simultaneously" },
+                { icon: "🔀", text: "All AI Models respond simultaneously" },
                 { icon: "📱", text: "Native mobile app — iOS & Android" },
-                { icon: "🧠", text: "AI synthesis across all responses" },
+                { icon: "🧠", text: "Synthesis — consensus distilled across all responses" },
                 { icon: "🔍", text: "Searchable conversation history" },
                 { icon: "🔒", text: "Secure, private, no data sharing" },
               ].map(({ icon, text }) => (
@@ -113,8 +117,24 @@ export default function App() {
       {/* Footer */}
       <footer style={{ borderTop: "1px solid rgba(255,255,255,0.06)", padding: "24px 48px", display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 13, color: "rgba(240,240,255,0.3)" }}>
         <span>© 2026 Dreamtop LLC. All rights reserved.</span>
-        <span>Built in the USA 🇺🇸</span>
+        <div style={{ display: "flex", gap: 24 }}>
+          <a href="/dreamtop/privacy" style={{ color: "inherit", textDecoration: "none" }}>Privacy Policy</a>
+          <a href="/dreamtop/support" style={{ color: "inherit", textDecoration: "none" }}>Support</a>
+          <span>Built in the USA 🇺🇸</span>
+        </div>
       </footer>
     </div>
+  );
+}
+
+export default function App() {
+  return (
+    <Router base="/dreamtop">
+      <Switch>
+        <Route path="/privacy" component={PrivacyPolicy} />
+        <Route path="/support" component={Support} />
+        <Route component={MainPage} />
+      </Switch>
+    </Router>
   );
 }
