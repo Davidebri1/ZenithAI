@@ -31,6 +31,7 @@ import {
 import { authFetch } from "@/constants/apiAuth";
 
 const BG = require("../../assets/images/bg-alley.png");
+const BG_FOCAL: object = { transform: [{ scale: 1.2 }, { translateY: -60 }] };
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 const CARD_GAP = 10;
 
@@ -256,13 +257,13 @@ export default function SessionDetailScreen() {
 
   if (loadingSession) {
     return (
-      <ImageBackground source={BG} style={{ flex: 1 }} resizeMode="cover">
+      <ImageBackground source={BG} style={{ flex: 1 }} resizeMode="cover" imageStyle={BG_FOCAL}>
         <LinearGradient
           colors={["rgba(7,7,13,0.65)", "rgba(7,7,13,0.97)"]}
           style={StyleSheet.absoluteFill}
         />
         <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
-          <ActivityIndicator color="#00e5b0" size="large" />
+          <ActivityIndicator color="rgba(255,255,255,0.6)" size="large" />
         </View>
       </ImageBackground>
     );
@@ -270,7 +271,7 @@ export default function SessionDetailScreen() {
 
   if (!session) {
     return (
-      <ImageBackground source={BG} style={{ flex: 1 }} resizeMode="cover">
+      <ImageBackground source={BG} style={{ flex: 1 }} resizeMode="cover" imageStyle={BG_FOCAL}>
         <LinearGradient
           colors={["rgba(7,7,13,0.65)", "rgba(7,7,13,0.97)"]}
           style={StyleSheet.absoluteFill}
@@ -281,7 +282,7 @@ export default function SessionDetailScreen() {
             Session not found
           </Text>
           <TouchableOpacity onPress={() => router.back()} activeOpacity={0.7}>
-            <Text style={{ color: "#00e5b0", fontSize: 15 }}>Go back</Text>
+            <Text style={{ color: "rgba(255,255,255,0.7)", fontSize: 15 }}>Go back</Text>
           </TouchableOpacity>
         </View>
       </ImageBackground>
@@ -289,7 +290,7 @@ export default function SessionDetailScreen() {
   }
 
   return (
-    <ImageBackground source={BG} style={styles.bg} resizeMode="cover">
+    <ImageBackground source={BG} style={styles.bg} resizeMode="cover" imageStyle={BG_FOCAL}>
       <LinearGradient
         colors={[
           "rgba(7,7,13,0.55)",

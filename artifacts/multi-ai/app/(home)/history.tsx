@@ -8,6 +8,7 @@ import {
   Platform,
   Alert,
   ImageBackground,
+  ActivityIndicator,
   Pressable,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
@@ -27,6 +28,7 @@ import {
 } from "@/constants/sessions";
 
 const BG = require("../../assets/images/bg-alley.png");
+const BG_FOCAL: object = { transform: [{ scale: 1.2 }, { translateY: -60 }] };
 type Tab = "public" | "private";
 
 export default function HistoryScreen() {
@@ -35,10 +37,12 @@ export default function HistoryScreen() {
   const router = useRouter();
   const [sessions, setSessions] = useState<Session[]>([]);
   const [tab, setTab] = useState<Tab>("public");
+  const [loading, setLoading] = useState(true);
 
   useFocusEffect(
     useCallback(() => {
-      getSessions().then(setSessions);
+      setLoading(true);
+      getSessions().then((data) => { setSessions(data); setLoading(false); });
     }, [])
   );
 
@@ -104,7 +108,7 @@ export default function HistoryScreen() {
   const topPad = Platform.OS === "web" ? 52 : insets.top;
 
   return (
-    <ImageBackground source={BG} style={styles.bg} resizeMode="cover">
+    <ImageBackground source={BG} style={styles.bg} resizeMode="cover" imageStyle={BG_FOCAL}>
       <LinearGradient
         colors={["rgba(7,7,13,0.65)", "rgba(7,7,13,0.88)", "rgba(7,7,13,0.97)"]}
         style={StyleSheet.absoluteFill}
@@ -165,7 +169,7 @@ export default function HistoryScreen() {
             <Feather
               name="clock"
               size={13}
-              color={tab === "public" ? "#00e5b0" : "rgba(255,255,255,0.4)"}
+              color={tab === "public" ? "rgba(255,255,255,0.9)" : "rgba(255,255,255,0.4)"}
             />
             <Text style={[styles.tabText, tab === "public" && styles.tabTextActive]}>
               All
@@ -221,7 +225,11 @@ export default function HistoryScreen() {
         </View>
 
         {/* List */}
-        {visible.length === 0 ? (
+        {loading ? (
+          <View style={styles.empty}>
+            <ActivityIndicator size="large" color="rgba(255,255,255,0.4)" />
+          </View>
+        ) : visible.length === 0 ? (
           <View style={styles.empty}>
             <View style={styles.emptyIcon}>
               <Feather
@@ -409,7 +417,7 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_500Medium",
     color: "rgba(255,255,255,0.4)",
   },
-  tabTextActive: { color: "#00e5b0" },
+  tabTextActive: { color: "rgba(255,255,255,0.9)" },
   tabBadge: {
     paddingHorizontal: 7,
     paddingVertical: 2,
@@ -419,15 +427,15 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(255,255,255,0.06)",
   },
   tabBadgeActive: {
-    borderColor: "rgba(0,229,176,0.3)",
-    backgroundColor: "rgba(0,229,176,0.15)",
+    borderColor: "rgba(255,255,255,0.3)",
+    backgroundColor: "rgba(255,255,255,0.12)",
   },
   tabBadgeText: {
     fontSize: 11,
     fontFamily: "Inter_600SemiBold",
     color: "rgba(255,255,255,0.4)",
   },
-  tabBadgeTextActive: { color: "#00e5b0" },
+  tabBadgeTextActive: { color: "rgba(255,255,255,0.9)" },
 
   empty: {
     flex: 1,

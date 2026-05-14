@@ -32,6 +32,7 @@ import { AI_PROVIDERS, BASE_URL } from "@/constants/aiConfig";
 import { CONV_IDS_KEY, formatMessageTime } from "@/constants/sessions";
 
 const BG = require("../../assets/images/bg-alley.png");
+const BG_FOCAL: object = { transform: [{ scale: 1.2 }, { translateY: -60 }] };
 
 interface Message {
   role: "user" | "assistant";
@@ -259,7 +260,7 @@ export default function ThreadScreen() {
   };
 
   return (
-    <ImageBackground source={BG} style={styles.bg} resizeMode="cover">
+    <ImageBackground source={BG} style={styles.bg} resizeMode="cover" imageStyle={BG_FOCAL}>
       <LinearGradient
         colors={["rgba(7,7,13,0.72)", "rgba(7,7,13,0.82)", "rgba(7,7,13,0.92)"]}
         style={StyleSheet.absoluteFill}

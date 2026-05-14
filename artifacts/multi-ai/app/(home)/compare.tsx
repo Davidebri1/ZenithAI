@@ -22,6 +22,7 @@ import { AI_PROVIDERS, BASE_URL } from "@/constants/aiConfig";
 import { CONV_IDS_KEY } from "@/constants/sessions";
 
 const BG = require("../../assets/images/bg-alley.png");
+const BG_FOCAL: object = { transform: [{ scale: 1.2 }, { translateY: -60 }] };
 const { width: SW } = Dimensions.get("window");
 const PANEL_GAP = 8;
 const PANEL_W = (SW - 32 - PANEL_GAP) / 2;
@@ -116,7 +117,7 @@ export default function CompareScreen() {
   }
 
   return (
-    <ImageBackground source={BG} style={styles.bg} resizeMode="cover">
+    <ImageBackground source={BG} style={styles.bg} resizeMode="cover" imageStyle={BG_FOCAL}>
       <LinearGradient
         colors={["rgba(7,7,13,0.6)", "rgba(7,7,13,0.88)", "rgba(7,7,13,0.97)"]}
         style={StyleSheet.absoluteFill}

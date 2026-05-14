@@ -24,6 +24,7 @@ import { authFetch } from "@/constants/apiAuth";
 import { BASE_URL, AI_PROVIDERS } from "@/constants/aiConfig";
 
 const BG = require("../../assets/images/bg-alley.png");
+const BG_FOCAL: object = { transform: [{ scale: 1.2 }, { translateY: -60 }] };
 const { width: SW } = Dimensions.get("window");
 
 const GOLD = "#f59e0b";
@@ -128,7 +129,7 @@ export default function EnterpriseScreen() {
 
   return (
     <>
-      <ImageBackground source={BG} style={StyleSheet.absoluteFill} resizeMode="cover">
+      <ImageBackground source={BG} style={StyleSheet.absoluteFill} resizeMode="cover" imageStyle={BG_FOCAL}>
         <LinearGradient
           colors={["rgba(7,7,20,0.90)", "rgba(7,7,20,0.78)", "rgba(7,7,20,0.95)"]}
           style={StyleSheet.absoluteFill}

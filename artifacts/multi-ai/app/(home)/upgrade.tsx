@@ -21,6 +21,7 @@ import { authFetch } from "@/constants/apiAuth";
 import { BASE_URL } from "@/constants/aiConfig";
 
 const BG = require("../../assets/images/bg-alley.png");
+const BG_FOCAL: object = { transform: [{ scale: 1.2 }, { translateY: -60 }] };
 const ACCENT = "#22c55e";
 const ACCENT_GLOW = "#22c55e55";
 
@@ -118,7 +119,7 @@ export default function UpgradeScreen() {
 
   if (checkoutSuccess) {
     return (
-      <ImageBackground source={BG} style={StyleSheet.absoluteFill} resizeMode="cover">
+      <ImageBackground source={BG} style={StyleSheet.absoluteFill} resizeMode="cover" imageStyle={BG_FOCAL}>
         <LinearGradient
           colors={["rgba(7,7,20,0.92)", "rgba(7,7,20,0.80)", "rgba(7,7,20,0.95)"]}
           style={StyleSheet.absoluteFill}
@@ -145,7 +146,7 @@ export default function UpgradeScreen() {
 
   return (
     <>
-      <ImageBackground source={BG} style={StyleSheet.absoluteFill} resizeMode="cover">
+      <ImageBackground source={BG} style={StyleSheet.absoluteFill} resizeMode="cover" imageStyle={BG_FOCAL}>
         <LinearGradient
           colors={["rgba(7,7,20,0.88)", "rgba(7,7,20,0.72)", "rgba(7,7,20,0.92)"]}
           style={StyleSheet.absoluteFill}
