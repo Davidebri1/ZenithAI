@@ -277,7 +277,7 @@ export default function EnterpriseScreen() {
               <View style={[StyleSheet.absoluteFill, { borderRadius: 20, borderWidth: 1, borderColor: `${GOLD}30` }]} />
               <View style={styles.ctaBannerContent}>
                 <Feather name="users" size={22} color={GOLD} style={{ marginBottom: 10 }} />
-                <Text style={styles.ctaBannerTitle}>Ready to bring OneAI to your team?</Text>
+                <Text style={styles.ctaBannerTitle}>Ready to bring Zenith to your team?</Text>
                 <Text style={styles.ctaBannerSub}>Get custom pricing, a dedicated success manager, and white-glove onboarding.</Text>
                 <TouchableOpacity onPress={() => setContactOpen(true)} activeOpacity={0.85} style={styles.ctaBannerBtn}>
                   <Text style={styles.ctaBannerBtnText}>Contact Sales</Text>

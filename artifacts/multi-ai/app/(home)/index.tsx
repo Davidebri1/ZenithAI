@@ -574,7 +574,7 @@ export default function HomeScreen() {
               ))}
             </View>
             <Text style={styles.appName}>
-              One<Text style={{ color: AI_PROVIDERS[0].color }}>AI</Text>
+              <Text style={{ color: AI_PROVIDERS[0].color }}>Z</Text>enith
             </Text>
           </View>
           <View style={styles.headerActions}>

@@ -156,7 +156,7 @@ export default function UpgradeScreen() {
             <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
               <Feather name="x" size={22} color="rgba(240,240,255,0.7)" />
             </TouchableOpacity>
-            <Text style={styles.headerTitle}>OneAI Pro</Text>
+            <Text style={styles.headerTitle}>Zenith Pro</Text>
             <View style={{ width: 36 }} />
           </View>
 
@@ -210,7 +210,7 @@ export default function UpgradeScreen() {
                   <ActivityIndicator color={ACCENT} />
                 ) : selectedPrice ? (
                   <>
-                    <Text style={styles.priceName}>{proProduct?.name ?? "OneAI Pro"}</Text>
+                    <Text style={styles.priceName}>{proProduct?.name ?? "Zenith Pro"}</Text>
                     <Text style={styles.priceAmount}>
                       ${(selectedPrice.unit_amount / 100).toFixed(0)}
                       <Text style={styles.pricePer}>/{selectedInterval === "year" ? "year" : "month"}</Text>
@@ -262,7 +262,7 @@ export default function UpgradeScreen() {
 
             {/* Free tier reminder */}
             <View style={styles.freeTier}>
-              <Text style={styles.freeTierText}>Free plan: 10 prompts to try OneAI</Text>
+              <Text style={styles.freeTierText}>Free plan: 10 prompts to try Zenith</Text>
             </View>
           </ScrollView>
         </View>

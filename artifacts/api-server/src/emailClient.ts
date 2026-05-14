@@ -14,7 +14,7 @@ export async function sendEmail(opts: {
     const resp = await fetch("https://api.resend.com/emails", {
       method: "POST",
       headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ from: process.env.RESEND_FROM ?? "OneAI <onboarding@resend.dev>", ...opts }),
+      body: JSON.stringify({ from: process.env.RESEND_FROM ?? "Zenith <onboarding@resend.dev>", ...opts }),
       signal: AbortSignal.timeout(10000),
     });
     if (!resp.ok) {
@@ -42,13 +42,13 @@ function base(title: string, body: string): string {
     <tr><td align="center" style="padding:40px 16px;">
       <table width="100%" style="max-width:500px;">
         <tr><td style="padding-bottom:28px;text-align:center;">
-          <span style="font-size:22px;font-weight:800;color:#f0f0ff;letter-spacing:-0.5px;">One<span style="color:#74aa9c;">AI</span></span>
+          <span style="font-size:22px;font-weight:800;color:#f0f0ff;letter-spacing:-0.5px;"><span style="color:#74aa9c;">Z</span>enith</span>
         </td></tr>
         <tr><td style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:16px;padding:32px;">
           ${body}
         </td></tr>
         <tr><td style="padding-top:22px;text-align:center;color:rgba(240,240,255,0.22);font-size:12px;line-height:1.6;">
-          OneAI · oneai.app
+          Zenith · zenith.app
         </td></tr>
       </table>
     </td></tr>
@@ -102,8 +102,8 @@ export function contactAutoReplyEmail(opts: {
     : "";
 
   return {
-    subject: "We received your OneAI inquiry",
-    html: base("Message received — OneAI", `
+    subject: "We received your Zenith inquiry",
+    html: base("Message received — Zenith", `
       <h1 style="margin:0 0 10px;color:#f0f0ff;font-size:20px;font-weight:800;">Message received, ${opts.name.split(" ")[0]}.</h1>
       <p style="margin:0 0 24px;color:rgba(240,240,255,0.55);font-size:15px;line-height:1.6;">
         Thanks for reaching out. Our team will get back to you shortly about enterprise pricing and onboarding.

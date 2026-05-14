@@ -1,6 +1,6 @@
-# MultiAI
+# Zenith
 
-A mobile app that lets you type one prompt and simultaneously get streaming responses from ChatGPT (GPT-5.4), Claude (Sonnet 4.6), and Gemini (Flash 3), displayed side by side.
+A mobile app that lets you type one prompt and simultaneously get streaming responses from 8 AI models (GPT, Claude, Gemini, Grok, DeepSeek, Mistral, Llama, Qwen), displayed side by side.
 
 ## Run & Operate
 

@@ -3,11 +3,11 @@ import { getUncachableStripeClient } from "./stripeClient";
 async function createProducts() {
   const stripe = await getUncachableStripeClient();
 
-  console.log("Checking for existing OneAI products...");
+  console.log("Checking for existing Zenith products...");
 
-  const existing = await stripe.products.search({ query: "name:'OneAI Pro' AND active:'true'" });
+  const existing = await stripe.products.search({ query: "name:'Zenith Pro' AND active:'true'" });
   if (existing.data.length > 0) {
-    console.log("OneAI Pro already exists:", existing.data[0].id);
+    console.log("Zenith Pro already exists:", existing.data[0].id);
     const prices = await stripe.prices.list({ product: existing.data[0].id, active: true });
     prices.data.forEach((p) => {
       console.log(`  Price: ${p.id} — $${(p.unit_amount ?? 0) / 100}/${(p.recurring as any)?.interval}`);
@@ -16,7 +16,7 @@ async function createProducts() {
   }
 
   const pro = await stripe.products.create({
-    name: "OneAI Pro",
+    name: "Zenith Pro",
     description: "Unlimited prompts across all 8 AI models — GPT, Claude, Gemini, Grok, DeepSeek, Mistral, Llama, Qwen",
     metadata: { plan: "pro", promptsLimit: "9999" },
   });
