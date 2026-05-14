@@ -220,7 +220,7 @@ export default function UpgradeScreen() {
                     )}
                   </>
                 ) : (
-                  <Text style={styles.priceAmount}>$14.99/mo</Text>
+                  <Text style={styles.priceAmount}>$20/mo</Text>
                 )}
               </View>
             </View>

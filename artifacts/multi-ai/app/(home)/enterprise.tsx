@@ -42,7 +42,7 @@ const MODELS = [
 const TIERS = [
   {
     name: "Starter",
-    price: "$14.99",
+    price: "$20",
     period: "/mo",
     seats: "1 user",
     prompts: "Unlimited",
