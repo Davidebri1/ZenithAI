@@ -35,17 +35,9 @@ router.post("/prompt/track", async (req, res) => {
 
     const updated = await storage.incrementPromptsUsed(userId);
 
-    if (updated?.email) {
-      const used = updated.promptsUsed;
-      const limit = updated.promptsLimit;
-      const pct = used / limit;
-      if (used >= limit) {
-        const tpl = quotaExhaustedEmail();
-        sendEmail({ to: updated.email, ...tpl });
-      } else if (pct >= 0.8) {
-        const tpl = quotaWarningEmail({ used, limit });
-        sendEmail({ to: updated.email, ...tpl });
-      }
+    if (updated?.email && updated.promptsUsed >= updated.promptsLimit) {
+      const tpl = quotaExhaustedEmail();
+      sendEmail({ to: updated.email, ...tpl });
     }
 
     res.json({
