@@ -29,7 +29,7 @@ import { authFetch } from "@/constants/apiAuth";
 import { useColors } from "@/hooks/useColors";
 import { useQuota } from "@/hooks/useQuota";
 import { QuotaBar } from "@/components/QuotaBar";
-import { AI_PROVIDERS, BASE_URL, SYNTHESIS_COLOR, SYNTHESIS_COLOR_GLOW, type AiProvider } from "@/constants/aiConfig";
+import { AI_PROVIDERS, BASE_URL, SYNTHESIS_COLOR, type AiProvider } from "@/constants/aiConfig";
 import { saveSession, CONV_IDS_KEY } from "@/constants/sessions";
 
 const CARD_GAP = 10;
@@ -63,10 +63,6 @@ function makeDefaultCard(): CardState {
   return { conversationId: null, lastMessage: "", lastRole: "user", streaming: false, streamingText: "", hasUnread: false };
 }
 
-function cardGlowStyle(color: string, selected: boolean) {
-  if (!selected || Platform.OS !== "web") return {};
-  return { boxShadow: `0 0 0 1.5px ${color}, 0 0 28px ${color}55` } as object;
-}
 
 interface AiCardProps {
   provider: AiProvider;
@@ -93,7 +89,6 @@ function AiCard({ provider, state, selected, onToggleSelect, onOpen, cardWidth }
           borderWidth: 1,
           opacity: pressed ? 0.85 : 1,
           overflow: "hidden",
-          ...cardGlowStyle(provider.color, selected),
         },
       ]}
     >
@@ -109,7 +104,6 @@ function AiCard({ provider, state, selected, onToggleSelect, onOpen, cardWidth }
         <View style={[
           styles.aiCircleOuter,
           { borderColor: `${provider.color}80` },
-          Platform.OS === "web" ? { boxShadow: `0 0 16px ${provider.colorGlow}` } as object : {},
         ]}>
           <Text style={[styles.aiInitial, { color: provider.color }]}>{provider.name[0]}</Text>
         </View>
@@ -528,7 +522,6 @@ export default function HomeScreen() {
           style={[
             styles.synthesizeBtn,
             synthesis.expanded && { borderColor: `${SYNTHESIS_COLOR}70` },
-            Platform.OS === "web" ? { boxShadow: `0 0 18px ${SYNTHESIS_COLOR_GLOW}` } as object : {},
           ]}
           activeOpacity={0.75}
         >
@@ -573,21 +566,10 @@ export default function HomeScreen() {
       <KeyboardAvoidingView style={styles.container} behavior="padding">
         <View style={[styles.header, { paddingTop: topPad + 14 }]}>
           <View style={styles.logoRow}>
-            <View style={styles.logoDots}>
-              {AI_PROVIDERS.slice(0, 5).map((p) => (
-                <View
-                  key={p.key}
-                  style={[
-                    styles.logoDot,
-                    { backgroundColor: p.color },
-                    Platform.OS === "web" ? { boxShadow: `0 0 8px ${p.color}` } as object : {},
-                  ]}
-                />
-              ))}
+            <View style={styles.logoMark}>
+              <Text style={styles.logoZ}>Z</Text>
             </View>
-            <Text style={styles.appName}>
-              <Text style={{ color: AI_PROVIDERS[0].color }}>Z</Text>enith
-            </Text>
+            <Text style={styles.appName}>Zenith</Text>
           </View>
           <View style={styles.headerActions}>
             <TouchableOpacity onPress={() => router.push("/(home)/enterprise")} style={styles.headerBtn} activeOpacity={0.7}>
@@ -662,7 +644,6 @@ export default function HomeScreen() {
                     backgroundColor: selected.has(p.key) ? `${p.color}18` : "rgba(255,255,255,0.05)",
                     borderColor: selected.has(p.key) ? `${p.color}70` : "rgba(255,255,255,0.1)",
                   },
-                  selected.has(p.key) && Platform.OS === "web" ? { boxShadow: `0 0 10px ${p.colorGlow}` } as object : {},
                 ]}
                 activeOpacity={0.7}
               >
@@ -711,7 +692,6 @@ export default function HomeScreen() {
                 style={[
                   styles.sendBtn,
                   { backgroundColor: canSend ? AI_PROVIDERS[0].color : "rgba(255,255,255,0.08)" },
-                  canSend && Platform.OS === "web" ? { boxShadow: `0 0 14px ${AI_PROVIDERS[0].colorGlow}` } as object : {},
                 ]}
                 activeOpacity={0.7}
               >
@@ -734,9 +714,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20, paddingBottom: 16,
   },
   logoRow: { flexDirection: "row", alignItems: "center", gap: 10 },
-  logoDots: { flexDirection: "row", gap: 4 },
-  logoDot: { width: 7, height: 7, borderRadius: 4 },
-  appName: { fontSize: 24, fontFamily: "Inter_700Bold", letterSpacing: -0.5, color: "#f0f0ff" },
+  logoMark: {
+    width: 30, height: 30, borderRadius: 8,
+    backgroundColor: "rgba(34,197,94,0.15)",
+    borderWidth: 1, borderColor: "rgba(34,197,94,0.3)",
+    alignItems: "center", justifyContent: "center",
+  },
+  logoZ: { fontSize: 17, fontFamily: "Inter_700Bold", color: "#22c55e" },
+  appName: { fontSize: 22, fontFamily: "Inter_700Bold", letterSpacing: -0.5, color: "#f0f0ff" },
   headerActions: { flexDirection: "row", alignItems: "center", gap: 6 },
   headerBtn: { width: 34, height: 34, alignItems: "center", justifyContent: "center" },
   newChatBtn: {
@@ -791,11 +776,6 @@ const styles = StyleSheet.create({
 
   card: {
     borderRadius: 20,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.5,
-    shadowRadius: 16,
-    elevation: 8,
   },
   cardTop: {
     height: 82,
@@ -847,11 +827,6 @@ const styles = StyleSheet.create({
   synthCard: {
     borderRadius: 22,
     marginTop: 8,
-    shadowColor: SYNTHESIS_COLOR,
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.25,
-    shadowRadius: 20,
-    elevation: 6,
   },
   synthHeader: {
     flexDirection: "row", alignItems: "center", justifyContent: "space-between",

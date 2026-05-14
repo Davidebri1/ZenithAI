@@ -25,7 +25,6 @@ const BG = require("../../assets/images/bg-alley.png");
 WebBrowser.maybeCompleteAuthSession();
 
 const PRIMARY = "#00e5a0";
-const PRIMARY_GLOW = "rgba(0,229,160,0.4)";
 
 export default function SignUpScreen() {
   const { signUp, errors, fetchStatus } = useSignUp();
@@ -195,7 +194,6 @@ export default function SignUpScreen() {
                 styles.primaryBtn,
                 { marginTop: 22 },
                 !canSubmit && styles.primaryBtnDisabled,
-                canSubmit && Platform.OS === "web" ? { boxShadow: `0 0 20px ${PRIMARY_GLOW}` } as object : {},
               ]}
               disabled={!canSubmit}
               activeOpacity={0.8}
