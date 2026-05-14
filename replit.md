@@ -17,7 +17,7 @@ A mobile app that lets you type one prompt and simultaneously get streaming resp
 - Mobile: Expo (React Native) with expo-router, AsyncStorage for session history
 - API: Express 5
 - DB: PostgreSQL + Drizzle ORM (`conversations`, `messages` tables)
-- AI: OpenAI gpt-5.4, Anthropic claude-sonnet-4-6, Gemini gemini-3-flash-preview via Replit AI Integrations
+- AI: OpenAI gpt-5.4, Anthropic claude-sonnet-4-6, Gemini gemini-3-flash-preview via Replit AI Integrations; Grok, DeepSeek, Mistral, Llama, Qwen via OpenRouter
 - Validation: Zod, drizzle-zod
 - Streaming: SSE via `expo/fetch` on mobile
 

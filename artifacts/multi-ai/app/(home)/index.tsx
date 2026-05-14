@@ -428,6 +428,24 @@ export default function HomeScreen() {
     setSynthesis({ status: "idle", text: "", expanded: false });
     if (text) lastPromptRef.current = text;
     try {
+      // Server-side quota check + increment before any streaming begins
+      const trackRes = await authFetch(`${BASE_URL}/api/prompt/track`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      });
+      if (trackRes.status === 402) {
+        Alert.alert(
+          "No prompts remaining",
+          "You've used all your free prompts. Upgrade to Pro for 250 prompts/month.",
+          [
+            { text: "Not now", style: "cancel" },
+            { text: "Upgrade to Pro", onPress: () => router.push("/(home)/upgrade") },
+          ]
+        );
+        return;
+      }
+      if (!trackRes.ok) throw new Error(`track ${trackRes.status}`);
+
       const isFirstMessage = AI_PROVIDERS.every((p) => !convIds[p.key]);
       const ids = await getOrCreateConvIds();
       if (isFirstMessage && !sessionTitleRef.current) sessionTitleRef.current = text || "[Image]";
@@ -439,18 +457,7 @@ export default function HomeScreen() {
       });
       refreshQuota();
     } catch (err: any) {
-      if (err?.status === 402 || (typeof err?.message === "string" && err.message.includes("402"))) {
-        Alert.alert(
-          "Quota exceeded",
-          "You've used all your free prompts.",
-          [
-            { text: "Cancel", style: "cancel" },
-            { text: "Upgrade to Pro", onPress: () => router.push("/(home)/upgrade") },
-          ]
-        );
-      } else {
-        Alert.alert("Connection failed", "Could not reach the server.", [{ text: "OK" }]);
-      }
+      Alert.alert("Connection failed", "Could not reach the server.", [{ text: "OK" }]);
     }
   };
 
