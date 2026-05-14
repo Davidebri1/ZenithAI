@@ -127,15 +127,13 @@ export default function SignInScreen() {
         <ScrollView contentContainerStyle={{ flexGrow: 1 }} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
           <View style={{ paddingTop: topPad + 30, paddingHorizontal: 24 }}>
             <View style={styles.logoRow}>
-              <View style={styles.logoDots}>
-                {["#00e5a0", "#ff6b35", "#7c5cfc", "#facc15", "#e879f9"].map((c, i) => (
-                  <View key={i} style={[styles.logoDot, { backgroundColor: c }]} />
-                ))}
+              <View style={styles.logoMark}>
+                <Text style={styles.logoZ}>Z</Text>
               </View>
-              <Text style={styles.logoText}>One<Text style={{ color: PRIMARY }}>AI</Text></Text>
+              <Text style={styles.logoText}>Zenith</Text>
             </View>
             <Text style={styles.heroTitle}>Welcome back</Text>
-            <Text style={styles.heroSubtitle}>Sign in to your account</Text>
+            <Text style={styles.heroSubtitle}>Sign in to compare all 8 AIs</Text>
           </View>
 
           <View style={[styles.card, { marginHorizontal: 24, marginTop: 28 }]}>
@@ -231,8 +229,13 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
 
   logoRow: { flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 28 },
-  logoDots: { flexDirection: "row", gap: 5 },
-  logoDot: { width: 7, height: 7, borderRadius: 4 },
+  logoMark: {
+    width: 34, height: 34, borderRadius: 9,
+    backgroundColor: "rgba(34,197,94,0.15)",
+    borderWidth: 1, borderColor: "rgba(34,197,94,0.35)",
+    alignItems: "center", justifyContent: "center",
+  },
+  logoZ: { fontSize: 20, fontFamily: "Inter_700Bold", color: "#22c55e" },
   logoText: { fontSize: 22, fontFamily: "Inter_700Bold", color: "#e8e8f4", letterSpacing: -0.5 },
 
   heroTitle: { fontSize: 32, fontFamily: "Inter_700Bold", color: "#e8e8f4", letterSpacing: -0.8 },

@@ -4,7 +4,7 @@ uploads = []
 id = "IBSAe2M0H0nJne8_KkH_s"
 uri = "file://artifacts/multi-ai/assets/images/icon.png"
 type = "image"
-title = "zenith app icon"
+title = "generated_image"
 
 [[generated]]
 id = "LvVHblKQO34xqAXVFOOsN"
@@ -22,7 +22,7 @@ title = "generated_image"
 id = "yPZNP9hdFiJfsp8VJQzw0"
 uri = "file://artifacts/multi-ai/assets/images/splash-icon.png"
 type = "image"
-title = "zenith splash icon"
+title = "generated_image"
 
 [[outputs]]
 id = "hISodbmZBYOc8_0Sq7hf2"
