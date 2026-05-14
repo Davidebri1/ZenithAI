@@ -71,5 +71,6 @@ export async function getStripeSync() {
       max: 2,
     },
     stripeSecretKey: secretKey,
+    stripeWebhookSecret: process.env.STRIPE_WEBHOOK_SECRET,
   });
 }
