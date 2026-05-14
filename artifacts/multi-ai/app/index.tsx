@@ -13,6 +13,7 @@ import {
   Alert,
   Image,
   ImageBackground,
+  ScrollView,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { BlurView } from "expo-blur";
@@ -26,11 +27,12 @@ import * as ImagePicker from "expo-image-picker";
 import { fetch } from "expo/fetch";
 
 import { useColors } from "@/hooks/useColors";
-import { AI_PROVIDERS, BASE_URL, type AiProvider } from "@/constants/aiConfig";
+import { AI_PROVIDERS, BASE_URL, SYNTHESIS_COLOR, SYNTHESIS_COLOR_GLOW, type AiProvider } from "@/constants/aiConfig";
 import { saveSession, CONV_IDS_KEY } from "@/constants/sessions";
 
 const CARD_GAP = 10;
 const BG = require("../assets/images/bg-alley.png");
+const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
 interface ConvIds { [key: string]: number; }
 
@@ -47,6 +49,12 @@ interface Attachment {
   base64: string;
   mimeType: string;
   uri: string;
+}
+
+interface SynthesisState {
+  status: "idle" | "loading" | "done" | "error";
+  text: string;
+  expanded: boolean;
 }
 
 function makeDefaultCard(): CardState {
@@ -68,7 +76,6 @@ interface AiCardProps {
 }
 
 function AiCard({ provider, state, selected, onToggleSelect, onOpen, cardWidth }: AiCardProps) {
-  const c = useColors();
   const previewText = state.streaming
     ? state.streamingText || "Thinking…"
     : state.lastMessage || "Start a conversation";
@@ -162,7 +169,58 @@ function AiCard({ provider, state, selected, onToggleSelect, onOpen, cardWidth }
   );
 }
 
-const { width: SCREEN_WIDTH } = Dimensions.get("window");
+function SynthesisCard({ synthesis, onClose }: { synthesis: SynthesisState; onClose: () => void }) {
+  if (!synthesis.expanded) return null;
+  return (
+    <View style={[styles.synthCard, { overflow: "hidden" }]}>
+      <BlurView intensity={32} tint="dark" style={StyleSheet.absoluteFill} />
+      <View style={[StyleSheet.absoluteFill, { backgroundColor: "rgba(7,7,20,0.60)", borderRadius: 22, borderWidth: 1, borderColor: `${SYNTHESIS_COLOR}40` }]} />
+      <LinearGradient
+        colors={[`${SYNTHESIS_COLOR}30`, `${SYNTHESIS_COLOR}08`, "transparent"]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={StyleSheet.absoluteFill}
+      />
+
+      <View style={styles.synthHeader}>
+        <LinearGradient
+          colors={[SYNTHESIS_COLOR, "#ff8c00", SYNTHESIS_COLOR]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 0 }}
+          style={styles.synthBadge}
+        >
+          <Text style={styles.synthBadgeText}>✦  SYNTHESIS</Text>
+        </LinearGradient>
+        <TouchableOpacity onPress={onClose} hitSlop={{ top: 10, right: 10, bottom: 10, left: 10 }} activeOpacity={0.7}>
+          <Feather name="x" size={16} color={`${SYNTHESIS_COLOR}80`} />
+        </TouchableOpacity>
+      </View>
+
+      <View style={styles.synthSubtitleRow}>
+        <Feather name="git-merge" size={11} color={`${SYNTHESIS_COLOR}70`} />
+        <Text style={styles.synthSubtitle}>Consensus across all AI responses</Text>
+      </View>
+
+      {synthesis.status === "loading" && synthesis.text.length === 0 ? (
+        <View style={styles.synthLoading}>
+          <ActivityIndicator size="small" color={SYNTHESIS_COLOR} />
+          <Text style={styles.synthLoadingText}>Synthesizing responses…</Text>
+        </View>
+      ) : synthesis.status === "error" ? (
+        <Text style={styles.synthError}>Synthesis failed. Please try again.</Text>
+      ) : (
+        <ScrollView style={styles.synthScroll} showsVerticalScrollIndicator={false} nestedScrollEnabled>
+          <Text style={styles.synthText}>
+            {synthesis.text}
+            {synthesis.status === "loading" && (
+              <Text style={[styles.synthCursor, { color: SYNTHESIS_COLOR }]}> ▋</Text>
+            )}
+          </Text>
+        </ScrollView>
+      )}
+    </View>
+  );
+}
 
 export default function HomeScreen() {
   const c = useColors();
@@ -177,9 +235,12 @@ export default function HomeScreen() {
   const [message, setMessage] = useState("");
   const [convIds, setConvIds] = useState<ConvIds>({});
   const [attachment, setAttachment] = useState<Attachment | null>(null);
+  const [synthesis, setSynthesis] = useState<SynthesisState>({ status: "idle", text: "", expanded: false });
+
   const inputRef = useRef<TextInput>(null);
   const activeReaders = useRef<Map<string, ReadableStreamDefaultReader<Uint8Array>>>(new Map());
   const sessionTitleRef = useRef<string>("");
+  const lastPromptRef = useRef<string>("");
 
   const updateCard = useCallback((key: string, patch: Partial<CardState>) =>
     setCards((prev) => ({ ...prev, [key]: { ...prev[key], ...patch } })), []);
@@ -264,7 +325,11 @@ export default function HomeScreen() {
           let parsed: { content?: string; done?: boolean; error?: string };
           try { parsed = JSON.parse(line.slice(6)); } catch { continue; }
           if (parsed.content) { fullText += parsed.content; updateCard(key, { streamingText: fullText }); }
-          if (parsed.done) { finished = true; updateCard(key, { streaming: false, streamingText: "", lastMessage: fullText, lastRole: "assistant", hasUnread: true, conversationId: convId }); break; }
+          if (parsed.done) {
+            finished = true;
+            updateCard(key, { streaming: false, streamingText: "", lastMessage: fullText, lastRole: "assistant", hasUnread: true, conversationId: convId });
+            break;
+          }
           if (parsed.error) throw new Error(parsed.error);
         }
         if (finished) break;
@@ -278,6 +343,55 @@ export default function HomeScreen() {
       activeReaders.current.delete(key);
     }
   }, [updateCard]);
+
+  const handleSynthesize = useCallback(async () => {
+    if (synthesis.status === "loading") return;
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+
+    const readyProviders = AI_PROVIDERS.filter(
+      (p) => selected.has(p.key) && cards[p.key].lastRole === "assistant" && cards[p.key].lastMessage.length > 10
+    );
+    if (readyProviders.length < 2) {
+      Alert.alert("Not enough responses", "Send a prompt to at least 2 AI models first.", [{ text: "OK" }]);
+      return;
+    }
+
+    setSynthesis({ status: "loading", text: "", expanded: true });
+
+    try {
+      const responses = readyProviders.map((p) => ({ name: p.name, content: cards[p.key].lastMessage }));
+      const res = await fetch(`${BASE_URL}/api/synthesize`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ question: lastPromptRef.current || "the question", responses }),
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const reader = res.body?.getReader();
+      if (!reader) throw new Error("No stream");
+      const decoder = new TextDecoder();
+      let buffer = "", fullText = "";
+      let finished = false;
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop() ?? "";
+        for (const line of lines) {
+          if (!line.startsWith("data: ")) continue;
+          let parsed: { content?: string; done?: boolean; error?: string };
+          try { parsed = JSON.parse(line.slice(6)); } catch { continue; }
+          if (parsed.content) { fullText += parsed.content; setSynthesis((prev) => ({ ...prev, text: fullText })); }
+          if (parsed.done) { finished = true; setSynthesis((prev) => ({ ...prev, status: "done", text: fullText })); break; }
+          if (parsed.error) throw new Error(parsed.error);
+        }
+        if (finished) break;
+      }
+      if (!finished) setSynthesis((prev) => ({ ...prev, status: "done" }));
+    } catch {
+      setSynthesis((prev) => ({ ...prev, status: "error" }));
+    }
+  }, [synthesis.status, cards, selected]);
 
   const pickImage = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -295,6 +409,8 @@ export default function HomeScreen() {
     if ([...selected].some((k) => cards[k].streaming)) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     inputRef.current?.blur();
+    setSynthesis({ status: "idle", text: "", expanded: false });
+    if (text) lastPromptRef.current = text;
     try {
       const isFirstMessage = AI_PROVIDERS.every((p) => !convIds[p.key]);
       const ids = await getOrCreateConvIds();
@@ -341,12 +457,14 @@ export default function HomeScreen() {
           const currentIds = convIds;
           if (Object.keys(currentIds).length > 0) await saveSession(sessionTitleRef.current || "Untitled session", currentIds);
           sessionTitleRef.current = "";
+          lastPromptRef.current = "";
           activeReaders.current.forEach((reader) => { try { reader.cancel(); } catch {} });
           activeReaders.current.clear();
           await AsyncStorage.removeItem(CONV_IDS_KEY);
           setConvIds({});
           setCards(Object.fromEntries(AI_PROVIDERS.map((p) => [p.key, makeDefaultCard()])));
           setSelected(new Set(AI_PROVIDERS.map((p) => p.key)));
+          setSynthesis({ status: "idle", text: "", expanded: false });
           setMessage("");
           setAttachment(null);
         },
@@ -357,10 +475,51 @@ export default function HomeScreen() {
   const anyStreaming = Object.values(cards).some((c) => c.streaming);
   const selectedProviders = AI_PROVIDERS.filter((p) => selected.has(p.key));
   const canSend = (message.trim().length > 0 || !!attachment) && selected.size > 0 && !anyStreaming;
+  const canSynthesize = !anyStreaming && AI_PROVIDERS.filter((p) => selected.has(p.key) && cards[p.key].lastRole === "assistant" && cards[p.key].lastMessage.length > 10).length >= 2;
   const topPad = Platform.OS === "web" ? 52 : insets.top;
   const bottomPad = Platform.OS === "web" ? 24 : insets.bottom;
+
   const rows: (AiProvider | null)[][] = [];
   for (let i = 0; i < AI_PROVIDERS.length; i += 2) rows.push([AI_PROVIDERS[i], AI_PROVIDERS[i + 1] ?? null]);
+
+  const listFooter = (
+    <View style={{ paddingBottom: 8 }}>
+      {canSynthesize && (
+        <TouchableOpacity
+          onPress={synthesis.expanded ? () => setSynthesis((s) => ({ ...s, expanded: !s.expanded })) : handleSynthesize}
+          style={[
+            styles.synthesizeBtn,
+            synthesis.expanded && { borderColor: `${SYNTHESIS_COLOR}70` },
+            Platform.OS === "web" ? { boxShadow: `0 0 18px ${SYNTHESIS_COLOR_GLOW}` } as object : {},
+          ]}
+          activeOpacity={0.75}
+        >
+          <BlurView intensity={22} tint="dark" style={StyleSheet.absoluteFill} />
+          <LinearGradient
+            colors={[`${SYNTHESIS_COLOR}20`, `${SYNTHESIS_COLOR}05`]}
+            style={StyleSheet.absoluteFill}
+          />
+          <Text style={styles.synthesizeBtnIcon}>✦</Text>
+          <View style={styles.synthesizeBtnContent}>
+            <Text style={[styles.synthesizeBtnTitle, Platform.OS === "web" ? { textShadow: `0 0 20px ${SYNTHESIS_COLOR}` } as object : {}]}>
+              {synthesis.status === "loading" ? "Synthesizing…" : "Synthesize"}
+            </Text>
+            <Text style={styles.synthesizeBtnSub}>
+              {synthesis.expanded && synthesis.status !== "idle"
+                ? synthesis.expanded ? "Tap to toggle" : "Reveal consensus"
+                : `Consensus across ${AI_PROVIDERS.filter((p) => selected.has(p.key) && cards[p.key].lastRole === "assistant").length} AI responses`}
+            </Text>
+          </View>
+          {synthesis.status === "loading" ? (
+            <ActivityIndicator size="small" color={SYNTHESIS_COLOR} />
+          ) : (
+            <Feather name={synthesis.expanded ? "chevron-up" : "chevron-down"} size={16} color={`${SYNTHESIS_COLOR}90`} />
+          )}
+        </TouchableOpacity>
+      )}
+      {synthesis.expanded && <SynthesisCard synthesis={synthesis} onClose={() => setSynthesis((s) => ({ ...s, expanded: false }))} />}
+    </View>
+  );
 
   return (
     <ImageBackground source={BG} style={styles.bg} resizeMode="cover">
@@ -373,7 +532,7 @@ export default function HomeScreen() {
         <View style={[styles.header, { paddingTop: topPad + 14 }]}>
           <View style={styles.logoRow}>
             <View style={styles.logoDots}>
-              {AI_PROVIDERS.map((p) => (
+              {AI_PROVIDERS.slice(0, 5).map((p) => (
                 <View
                   key={p.key}
                   style={[
@@ -385,10 +544,13 @@ export default function HomeScreen() {
               ))}
             </View>
             <Text style={styles.appName}>
-              Multi<Text style={{ color: AI_PROVIDERS[0].color }}>AI</Text>
+              One<Text style={{ color: AI_PROVIDERS[0].color }}>AI</Text>
             </Text>
           </View>
           <View style={styles.headerActions}>
+            <TouchableOpacity onPress={() => router.push("/compare")} style={styles.headerBtn} activeOpacity={0.7}>
+              <Feather name="columns" size={17} color="rgba(255,255,255,0.6)" />
+            </TouchableOpacity>
             <TouchableOpacity onPress={() => router.push("/search")} style={styles.headerBtn} activeOpacity={0.7}>
               <Feather name="search" size={17} color="rgba(255,255,255,0.6)" />
             </TouchableOpacity>
@@ -417,6 +579,7 @@ export default function HomeScreen() {
             </View>
           )}
           contentContainerStyle={styles.grid}
+          ListFooterComponent={listFooter}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         />
@@ -425,7 +588,7 @@ export default function HomeScreen() {
           <BlurView intensity={40} tint="dark" style={StyleSheet.absoluteFill} />
           <View style={[StyleSheet.absoluteFill, { backgroundColor: "rgba(7,7,20,0.6)", borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: "rgba(255,255,255,0.08)" }]} />
 
-          <View style={styles.chipRow}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipRow}>
             {AI_PROVIDERS.map((p) => (
               <TouchableOpacity
                 key={p.key}
@@ -444,7 +607,7 @@ export default function HomeScreen() {
                 <Text style={[styles.chipLabel, { color: selected.has(p.key) ? p.color : "rgba(255,255,255,0.45)" }]}>{p.name}</Text>
               </TouchableOpacity>
             ))}
-          </View>
+          </ScrollView>
 
           {attachment && (
             <View style={styles.attachmentRow}>
@@ -467,7 +630,7 @@ export default function HomeScreen() {
             <TextInput
               ref={inputRef}
               style={styles.input}
-              placeholder={`Ask ${selectedProviders.map((p) => p.name).join(", ")}…`}
+              placeholder={`Ask ${selectedProviders.length} AI${selectedProviders.length !== 1 ? "s" : ""}…`}
               placeholderTextColor="rgba(255,255,255,0.3)"
               value={message}
               onChangeText={setMessage}
@@ -510,8 +673,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20, paddingBottom: 16,
   },
   logoRow: { flexDirection: "row", alignItems: "center", gap: 10 },
-  logoDots: { flexDirection: "row", gap: 5 },
-  logoDot: { width: 8, height: 8, borderRadius: 4 },
+  logoDots: { flexDirection: "row", gap: 4 },
+  logoDot: { width: 7, height: 7, borderRadius: 4 },
   appName: { fontSize: 24, fontFamily: "Inter_700Bold", letterSpacing: -0.5, color: "#f0f0ff" },
   headerActions: { flexDirection: "row", alignItems: "center", gap: 6 },
   headerBtn: { width: 34, height: 34, alignItems: "center", justifyContent: "center" },
@@ -534,18 +697,18 @@ const styles = StyleSheet.create({
     elevation: 8,
   },
   cardTop: {
-    height: 88,
+    height: 82,
     alignItems: "center",
     justifyContent: "center",
     position: "relative",
   },
   aiCircleOuter: {
-    width: 50, height: 50, borderRadius: 25,
+    width: 46, height: 46, borderRadius: 23,
     borderWidth: 1.5,
     alignItems: "center", justifyContent: "center",
     backgroundColor: "rgba(0,0,0,0.3)",
   },
-  aiInitial: { fontSize: 22, fontFamily: "Inter_700Bold" },
+  aiInitial: { fontSize: 20, fontFamily: "Inter_700Bold" },
   checkbox: {
     position: "absolute", top: 10, right: 10,
     width: 20, height: 20, borderRadius: 10, borderWidth: 1.5,
@@ -553,45 +716,104 @@ const styles = StyleSheet.create({
   },
   unreadDot: { position: "absolute", bottom: 10, right: 10, width: 8, height: 8, borderRadius: 4 },
 
-  cardBody: { padding: 12, gap: 7 },
+  cardBody: { padding: 10, gap: 6 },
   cardNameRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 6 },
-  cardName: { fontSize: 15, fontFamily: "Inter_600SemiBold" },
+  cardName: { fontSize: 14, fontFamily: "Inter_600SemiBold" },
   modelChip: {
     paddingHorizontal: 6, paddingVertical: 2,
     borderRadius: 6, borderWidth: 1,
   },
-  modelChipText: { fontSize: 10, fontFamily: "Inter_500Medium", letterSpacing: 0.3 },
-  previewRow: { minHeight: 44 },
+  modelChipText: { fontSize: 9, fontFamily: "Inter_500Medium", letterSpacing: 0.3 },
+  previewRow: { minHeight: 40 },
   streamingRow: { flexDirection: "row", alignItems: "flex-start", gap: 6 },
   previewText: { fontSize: 12, fontFamily: "Inter_400Regular", lineHeight: 18 },
 
-  bottomBar: {
-    paddingTop: 12, paddingHorizontal: 16, gap: 10, overflow: "hidden",
-  },
-  chipRow: { flexDirection: "row", gap: 6, flexWrap: "wrap" },
-  providerChip: {
-    flexDirection: "row", alignItems: "center", gap: 5,
-    paddingHorizontal: 10, paddingVertical: 5,
-    borderRadius: 20, borderWidth: 1,
-  },
-  chipDot: { width: 5, height: 5, borderRadius: 3 },
-  chipLabel: { fontSize: 12, fontFamily: "Inter_500Medium" },
-
-  attachmentRow: { flexDirection: "row", alignItems: "center", gap: 8 },
-  attachmentThumb: { width: 40, height: 40, borderRadius: 8 },
-  removeBtn: { width: 20, height: 20, borderRadius: 10, backgroundColor: "rgba(255,255,255,0.15)", alignItems: "center", justifyContent: "center" },
-  attachmentLabel: { fontSize: 12, fontFamily: "Inter_400Regular", flex: 1, color: "rgba(255,255,255,0.5)" },
-
-  inputRow: {
-    flexDirection: "row", alignItems: "flex-end",
-    borderRadius: 16,
-    paddingLeft: 4, paddingRight: 6, paddingVertical: 6, gap: 4,
+  synthesizeBtn: {
+    flexDirection: "row", alignItems: "center", gap: 10,
+    marginHorizontal: 0, marginTop: 4, marginBottom: 4,
+    paddingHorizontal: 18, paddingVertical: 14,
+    borderRadius: 18, borderWidth: 1, borderColor: `${SYNTHESIS_COLOR}35`,
     overflow: "hidden",
   },
-  attachBtn: { width: 36, height: 38, alignItems: "center", justifyContent: "center" },
+  synthesizeBtnIcon: { fontSize: 20, color: SYNTHESIS_COLOR },
+  synthesizeBtnContent: { flex: 1, gap: 2 },
+  synthesizeBtnTitle: {
+    fontSize: 15, fontFamily: "Inter_700Bold",
+    color: SYNTHESIS_COLOR, letterSpacing: 0.3,
+  },
+  synthesizeBtnSub: { fontSize: 11, fontFamily: "Inter_400Regular", color: "rgba(255,200,0,0.5)" },
+
+  synthCard: {
+    borderRadius: 22,
+    marginTop: 8,
+    shadowColor: SYNTHESIS_COLOR,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.25,
+    shadowRadius: 20,
+    elevation: 6,
+  },
+  synthHeader: {
+    flexDirection: "row", alignItems: "center", justifyContent: "space-between",
+    paddingHorizontal: 16, paddingTop: 16, paddingBottom: 8,
+  },
+  synthBadge: {
+    paddingHorizontal: 12, paddingVertical: 5, borderRadius: 20,
+  },
+  synthBadgeText: {
+    fontSize: 11, fontFamily: "Inter_700Bold", letterSpacing: 2.5, color: "#000",
+  },
+  synthSubtitleRow: {
+    flexDirection: "row", alignItems: "center", gap: 5,
+    paddingHorizontal: 16, paddingBottom: 12,
+  },
+  synthSubtitle: { fontSize: 11, fontFamily: "Inter_400Regular", color: `${SYNTHESIS_COLOR}60` },
+  synthLoading: { flexDirection: "row", alignItems: "center", gap: 10, paddingHorizontal: 16, paddingBottom: 20 },
+  synthLoadingText: { fontSize: 13, fontFamily: "Inter_400Regular", color: `${SYNTHESIS_COLOR}80` },
+  synthError: { fontSize: 13, fontFamily: "Inter_400Regular", color: "#ff4466", padding: 16 },
+  synthScroll: { maxHeight: 260 },
+  synthText: {
+    fontSize: 14, fontFamily: "Inter_400Regular", lineHeight: 22,
+    color: "rgba(255,240,200,0.9)",
+    padding: 16, paddingTop: 0,
+  },
+  synthCursor: { fontFamily: "Inter_700Bold" },
+
+  bottomBar: {
+    paddingTop: 10, paddingHorizontal: 14, gap: 8,
+    overflow: "hidden",
+  },
+  chipRow: { flexDirection: "row", gap: 6, paddingBottom: 2 },
+  providerChip: {
+    flexDirection: "row", alignItems: "center", gap: 5,
+    paddingHorizontal: 9, paddingVertical: 6, borderRadius: 20, borderWidth: 1,
+    flexShrink: 0,
+  },
+  chipDot: { width: 5, height: 5, borderRadius: 3 },
+  chipLabel: { fontSize: 11, fontFamily: "Inter_500Medium" },
+
+  attachmentRow: {
+    flexDirection: "row", alignItems: "center", gap: 8,
+    paddingHorizontal: 4,
+  },
+  attachmentThumb: { width: 32, height: 32, borderRadius: 7 },
+  removeBtn: {
+    width: 18, height: 18, borderRadius: 9, backgroundColor: "rgba(255,68,102,0.8)",
+    alignItems: "center", justifyContent: "center",
+  },
+  attachmentLabel: { fontSize: 12, fontFamily: "Inter_400Regular", color: "rgba(255,255,255,0.5)", flex: 1 },
+
+  inputRow: {
+    flexDirection: "row", alignItems: "flex-end", gap: 8,
+    borderRadius: 16, overflow: "hidden",
+    paddingLeft: 12, paddingRight: 6, paddingVertical: 6,
+  },
+  attachBtn: { width: 32, height: 32, alignItems: "center", justifyContent: "center" },
   input: {
     flex: 1, fontSize: 15, fontFamily: "Inter_400Regular",
-    maxHeight: 100, lineHeight: 21, paddingVertical: 4, color: "#f0f0ff",
+    color: "#f0f0ff", maxHeight: 100, lineHeight: 21, paddingVertical: 3,
   },
-  sendBtn: { width: 38, height: 38, borderRadius: 11, alignItems: "center", justifyContent: "center" },
+  sendBtn: {
+    width: 36, height: 36, borderRadius: 10,
+    alignItems: "center", justifyContent: "center",
+  },
 });

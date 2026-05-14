@@ -32,6 +32,7 @@ function RootLayoutNav() {
       <Stack.Screen name="thread" options={{ animation: "slide_from_bottom", presentation: "modal" }} />
       <Stack.Screen name="history" options={{ animation: "slide_from_right" }} />
       <Stack.Screen name="search" options={{ animation: "slide_from_right" }} />
+      <Stack.Screen name="compare" options={{ animation: "slide_from_bottom", presentation: "modal" }} />
     </Stack>
   );
 }
