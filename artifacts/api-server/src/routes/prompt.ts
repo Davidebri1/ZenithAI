@@ -1,9 +1,7 @@
 import { Router } from "express";
 import { storage } from "../storage";
 import { getAuth } from "@clerk/express";
-import { sendEmail, quotaExhaustedEmail, quotaWarningEmail } from "../emailClient";
 import { db } from "@workspace/db";
-import { conversations } from "@workspace/db";
 
 const router = Router();
 

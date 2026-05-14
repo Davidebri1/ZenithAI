@@ -57,35 +57,6 @@ function base(title: string, body: string): string {
 </html>`;
 }
 
-export function quotaWarningEmail(opts: { used: number; limit: number }): { subject: string; html: string } {
-  const remaining = opts.limit - opts.used;
-  return {
-    subject: `You've used ${opts.used} of your ${opts.limit} free Zenith prompts`,
-    html: base("Running low on prompts", `
-      <h1 style="margin:0 0 10px;color:#f0f0ff;font-size:20px;font-weight:800;">Almost out of prompts</h1>
-      <p style="margin:0 0 24px;color:rgba(240,240,255,0.55);font-size:15px;line-height:1.6;">
-        You have <strong style="color:#ffc400;">${remaining} prompt${remaining === 1 ? "" : "s"}</strong> left on your free plan.
-        Upgrade to Zenith Pro for 250 prompts per month across all 8 AI models.
-      </p>
-      <a href="https://zenith.app" style="display:inline-block;padding:12px 28px;background:#00e5b0;border-radius:10px;color:#07070d;font-weight:800;font-size:15px;text-decoration:none;">Upgrade to Pro</a>
-    `),
-  };
-}
-
-export function quotaExhaustedEmail(): { subject: string; html: string } {
-  return {
-    subject: "You've used all your free Zenith prompts",
-    html: base("Prompts used up", `
-      <h1 style="margin:0 0 10px;color:#f0f0ff;font-size:20px;font-weight:800;">You're out of free prompts</h1>
-      <p style="margin:0 0 24px;color:rgba(240,240,255,0.55);font-size:15px;line-height:1.6;">
-        You've used all 10 of your free prompts. Upgrade to Zenith Pro to get
-        <strong style="color:#00e5b0;">250 prompts per month</strong> across all 8 AI models — GPT, Claude, Gemini, Grok, DeepSeek, Mistral, Llama, and Qwen.
-      </p>
-      <a href="https://zenith.app" style="display:inline-block;padding:12px 28px;background:#00e5b0;border-radius:10px;color:#07070d;font-weight:800;font-size:15px;text-decoration:none;">Upgrade to Pro — $20/mo</a>
-    `),
-  };
-}
-
 export function contactNotifyEmail(opts: {
   name: string;
   company?: string | null;
