@@ -108,15 +108,12 @@ export class Storage {
   }
 
   async upsertUser(data: { id: string; email?: string | null }) {
-    const [user] = await db
+    await db
       .insert(users)
       .values({ id: data.id, email: data.email ?? null })
-      .onConflictDoUpdate({
-        target: users.id,
-        set: { email: data.email ?? null, updatedAt: new Date() },
-      })
-      .returning();
-    return user;
+      .onConflictDoNothing();
+    const [user] = await db.select().from(users).where(eq(users.id, data.id));
+    return user!;
   }
 
   async updateUserStripeInfo(

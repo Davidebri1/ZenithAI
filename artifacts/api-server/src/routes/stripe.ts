@@ -1,4 +1,5 @@
 import { Router, type IRouter } from "express";
+import { getAuth } from "@clerk/express";
 import { storage } from "../storage";
 import { getUncachableStripeClient, getStripePublishableKey } from "../stripeClient";
 import type { Request, Response } from "express";
@@ -43,52 +44,66 @@ router.get("/stripe/products", async (req: Request, res: Response) => {
 });
 
 router.get("/stripe/subscription", async (req: any, res: Response) => {
-  const user = await storage.getUser(req.auth.userId);
+  const userId = getAuth(req).userId;
+  const user = await storage.getUser(userId!);
   if (!user?.stripeSubscriptionId) {
-    return res.json({ subscription: null, plan: user?.plan ?? "free" });
+    res.json({ subscription: null, plan: user?.plan ?? "free" });
+    return;
   }
   const subscription = await storage.getSubscription(user.stripeSubscriptionId);
   res.json({ subscription, plan: user.plan });
 });
 
 router.post("/stripe/checkout", async (req: any, res: Response) => {
-  const { priceId } = req.body as { priceId: string };
-  if (!priceId) return res.status(400).json({ error: "priceId required" });
+  try {
+    const { priceId } = req.body as { priceId: string };
+    if (!priceId) { res.status(400).json({ error: "priceId required" }); return; }
 
-  let user = await storage.getUser(req.auth.userId);
-  if (!user) {
-    user = await storage.upsertUser({ id: req.auth.userId });
-  }
+    const userId = getAuth(req).userId;
+    if (!userId) { res.status(401).json({ error: "Unauthorized" }); return; }
 
-  const stripe = await getUncachableStripeClient();
+    let user = await storage.getUser(userId);
+    if (!user) {
+      user = await storage.upsertUser({ id: userId });
+    }
 
-  let customerId = user.stripeCustomerId;
-  if (!customerId) {
-    const customer = await stripe.customers.create({
-      email: user.email ?? undefined,
-      metadata: { userId: user.id },
+    const stripe = await getUncachableStripeClient();
+
+    let customerId = user.stripeCustomerId;
+    if (!customerId) {
+      const customer = await stripe.customers.create({
+        email: user.email ?? undefined,
+        metadata: { userId: user.id },
+      });
+      await storage.updateUserStripeInfo(user.id, { stripeCustomerId: customer.id });
+      customerId = customer.id;
+    }
+
+    const baseUrl = `https://${process.env.REPLIT_DOMAINS?.split(",")[0]}`;
+    const session = await stripe.checkout.sessions.create({
+      customer: customerId,
+      payment_method_types: ["card"],
+      line_items: [{ price: priceId, quantity: 1 }],
+      mode: "subscription",
+      success_url: `${baseUrl}/?checkout=success`,
+      cancel_url: `${baseUrl}/?checkout=cancel`,
     });
-    await storage.updateUserStripeInfo(user.id, { stripeCustomerId: customer.id });
-    customerId = customer.id;
+
+    res.json({ url: session.url });
+  } catch (err) {
+    req.log.error({ err }, "stripe/checkout error");
+    res.status(500).json({ error: "Failed to create checkout session" });
   }
-
-  const baseUrl = `https://${process.env.REPLIT_DOMAINS?.split(",")[0]}`;
-  const session = await stripe.checkout.sessions.create({
-    customer: customerId,
-    payment_method_types: ["card"],
-    line_items: [{ price: priceId, quantity: 1 }],
-    mode: "subscription",
-    success_url: `${baseUrl}/?checkout=success`,
-    cancel_url: `${baseUrl}/?checkout=cancel`,
-  });
-
-  res.json({ url: session.url });
 });
 
 router.post("/stripe/portal", async (req: any, res: Response) => {
-  const user = await storage.getUser(req.auth.userId);
+  const userId = getAuth(req).userId;
+  if (!userId) { res.status(401).json({ error: "Unauthorized" }); return; }
+
+  const user = await storage.getUser(userId);
   if (!user?.stripeCustomerId) {
-    return res.status(400).json({ error: "No Stripe customer found" });
+    res.status(400).json({ error: "No Stripe customer found" });
+    return;
   }
 
   const stripe = await getUncachableStripeClient();
@@ -102,16 +117,24 @@ router.post("/stripe/portal", async (req: any, res: Response) => {
 });
 
 router.get("/stripe/quota", async (req: any, res: Response) => {
-  let user = await storage.getUser(req.auth.userId);
-  if (!user) {
-    user = await storage.upsertUser({ id: req.auth.userId });
+  try {
+    const userId = getAuth(req).userId;
+    if (!userId) { res.status(401).json({ error: "Unauthorized" }); return; }
+
+    let user = await storage.getUser(userId);
+    if (!user) {
+      user = await storage.upsertUser({ id: userId });
+    }
+    res.json({
+      promptsUsed: user.promptsUsed,
+      promptsLimit: user.promptsLimit,
+      plan: user.plan,
+      remaining: Math.max(0, user.promptsLimit - user.promptsUsed),
+    });
+  } catch (err) {
+    req.log.error({ err }, "stripe/quota error");
+    res.status(500).json({ error: "Failed to fetch quota" });
   }
-  res.json({
-    promptsUsed: user.promptsUsed,
-    promptsLimit: user.promptsLimit,
-    plan: user.plan,
-    remaining: Math.max(0, user.promptsLimit - user.promptsUsed),
-  });
 });
 
 export default router;
