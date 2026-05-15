@@ -22,7 +22,7 @@
       },
       "env": {
         "EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY": "pk_test_YW1wbGUtdnVsdHVyZS05OS5jbGVyay5hY2NvdW50cy5kZXYk",
-        "EXPO_PUBLIC_DOMAIN": "zenithai-app.replit.app"
+        "EXPO_PUBLIC_DOMAIN": "db7bf7b2-6b67-4999-9505-95dc13c4761a-00-1wizziswroulk.picard.replit.dev"
       }
     },
     "production": {
