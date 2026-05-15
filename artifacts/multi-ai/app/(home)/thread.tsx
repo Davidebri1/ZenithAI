@@ -32,6 +32,8 @@ import { AI_PROVIDERS, BASE_URL } from "@/constants/aiConfig";
 import { CONV_IDS_KEY, formatMessageTime } from "@/constants/sessions";
 import { NeonGlowOverlay } from "@/components/NeonGlowOverlay";
 import { PROVIDER_MODES, getProviderMode, setProviderMode } from "@/constants/providerModes";
+import { ProviderSettings, PROVIDER_SETTING_DEFS, getGlobalSettings, DEFAULT_SETTINGS } from "@/constants/providerSettings";
+import { SettingsSheet } from "@/components/SettingsSheet";
 
 const BG = require("../../assets/images/bg-alley.png");
 const BG_FOCAL: object = {};
@@ -70,9 +72,12 @@ export default function ThreadScreen() {
   const [copiedIdx, setCopiedIdx] = useState<number | null>(null);
   const [showScrollBtn, setShowScrollBtn] = useState(false);
   const [mode, setMode] = useState("standard");
+  const [settings, setSettings] = useState<ProviderSettings>({ ...DEFAULT_SETTINGS });
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   useEffect(() => {
     getProviderMode(provider.key).then(setMode);
+    getGlobalSettings(provider.key).then(setSettings);
   }, [provider.key]);
 
   const handleModeChange = async (newMode: string) => {
@@ -173,7 +178,18 @@ export default function ThreadScreen() {
 
     try {
       const id = await getOrCreateConvId();
-      const body: Record<string, string> = { content: text, mode };
+      const body: Record<string, unknown> = {
+        content: text,
+        mode,
+        temperature: settings.temperature,
+        length: settings.length,
+        tone: settings.tone,
+        frequencyPenalty: settings.frequencyPenalty,
+        presencePenalty: settings.presencePenalty,
+        topK: settings.topK,
+        safetyLevel: settings.safetyLevel,
+        safeMode: settings.safeMode,
+      };
       if (pendingAttachment?.base64) { body.imageBase64 = pendingAttachment.base64; body.imageMimeType = pendingAttachment.mimeType; }
       const res = await authFetch(`${BASE_URL}/api/${provider.key}/conversations/${id}/messages`, {
         method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body),
@@ -295,7 +311,9 @@ export default function ThreadScreen() {
             </View>
             <Text style={styles.headerModel}>{provider.model}</Text>
           </View>
-          <View style={{ width: 34 }} />
+          <TouchableOpacity onPress={() => setSettingsOpen(true)} style={styles.gearBtn} activeOpacity={0.7}>
+            <Feather name="sliders" size={17} color="rgba(255,255,255,0.5)" />
+          </TouchableOpacity>
         </View>
 
         {(PROVIDER_MODES[provider.key]?.length ?? 0) > 1 && (
@@ -479,6 +497,17 @@ export default function ThreadScreen() {
           </View>
         </View>
       </KeyboardAvoidingView>
+
+      <SettingsSheet
+        visible={settingsOpen}
+        providerName={provider.name}
+        providerColor={provider.color}
+        providerKey={provider.key}
+        defs={PROVIDER_SETTING_DEFS[provider.key]}
+        initial={settings}
+        onApply={(s) => setSettings(s)}
+        onClose={() => setSettingsOpen(false)}
+      />
     </ImageBackground>
   );
 }
@@ -502,6 +531,7 @@ const styles = StyleSheet.create({
   headerName: { fontSize: 15, fontFamily: "Inter_600SemiBold" },
   headerModel: { fontSize: 11, fontFamily: "Inter_400Regular", letterSpacing: 0.5, color: "rgba(255,255,255,0.4)" },
 
+  gearBtn: { width: 34, height: 34, alignItems: "center", justifyContent: "center" },
   modePicker: { maxHeight: 44, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: "rgba(255,255,255,0.07)" },
   modePickerContent: { flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 16, paddingVertical: 8 },
   modePill: { flexDirection: "row", alignItems: "center", paddingHorizontal: 12, paddingVertical: 5, borderRadius: 20, borderWidth: 1, borderColor: "rgba(255,255,255,0.12)", backgroundColor: "rgba(255,255,255,0.04)" },

@@ -6,6 +6,25 @@ import { getAuth } from "@clerk/express";
 
 const router = Router();
 
+function buildSystemPrompt(tone?: string, length?: string): string | null {
+  const toneParts: Record<string, string> = {
+    professional: "Respond formally and with precision. Use technical language where appropriate.",
+    casual: "Respond conversationally and accessibly. Keep your tone warm and friendly.",
+    creative: "Respond creatively with vivid language, analogies, and unexpected angles.",
+    socratic: "Guide the user's thinking with probing questions rather than giving direct answers.",
+  };
+  const lengthParts: Record<string, string> = {
+    concise: "Be extremely concise. Get to the core point quickly. Minimize words.",
+    detailed: "Be thorough and well-structured. Use examples and clear explanations.",
+    exhaustive: "Provide an exhaustive, deeply structured response. Use headers, cover every angle.",
+  };
+  const parts = [
+    tone && tone !== "default" ? toneParts[tone] : null,
+    length && length !== "standard" ? lengthParts[length] : null,
+  ].filter(Boolean);
+  return parts.length > 0 ? parts.join(" ") : null;
+}
+
 router.post("/openai/conversations", async (req, res) => {
   const userId = getAuth(req)?.userId;
   if (!userId) { res.status(401).json({ error: "Unauthorized" }); return; }
@@ -40,11 +59,16 @@ router.post("/openai/conversations/:id/messages", async (req, res) => {
     const [conv] = await db.select().from(conversations).where(eq(conversations.id, id));
     if (!conv) { res.status(404).json({ error: "Conversation not found" }); return; }
     if (conv.userId !== "unknown" && conv.userId !== userId) { res.status(403).json({ error: "Forbidden" }); return; }
-    const { content, imageBase64, imageMimeType, mode } = req.body as {
+    const { content, imageBase64, imageMimeType, mode, temperature, length, tone, frequencyPenalty, presencePenalty } = req.body as {
       content: string;
       imageBase64?: string;
       imageMimeType?: string;
       mode?: string;
+      temperature?: number;
+      length?: string;
+      tone?: string;
+      frequencyPenalty?: number;
+      presencePenalty?: number;
     };
 
     if ((content === undefined || content === null) && !imageBase64) {
@@ -92,16 +116,30 @@ router.post("/openai/conversations/:id/messages", async (req, res) => {
     res.setHeader("Cache-Control", "no-cache");
     res.setHeader("Connection", "keep-alive");
 
+    const sysPrompt = buildSystemPrompt(tone, length);
+    const finalMessages = sysPrompt
+      ? [{ role: "system" as const, content: sysPrompt }, ...chatMessages]
+      : chatMessages;
+
     let fullResponse = "";
 
     const isReasoning = mode === "think" || mode === "deep";
-    const stream = await openai.chat.completions.create({
+    const lengthTokens: Record<string, number> = { concise: 1024, detailed: 16384, exhaustive: 32768 };
+    const modeTokens = mode === "deep" ? 32768 : mode === "think" ? 16384 : 8192;
+    const maxToks = length && length !== "standard" ? (lengthTokens[length] ?? modeTokens) : modeTokens;
+
+    const createParams: Record<string, unknown> = {
       model: isReasoning ? "o3" : "gpt-5.4",
-      max_completion_tokens: mode === "deep" ? 32768 : mode === "think" ? 16384 : 8192,
-      ...(isReasoning ? { reasoning_effort: mode === "deep" ? "high" : "medium" } as any : {}),
-      messages: chatMessages as any,
+      max_completion_tokens: maxToks,
+      messages: finalMessages,
       stream: true,
-    });
+    };
+    if (isReasoning) createParams.reasoning_effort = mode === "deep" ? "high" : "medium";
+    if (!isReasoning && temperature != null) createParams.temperature = temperature;
+    if (!isReasoning && frequencyPenalty) createParams.frequency_penalty = frequencyPenalty;
+    if (!isReasoning && presencePenalty) createParams.presence_penalty = presencePenalty;
+
+    const stream = openai.chat.completions.create(createParams as any) as unknown as AsyncIterable<{ choices: { delta: { content?: string } }[] }>;
 
     for await (const chunk of stream) {
       const delta = chunk.choices[0]?.delta?.content;

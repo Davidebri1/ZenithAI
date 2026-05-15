@@ -6,6 +6,25 @@ import { getAuth } from "@clerk/express";
 
 const router = Router();
 
+function buildSystemPrompt(tone?: string, length?: string): string | null {
+  const toneParts: Record<string, string> = {
+    professional: "Respond formally and with precision. Use technical language where appropriate.",
+    casual: "Respond conversationally and accessibly. Keep your tone warm and friendly.",
+    creative: "Respond creatively with vivid language, analogies, and unexpected angles.",
+    socratic: "Guide the user's thinking with probing questions rather than giving direct answers.",
+  };
+  const lengthParts: Record<string, string> = {
+    concise: "Be extremely concise. Get to the core point quickly. Minimize words.",
+    detailed: "Be thorough and well-structured. Use examples and clear explanations.",
+    exhaustive: "Provide an exhaustive, deeply structured response. Use headers, cover every angle.",
+  };
+  const parts = [
+    tone && tone !== "default" ? toneParts[tone] : null,
+    length && length !== "standard" ? lengthParts[length] : null,
+  ].filter(Boolean);
+  return parts.length > 0 ? parts.join(" ") : null;
+}
+
 router.post("/anthropic/conversations", async (req, res) => {
   const userId = getAuth(req)?.userId;
   if (!userId) { res.status(401).json({ error: "Unauthorized" }); return; }
@@ -40,11 +59,15 @@ router.post("/anthropic/conversations/:id/messages", async (req, res) => {
     const [conv] = await db.select().from(conversations).where(eq(conversations.id, id));
     if (!conv) { res.status(404).json({ error: "Conversation not found" }); return; }
     if (conv.userId !== "unknown" && conv.userId !== userId) { res.status(403).json({ error: "Forbidden" }); return; }
-    const { content, imageBase64, imageMimeType, mode } = req.body as {
+    const { content, imageBase64, imageMimeType, mode, temperature, length, tone, topK } = req.body as {
       content: string;
       imageBase64?: string;
       imageMimeType?: string;
       mode?: string;
+      temperature?: number;
+      length?: string;
+      tone?: string;
+      topK?: number;
     };
 
     if ((content === undefined || content === null) && !imageBase64) {
@@ -104,14 +127,20 @@ router.post("/anthropic/conversations/:id/messages", async (req, res) => {
     res.setHeader("Cache-Control", "no-cache");
     res.setHeader("Connection", "keep-alive");
 
+    const sysPrompt = buildSystemPrompt(tone, length);
     let fullResponse = "";
     const useThinking = mode === "think" || mode === "deep";
     const thinkBudget  = mode === "deep" ? 32000 : 10000;
-    const maxToks      = mode === "deep" ? 32000 : mode === "think" ? 16000 : 8192;
+    const lengthTokens: Record<string, number> = { concise: 1024, detailed: 16384, exhaustive: 32768 };
+    const modeMaxToks  = mode === "deep" ? 32000 : mode === "think" ? 16000 : 8192;
+    const maxToks = length && length !== "standard" ? (lengthTokens[length] ?? modeMaxToks) : modeMaxToks;
 
     const streamParams: Parameters<typeof anthropic.messages.stream>[0] = {
       model: "claude-sonnet-4-6",
       max_tokens: maxToks,
+      ...(sysPrompt ? { system: sysPrompt } : {}),
+      ...(temperature != null ? { temperature: Math.min(temperature, 1) } : {}),
+      ...(topK != null ? { top_k: topK } : {}),
       messages: chatMessages,
       ...(useThinking ? { thinking: { type: "enabled" as const, budget_tokens: thinkBudget } } : {}),
     };

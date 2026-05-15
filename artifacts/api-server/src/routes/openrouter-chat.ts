@@ -58,11 +58,15 @@ router.post("/:provider/conversations/:id/messages", async (req, res) => {
     const [conv] = await db.select().from(conversations).where(eq(conversations.id, id));
     if (!conv) { res.status(404).json({ error: "Conversation not found" }); return; }
     if (conv.userId !== "unknown" && conv.userId !== userId) { res.status(403).json({ error: "Forbidden" }); return; }
-    const { content, imageBase64, imageMimeType, mode } = req.body as {
+    const { content, imageBase64, imageMimeType, mode, temperature, length, tone, safeMode } = req.body as {
       content: string;
       imageBase64?: string;
       imageMimeType?: string;
       mode?: string;
+      temperature?: number;
+      length?: string;
+      tone?: string;
+      safeMode?: boolean;
     };
 
     if ((content === undefined || content === null) && !imageBase64) {
@@ -120,12 +124,38 @@ router.post("/:provider/conversations/:id/messages", async (req, res) => {
     const selectedModel = MODE_MODELS[req.params.provider]?.[mode ?? "standard"] ?? model;
     const maxTokens = MODE_TOKENS[mode ?? "standard"] ?? 8192;
 
+    const toneParts: Record<string, string> = {
+      professional: "Respond formally and with precision.",
+      casual: "Respond conversationally and accessibly.",
+      creative: "Respond creatively with vivid language and unexpected angles.",
+      socratic: "Guide the user's thinking with probing questions rather than direct answers.",
+    };
+    const lengthParts: Record<string, string> = {
+      concise: "Be extremely concise. Get to the core point quickly.",
+      detailed: "Be thorough and well-structured. Use examples.",
+      exhaustive: "Provide an exhaustive structured response. Use headers, cover every angle.",
+    };
+    const sysParts = [
+      tone && tone !== "default" ? toneParts[tone] : null,
+      length && length !== "standard" ? lengthParts[length] : null,
+      safeMode ? "Keep all responses safe and appropriate for all audiences." : null,
+    ].filter(Boolean);
+    const sysContent = sysParts.join(" ");
+
+    const finalMessages = sysContent
+      ? [{ role: "system" as const, content: sysContent }, ...chatMessages]
+      : chatMessages;
+
+    const lengthTokenMap: Record<string, number> = { concise: 1024, detailed: 16384, exhaustive: 32768 };
+    const resolvedMax = length && length !== "standard" ? (lengthTokenMap[length] ?? maxTokens) : maxTokens;
+
     let fullResponse = "";
 
     const stream = await openrouter.chat.completions.create({
       model: selectedModel,
-      max_tokens: maxTokens,
-      messages: chatMessages as any,
+      max_tokens: resolvedMax,
+      ...(temperature != null ? { temperature } : {}),
+      messages: finalMessages as any,
       stream: true,
     });
 

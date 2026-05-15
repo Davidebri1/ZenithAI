@@ -35,6 +35,7 @@ export default function HomeLayout() {
       <Stack.Screen name="upgrade" options={{ animation: "slide_from_bottom", presentation: "modal" }} />
       <Stack.Screen name="enterprise" options={{ animation: "slide_from_right" }} />
       <Stack.Screen name="session-detail" options={{ animation: "slide_from_right" }} />
+      <Stack.Screen name="settings" options={{ animation: "slide_from_right" }} />
     </Stack>
   );
 }

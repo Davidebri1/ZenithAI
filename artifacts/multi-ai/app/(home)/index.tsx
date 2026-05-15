@@ -616,6 +616,9 @@ export default function HomeScreen() {
             <TouchableOpacity onPress={() => router.push("/(home)/history")} style={styles.headerBtn} activeOpacity={0.7}>
               <Feather name="clock" size={17} color="rgba(255,255,255,0.6)" />
             </TouchableOpacity>
+            <TouchableOpacity onPress={() => router.push("/(home)/settings")} style={styles.headerBtn} activeOpacity={0.7}>
+              <Feather name="sliders" size={17} color="rgba(255,255,255,0.6)" />
+            </TouchableOpacity>
             <TouchableOpacity onPress={handleNewChat} style={styles.newChatBtn} activeOpacity={0.7}>
               <Feather name="plus" size={13} color="rgba(255,255,255,0.6)" />
               <Text style={styles.newChatText}>New</Text>

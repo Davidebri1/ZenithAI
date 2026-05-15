@@ -6,6 +6,25 @@ import { getAuth } from "@clerk/express";
 
 const router = Router();
 
+function buildSystemPrompt(tone?: string, length?: string): string | null {
+  const toneParts: Record<string, string> = {
+    professional: "Respond formally and with precision. Use technical language where appropriate.",
+    casual: "Respond conversationally and accessibly. Keep your tone warm and friendly.",
+    creative: "Respond creatively with vivid language, analogies, and unexpected angles.",
+    socratic: "Guide the user's thinking with probing questions rather than giving direct answers.",
+  };
+  const lengthParts: Record<string, string> = {
+    concise: "Be extremely concise. Get to the core point quickly. Minimize words.",
+    detailed: "Be thorough and well-structured. Use examples and clear explanations.",
+    exhaustive: "Provide an exhaustive, deeply structured response. Use headers, cover every angle.",
+  };
+  const parts = [
+    tone && tone !== "default" ? toneParts[tone] : null,
+    length && length !== "standard" ? lengthParts[length] : null,
+  ].filter(Boolean);
+  return parts.length > 0 ? parts.join(" ") : null;
+}
+
 router.post("/gemini/conversations", async (req, res) => {
   const userId = getAuth(req)?.userId;
   if (!userId) { res.status(401).json({ error: "Unauthorized" }); return; }
@@ -40,11 +59,16 @@ router.post("/gemini/conversations/:id/messages", async (req, res) => {
     const [conv] = await db.select().from(conversations).where(eq(conversations.id, id));
     if (!conv) { res.status(404).json({ error: "Conversation not found" }); return; }
     if (conv.userId !== "unknown" && conv.userId !== userId) { res.status(403).json({ error: "Forbidden" }); return; }
-    const { content, imageBase64, imageMimeType, mode } = req.body as {
+    const { content, imageBase64, imageMimeType, mode, temperature, length, tone, topK, safetyLevel } = req.body as {
       content: string;
       imageBase64?: string;
       imageMimeType?: string;
       mode?: string;
+      temperature?: number;
+      length?: string;
+      tone?: string;
+      topK?: number;
+      safetyLevel?: string;
     };
 
     if ((content === undefined || content === null) && !imageBase64) {
@@ -89,17 +113,32 @@ router.post("/gemini/conversations/:id/messages", async (req, res) => {
     res.setHeader("Cache-Control", "no-cache");
     res.setHeader("Connection", "keep-alive");
 
+    const sysPrompt = buildSystemPrompt(tone, length);
     let fullResponse = "";
 
-    const geminiConfig: Record<string, unknown> = {
-      maxOutputTokens: mode === "deep" ? 32768 : mode === "think" ? 16384 : 8192,
-    };
+    const lengthTokens: Record<string, number> = { concise: 1024, detailed: 16384, exhaustive: 32768 };
+    const modeToks = mode === "deep" ? 32768 : mode === "think" ? 16384 : 8192;
+    const maxOutputTokens = length && length !== "standard" ? (lengthTokens[length] ?? modeToks) : modeToks;
+
+    const geminiConfig: Record<string, unknown> = { maxOutputTokens };
+    if (temperature != null) geminiConfig.temperature = Math.min(temperature, 2);
+    if (topK != null) geminiConfig.topK = topK;
     if (mode === "think") geminiConfig.thinkingConfig = { thinkingBudget: 8000 };
     if (mode === "deep")  geminiConfig.thinkingConfig = { thinkingBudget: 24576 };
+    if (safetyLevel) {
+      const threshold = safetyLevel === "block_few" ? "BLOCK_ONLY_HIGH" : safetyLevel === "block_most" ? "BLOCK_LOW_AND_ABOVE" : "BLOCK_MEDIUM_AND_ABOVE";
+      geminiConfig.safetySettings = [
+        { category: "HARM_CATEGORY_HARASSMENT",        threshold },
+        { category: "HARM_CATEGORY_HATE_SPEECH",       threshold },
+        { category: "HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold },
+        { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold },
+      ];
+    }
 
     const stream = await ai.models.generateContentStream({
       model: "gemini-3-flash-preview",
       contents: chatMessages,
+      ...(sysPrompt ? { systemInstruction: sysPrompt } : {}),
       config: geminiConfig,
     });
 
