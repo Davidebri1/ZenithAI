@@ -8,34 +8,44 @@ export interface ProviderMode {
 
 export const PROVIDER_MODES: Record<string, ProviderMode[]> = {
   openai: [
-    { key: "standard", label: "Standard", emoji: "⚡" },
-    { key: "think",    label: "Think (o3)", emoji: "🧠" },
+    { key: "standard", label: "Standard",      emoji: "⚡" },
+    { key: "think",    label: "Think",          emoji: "🧠" },
+    { key: "deep",     label: "Deep Research",  emoji: "🔬" },
   ],
   anthropic: [
-    { key: "standard", label: "Standard", emoji: "⚡" },
+    { key: "standard", label: "Standard",         emoji: "⚡" },
     { key: "think",    label: "Extended Thinking", emoji: "🧠" },
+    { key: "deep",     label: "Deep Research",     emoji: "🔬" },
   ],
   gemini: [
-    { key: "standard", label: "Standard", emoji: "⚡" },
-    { key: "think",    label: "Think", emoji: "🧠" },
+    { key: "standard", label: "Standard",      emoji: "⚡" },
+    { key: "think",    label: "Think",          emoji: "🧠" },
+    { key: "deep",     label: "Deep Research",  emoji: "🔬" },
   ],
   grok: [
-    { key: "standard", label: "Standard", emoji: "⚡" },
-    { key: "think",    label: "Think", emoji: "🧠" },
+    { key: "standard", label: "Standard",      emoji: "⚡" },
+    { key: "think",    label: "Think",          emoji: "🧠" },
+    { key: "deep",     label: "Deep Research",  emoji: "🔬" },
   ],
   deepseek: [
-    { key: "standard", label: "Standard", emoji: "⚡" },
-    { key: "think",    label: "DeepThink (R1)", emoji: "🧠" },
+    { key: "standard", label: "Standard",         emoji: "⚡" },
+    { key: "think",    label: "DeepThink (R1)",   emoji: "🧠" },
+    { key: "deep",     label: "Deep Research",     emoji: "🔬" },
   ],
   mistral: [
-    { key: "standard", label: "Standard", emoji: "⚡" },
+    { key: "standard", label: "Standard",      emoji: "⚡" },
+    { key: "think",    label: "Think",          emoji: "🧠" },
+    { key: "deep",     label: "Deep Research",  emoji: "🔬" },
   ],
   llama: [
-    { key: "standard", label: "Standard", emoji: "⚡" },
+    { key: "standard", label: "Standard",      emoji: "⚡" },
+    { key: "think",    label: "Think",          emoji: "🧠" },
+    { key: "deep",     label: "Deep Research",  emoji: "🔬" },
   ],
   qwen: [
-    { key: "standard", label: "Standard", emoji: "⚡" },
-    { key: "think",    label: "Think (QwQ)", emoji: "🧠" },
+    { key: "standard", label: "Standard",      emoji: "⚡" },
+    { key: "think",    label: "Think (QwQ)",   emoji: "🧠" },
+    { key: "deep",     label: "Deep Research", emoji: "🔬" },
   ],
 };
 

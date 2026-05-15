@@ -105,13 +105,15 @@ router.post("/anthropic/conversations/:id/messages", async (req, res) => {
     res.setHeader("Connection", "keep-alive");
 
     let fullResponse = "";
-    const useThinking = mode === "think";
+    const useThinking = mode === "think" || mode === "deep";
+    const thinkBudget  = mode === "deep" ? 32000 : 10000;
+    const maxToks      = mode === "deep" ? 32000 : mode === "think" ? 16000 : 8192;
 
     const streamParams: Parameters<typeof anthropic.messages.stream>[0] = {
       model: "claude-sonnet-4-6",
-      max_tokens: useThinking ? 16000 : 8192,
+      max_tokens: maxToks,
       messages: chatMessages,
-      ...(useThinking ? { thinking: { type: "enabled" as const, budget_tokens: 10000 } } : {}),
+      ...(useThinking ? { thinking: { type: "enabled" as const, budget_tokens: thinkBudget } } : {}),
     };
 
     const stream = anthropic.messages.stream(streamParams);

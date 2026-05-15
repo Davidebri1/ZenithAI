@@ -94,9 +94,11 @@ router.post("/openai/conversations/:id/messages", async (req, res) => {
 
     let fullResponse = "";
 
+    const isReasoning = mode === "think" || mode === "deep";
     const stream = await openai.chat.completions.create({
-      model: mode === "think" ? "o3" : "gpt-5.4",
-      max_completion_tokens: 8192,
+      model: isReasoning ? "o3" : "gpt-5.4",
+      max_completion_tokens: mode === "deep" ? 32768 : mode === "think" ? 16384 : 8192,
+      ...(isReasoning ? { reasoning_effort: mode === "deep" ? "high" : "medium" } as any : {}),
       messages: chatMessages as any,
       stream: true,
     });

@@ -91,8 +91,11 @@ router.post("/gemini/conversations/:id/messages", async (req, res) => {
 
     let fullResponse = "";
 
-    const geminiConfig: Record<string, unknown> = { maxOutputTokens: 8192 };
+    const geminiConfig: Record<string, unknown> = {
+      maxOutputTokens: mode === "deep" ? 32768 : mode === "think" ? 16384 : 8192,
+    };
     if (mode === "think") geminiConfig.thinkingConfig = { thinkingBudget: 8000 };
+    if (mode === "deep")  geminiConfig.thinkingConfig = { thinkingBudget: 24576 };
 
     const stream = await ai.models.generateContentStream({
       model: "gemini-3-flash-preview",

@@ -110,19 +110,21 @@ router.post("/:provider/conversations/:id/messages", async (req, res) => {
     res.setHeader("Connection", "keep-alive");
 
     const MODE_MODELS: Record<string, Partial<Record<string, string>>> = {
-      grok:     { standard: "x-ai/grok-3-beta",              think: "x-ai/grok-3-mini-beta" },
-      deepseek: { standard: "deepseek/deepseek-chat-v3-0324", think: "deepseek/deepseek-r1" },
-      mistral:  { standard: "mistralai/mistral-large-2411" },
-      llama:    { standard: "meta-llama/llama-4-maverick" },
-      qwen:     { standard: "qwen/qwen3-235b-a22b",          think: "qwen/qwq-32b" },
+      grok:     { standard: "x-ai/grok-3-beta",              think: "x-ai/grok-3-mini-beta",           deep: "x-ai/grok-3-beta"               },
+      deepseek: { standard: "deepseek/deepseek-chat-v3-0324", think: "deepseek/deepseek-r1",            deep: "deepseek/deepseek-r1"            },
+      mistral:  { standard: "mistralai/mistral-small-3.1-24b-instruct", think: "mistralai/mistral-large-2411", deep: "mistralai/mistral-large-2411" },
+      llama:    { standard: "meta-llama/llama-4-scout",       think: "meta-llama/llama-4-maverick",     deep: "meta-llama/llama-4-maverick"     },
+      qwen:     { standard: "qwen/qwen3-235b-a22b",           think: "qwen/qwq-32b",                   deep: "qwen/qwq-32b"                    },
     };
+    const MODE_TOKENS: Record<string, number> = { standard: 8192, think: 16384, deep: 32768 };
     const selectedModel = MODE_MODELS[req.params.provider]?.[mode ?? "standard"] ?? model;
+    const maxTokens = MODE_TOKENS[mode ?? "standard"] ?? 8192;
 
     let fullResponse = "";
 
     const stream = await openrouter.chat.completions.create({
       model: selectedModel,
-      max_tokens: 8192,
+      max_tokens: maxTokens,
       messages: chatMessages as any,
       stream: true,
     });
