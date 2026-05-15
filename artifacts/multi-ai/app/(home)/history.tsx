@@ -29,6 +29,7 @@ import {
 } from "@/constants/sessions";
 
 const BG = require("../../assets/images/bg-alley.png");
+const BG_FOCAL = { transform: [{ scale: 1.5 }, { translateY: -200 }] };
 
 type Tab = "public" | "private";
 
@@ -109,7 +110,7 @@ export default function HistoryScreen() {
   const topPad = Platform.OS === "web" ? 52 : insets.top;
 
   return (
-    <ImageBackground source={BG} style={styles.bg} resizeMode="cover">
+    <ImageBackground source={BG} style={styles.bg} resizeMode="cover" imageStyle={BG_FOCAL}>
       <LinearGradient
         colors={["rgba(7,7,13,0.65)", "rgba(7,7,13,0.88)", "rgba(7,7,13,0.97)"]}
         style={StyleSheet.absoluteFill}

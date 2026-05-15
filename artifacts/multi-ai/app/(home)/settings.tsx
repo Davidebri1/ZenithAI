@@ -26,6 +26,7 @@ import { SettingsSheet } from "@/components/SettingsSheet";
 import { NeonGlowOverlay } from "@/components/NeonGlowOverlay";
 
 const BG = require("../../assets/images/bg-alley.png");
+const BG_FOCAL = { transform: [{ scale: 1.5 }, { translateY: -200 }] };
 
 export default function SettingsScreen() {
   const router = useRouter();
@@ -58,7 +59,7 @@ export default function SettingsScreen() {
   const activeProvider = AI_PROVIDERS.find((p) => p.key === sheetProvider);
 
   return (
-    <ImageBackground source={BG} style={styles.bg} resizeMode="cover">
+    <ImageBackground source={BG} style={styles.bg} resizeMode="cover" imageStyle={BG_FOCAL}>
       <LinearGradient
         colors={["rgba(7,7,13,0.6)", "rgba(7,7,13,0.92)", "rgba(7,7,13,0.98)"]}
         locations={[0, 0.4, 1]}

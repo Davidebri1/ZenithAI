@@ -36,6 +36,7 @@ import { ProviderSettings, PROVIDER_SETTING_DEFS, getGlobalSettings, DEFAULT_SET
 import { SettingsSheet } from "@/components/SettingsSheet";
 
 const BG = require("../../assets/images/bg-alley.png");
+const BG_FOCAL = { transform: [{ scale: 1.5 }, { translateY: -200 }] };
 
 
 interface Message {
@@ -287,7 +288,7 @@ export default function ThreadScreen() {
   };
 
   return (
-    <ImageBackground source={BG} style={styles.bg} resizeMode="cover">
+    <ImageBackground source={BG} style={styles.bg} resizeMode="cover" imageStyle={BG_FOCAL}>
       <LinearGradient
         colors={["rgba(7,7,13,0.72)", "rgba(7,7,13,0.82)", "rgba(7,7,13,0.92)"]}
         style={StyleSheet.absoluteFill}
