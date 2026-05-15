@@ -29,7 +29,7 @@ import {
 } from "@/constants/sessions";
 
 const BG = require("../../assets/images/bg-alley.png");
-const BG_FOCAL: object = { transform: [{ scale: 1.5 }, { translateY: -200 }] };
+const BG_FOCAL: object = {};
 type Tab = "public" | "private";
 
 export default function HistoryScreen() {

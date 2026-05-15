@@ -25,7 +25,7 @@ import { BASE_URL, AI_PROVIDERS } from "@/constants/aiConfig";
 import { NeonGlowOverlay } from "@/components/NeonGlowOverlay";
 
 const BG = require("../../assets/images/bg-alley.png");
-const BG_FOCAL: object = { transform: [{ scale: 1.5 }, { translateY: -200 }] };
+const BG_FOCAL: object = {};
 const { width: SW } = Dimensions.get("window");
 
 const GOLD = "#f59e0b";

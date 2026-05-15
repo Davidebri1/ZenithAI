@@ -23,7 +23,7 @@ import { NeonGlowOverlay } from "@/components/NeonGlowOverlay";
 import { getSessions, formatMessageTime, type Session } from "@/constants/sessions";
 
 const BG = require("../../assets/images/bg-alley.png");
-const BG_FOCAL: object = { transform: [{ scale: 1.5 }, { translateY: -200 }] };
+const BG_FOCAL: object = {};
 
 interface SearchResult {
   id: number;

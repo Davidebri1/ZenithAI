@@ -31,13 +31,14 @@ import { authFetch } from "@/constants/apiAuth";
 import { useColors } from "@/hooks/useColors";
 import { useQuota } from "@/hooks/useQuota";
 import { QuotaBar } from "@/components/QuotaBar";
+import { NeonSignsOverlay } from "@/components/NeonSignsOverlay";
 import { AI_PROVIDERS, BASE_URL, SYNTHESIS_COLOR, SYNTHESIS_COLOR_GLOW, type AiProvider } from "@/constants/aiConfig";
 import { PROVIDER_MODES, getAllProviderModes } from "@/constants/providerModes";
 import { saveSession, CONV_IDS_KEY } from "@/constants/sessions";
 
 const CARD_GAP = 10;
 const BG = require("../../assets/images/bg-alley.png");
-const BG_FOCAL: object = { transform: [{ scale: 1.5 }, { translateY: -200 }] };
+const BG_FOCAL: object = {};
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
 interface ConvIds { [key: string]: number; }
@@ -575,6 +576,7 @@ export default function HomeScreen() {
         style={StyleSheet.absoluteFill}
         pointerEvents="none"
       />
+      <NeonSignsOverlay />
 
       {/* Ambient neon city glow — breathes slowly to simulate distant signage */}
       <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFill, { opacity: glowPulse }]}>
