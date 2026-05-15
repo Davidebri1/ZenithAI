@@ -214,7 +214,7 @@ function SynthesisCard({ synthesis, onClose, stale }: { synthesis: SynthesisStat
       <View style={styles.synthSubtitleRow}>
         <Feather name="git-merge" size={11} color={stale ? "rgba(255,255,255,0.3)" : `${SYNTHESIS_COLOR}70`} />
         <Text style={[styles.synthSubtitle, stale && { color: "rgba(255,255,255,0.3)" }]}>
-          {stale ? "Previous round — new responses loading…" : "Consensus across all AI responses"}
+          {stale ? "Previous round — new responses loading…" : "Consensus across active models"}
         </Text>
       </View>
       {synthesis.status === "loading" && synthesis.text.length === 0 ? (
@@ -728,7 +728,7 @@ export default function HomeScreen() {
                       ? "Tap to reveal consensus"
                       : synthesis.status === "error"
                         ? "Tap to retry"
-                        : `Consensus across ${AI_PROVIDERS.filter((p) => selected.has(p.key)).length} AI responses`}
+                        : "Consensus across active models"}
                 </Text>
               </View>
               {synthesis.status === "loading" ? (
