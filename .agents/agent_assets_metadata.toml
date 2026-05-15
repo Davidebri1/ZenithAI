@@ -10,7 +10,7 @@ title = "generated_image"
 id = "LvVHblKQO34xqAXVFOOsN"
 uri = "file://artifacts/multi-ai/assets/images/bg-alley.png"
 type = "image"
-title = "noir cyberpunk alleyway background"
+title = "dark neon alley background"
 
 [[generated]]
 id = "A9jvLD94AwDS6BMeJ-iBg"
@@ -71,3 +71,9 @@ id = "vSxusgzJfrwUWEXaMgvD1"
 uri = "file://artifacts/multi-ai/store/screenshots/05_pricing.jpg"
 type = "image"
 title = "Screenshot 5 — Pro Upgrade"
+
+[[outputs]]
+id = "4mGY6YcoXlbz97PeV83hE"
+uri = "file://artifacts/multi-ai/assets/images/bg-alley.png"
+type = "image"
+title = "New Neon Alley Background"
