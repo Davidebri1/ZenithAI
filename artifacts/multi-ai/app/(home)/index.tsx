@@ -620,12 +620,11 @@ export default function HomeScreen() {
   return (
     <BgImage style={styles.bg}>
       <LinearGradient
-        colors={["rgba(7,7,13,0.25)", "rgba(7,7,13,0.55)", "rgba(7,7,13,0.88)", "rgba(7,7,13,0.97)"]}
-        locations={[0, 0.35, 0.68, 1]}
+        colors={["rgba(7,7,13,0.10)", "rgba(7,7,13,0.38)", "rgba(7,7,13,0.72)", "rgba(7,7,13,0.88)"]}
+        locations={[0, 0.30, 0.62, 1]}
         style={StyleSheet.absoluteFill}
         pointerEvents="none"
       />
-      <NeonSignsOverlay />
 
       {/* Ambient neon city glow — breathes slowly to simulate distant signage */}
       <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFill, { opacity: glowPulse }]}>
