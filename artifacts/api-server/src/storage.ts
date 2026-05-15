@@ -2,7 +2,7 @@ import { users } from "@workspace/db/schema";
 import { eq, sql } from "drizzle-orm";
 import { db } from "@workspace/db";
 
-export const FREE_PROMPTS_LIMIT = 10;
+export const FREE_PROMPTS_LIMIT = 9999;
 export const PRO_PROMPTS_LIMIT = 250;
 
 export class Storage {
