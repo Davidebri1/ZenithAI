@@ -656,6 +656,7 @@ export default function HomeScreen() {
                     : `Ask ${selectedProviders.map(p => p.name).join(", ")}…`
               }
               placeholderTextColor="rgba(255,255,255,0.3)"
+              selectionColor="#22c55e"
               value={message}
               onChangeText={setMessage}
               multiline
@@ -825,6 +826,7 @@ const styles = StyleSheet.create({
   input: {
     flex: 1, fontSize: 15, fontFamily: "Inter_400Regular",
     color: "#f0f0ff", maxHeight: 100, lineHeight: 21, paddingVertical: 4,
+    zIndex: 1,
   },
   sendBtn: {
     width: 36, height: 36, borderRadius: 10,

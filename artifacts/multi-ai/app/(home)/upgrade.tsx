@@ -40,7 +40,7 @@ interface Product {
 }
 
 const FEATURES = [
-  { icon: "zap", label: "Unlimited prompts across All AI Models" },
+  { icon: "zap", label: "High-volume prompts across All AI Models" },
   { icon: "layers", label: "Simultaneous GPT, Claude, Gemini, Grok, DeepSeek, Mistral, Llama & Qwen" },
   { icon: "cpu", label: "Synthesis — AI-powered cross-model summary" },
   { icon: "search", label: "Search across all your conversations" },
@@ -133,7 +133,7 @@ export default function UpgradeScreen() {
           </View>
           <Text style={styles.successTitle}>Welcome to Pro</Text>
           <Text style={styles.successSub}>
-            You now have unlimited prompts across All AI Models. Start asking.
+            You now have full access to All AI Models. Start asking.
           </Text>
           <TouchableOpacity onPress={() => router.replace("/(home)")} style={styles.successCTA} activeOpacity={0.85}>
             <LinearGradient colors={[ACCENT, "#16a34a"]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.successCTAGrad}>
@@ -173,7 +173,7 @@ export default function UpgradeScreen() {
               </View>
               <Text style={styles.heroTitle}>Unlock All AI Models</Text>
               <Text style={styles.heroSub}>
-                Compare GPT, Claude, Gemini, Grok, DeepSeek, Mistral, Llama & Qwen side by side — unlimited.
+                Compare GPT, Claude, Gemini, Grok, DeepSeek, Mistral, Llama & Qwen side by side.
               </Text>
             </View>
 

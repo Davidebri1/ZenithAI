@@ -6,7 +6,6 @@ import {
   TouchableOpacity,
   StyleSheet,
   Platform,
-  ImageBackground,
   ActivityIndicator,
   KeyboardAvoidingView,
   ScrollView,
@@ -21,8 +20,7 @@ import { useRouter, Link } from "expo-router";
 import { Feather } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { NeonGlowOverlay } from "@/components/NeonGlowOverlay";
-
-const BG = require("../../assets/images/bg-alley.png");
+import { BgImage } from "@/components/BgImage";
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -97,7 +95,7 @@ export default function SignInScreen() {
 
   if (signIn?.status === "needs_second_factor") {
     return (
-      <ImageBackground source={BG} style={styles.bg} resizeMode="cover">
+      <BgImage style={styles.bg}>
         <LinearGradient colors={["rgba(7,7,13,0.6)", "rgba(7,7,13,0.97)"]} style={StyleSheet.absoluteFill} pointerEvents="none" />
         <NeonGlowOverlay />
         <KeyboardAvoidingView style={styles.container} behavior="padding">
@@ -133,23 +131,21 @@ export default function SignInScreen() {
             </TouchableOpacity>
           </View>
         </KeyboardAvoidingView>
-      </ImageBackground>
+      </BgImage>
     );
   }
 
   return (
-    <ImageBackground source={BG} style={styles.bg} resizeMode="cover">
+    <BgImage style={styles.bg}>
       <LinearGradient colors={["rgba(7,7,13,0.55)", "rgba(7,7,13,0.97)"]} style={StyleSheet.absoluteFill} pointerEvents="none" />
       <NeonGlowOverlay />
       <KeyboardAvoidingView style={styles.container} behavior="padding">
         <ScrollView contentContainerStyle={{ flexGrow: 1 }} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
-          <View style={{ paddingTop: topPad + 30, paddingHorizontal: 24 }}>
-            <View style={styles.logoRow}>
-              <View style={styles.logoMark}>
-                <Text style={styles.logoZ}>Z</Text>
-              </View>
-              <Text style={styles.logoText}>Zenith</Text>
+          <View style={{ paddingTop: topPad + 30, paddingHorizontal: 24, alignItems: "center" }}>
+            <View style={styles.logoMark}>
+              <Text style={styles.logoZ}>Z</Text>
             </View>
+            <Text style={styles.logoText}>Zenith</Text>
             <Text style={styles.heroTitle}>Welcome back</Text>
             <Text style={styles.heroSubtitle}>Sign in to compare All AI Models</Text>
           </View>
@@ -237,7 +233,7 @@ export default function SignInScreen() {
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
-    </ImageBackground>
+    </BgImage>
   );
 }
 
@@ -245,18 +241,18 @@ const styles = StyleSheet.create({
   bg: { flex: 1 },
   container: { flex: 1 },
 
-  logoRow: { flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 28 },
   logoMark: {
-    width: 34, height: 34, borderRadius: 9,
+    width: 52, height: 52, borderRadius: 14,
     backgroundColor: "rgba(34,197,94,0.15)",
     borderWidth: 1, borderColor: "rgba(34,197,94,0.35)",
     alignItems: "center", justifyContent: "center",
+    marginBottom: 14,
   },
-  logoZ: { fontSize: 20, fontFamily: "Inter_700Bold", color: "#22c55e" },
-  logoText: { fontSize: 22, fontFamily: "Inter_700Bold", color: "#e8e8f4", letterSpacing: -0.5 },
+  logoZ: { fontSize: 28, fontFamily: "Inter_700Bold", color: "#22c55e" },
+  logoText: { fontSize: 38, fontFamily: "Inter_700Bold", color: "#e8e8f4", letterSpacing: -1.5, marginBottom: 18 },
 
-  heroTitle: { fontSize: 32, fontFamily: "Inter_700Bold", color: "#e8e8f4", letterSpacing: -0.8 },
-  heroSubtitle: { fontSize: 15, fontFamily: "Inter_400Regular", color: "rgba(255,255,255,0.45)", marginTop: 6 },
+  heroTitle: { fontSize: 20, fontFamily: "Inter_600SemiBold", color: "rgba(255,255,255,0.7)", letterSpacing: -0.3 },
+  heroSubtitle: { fontSize: 14, fontFamily: "Inter_400Regular", color: "rgba(255,255,255,0.35)", marginTop: 5, marginBottom: 4 },
 
   card: {
     borderRadius: 24, overflow: "hidden", padding: 24,
