@@ -58,10 +58,11 @@ router.post("/:provider/conversations/:id/messages", async (req, res) => {
     const [conv] = await db.select().from(conversations).where(eq(conversations.id, id));
     if (!conv) { res.status(404).json({ error: "Conversation not found" }); return; }
     if (conv.userId !== "unknown" && conv.userId !== userId) { res.status(403).json({ error: "Forbidden" }); return; }
-    const { content, imageBase64, imageMimeType } = req.body as {
+    const { content, imageBase64, imageMimeType, mode } = req.body as {
       content: string;
       imageBase64?: string;
       imageMimeType?: string;
+      mode?: string;
     };
 
     if ((content === undefined || content === null) && !imageBase64) {
@@ -108,10 +109,19 @@ router.post("/:provider/conversations/:id/messages", async (req, res) => {
     res.setHeader("Cache-Control", "no-cache");
     res.setHeader("Connection", "keep-alive");
 
+    const MODE_MODELS: Record<string, Partial<Record<string, string>>> = {
+      grok:     { standard: "x-ai/grok-3-beta",              think: "x-ai/grok-3-mini-beta" },
+      deepseek: { standard: "deepseek/deepseek-chat-v3-0324", think: "deepseek/deepseek-r1" },
+      mistral:  { standard: "mistralai/mistral-large-2411" },
+      llama:    { standard: "meta-llama/llama-4-maverick" },
+      qwen:     { standard: "qwen/qwen3-235b-a22b",          think: "qwen/qwq-32b" },
+    };
+    const selectedModel = MODE_MODELS[req.params.provider]?.[mode ?? "standard"] ?? model;
+
     let fullResponse = "";
 
     const stream = await openrouter.chat.completions.create({
-      model,
+      model: selectedModel,
       max_tokens: 8192,
       messages: chatMessages as any,
       stream: true,

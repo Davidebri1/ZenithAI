@@ -40,10 +40,11 @@ router.post("/anthropic/conversations/:id/messages", async (req, res) => {
     const [conv] = await db.select().from(conversations).where(eq(conversations.id, id));
     if (!conv) { res.status(404).json({ error: "Conversation not found" }); return; }
     if (conv.userId !== "unknown" && conv.userId !== userId) { res.status(403).json({ error: "Forbidden" }); return; }
-    const { content, imageBase64, imageMimeType } = req.body as {
+    const { content, imageBase64, imageMimeType, mode } = req.body as {
       content: string;
       imageBase64?: string;
       imageMimeType?: string;
+      mode?: string;
     };
 
     if ((content === undefined || content === null) && !imageBase64) {
@@ -104,12 +105,16 @@ router.post("/anthropic/conversations/:id/messages", async (req, res) => {
     res.setHeader("Connection", "keep-alive");
 
     let fullResponse = "";
+    const useThinking = mode === "think";
 
-    const stream = anthropic.messages.stream({
+    const streamParams: Parameters<typeof anthropic.messages.stream>[0] = {
       model: "claude-sonnet-4-6",
-      max_tokens: 8192,
+      max_tokens: useThinking ? 16000 : 8192,
       messages: chatMessages,
-    });
+      ...(useThinking ? { thinking: { type: "enabled" as const, budget_tokens: 10000 } } : {}),
+    };
+
+    const stream = anthropic.messages.stream(streamParams);
 
     for await (const event of stream) {
       if (event.type === "content_block_delta" && event.delta.type === "text_delta") {

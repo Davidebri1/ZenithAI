@@ -40,10 +40,11 @@ router.post("/gemini/conversations/:id/messages", async (req, res) => {
     const [conv] = await db.select().from(conversations).where(eq(conversations.id, id));
     if (!conv) { res.status(404).json({ error: "Conversation not found" }); return; }
     if (conv.userId !== "unknown" && conv.userId !== userId) { res.status(403).json({ error: "Forbidden" }); return; }
-    const { content, imageBase64, imageMimeType } = req.body as {
+    const { content, imageBase64, imageMimeType, mode } = req.body as {
       content: string;
       imageBase64?: string;
       imageMimeType?: string;
+      mode?: string;
     };
 
     if ((content === undefined || content === null) && !imageBase64) {
@@ -90,10 +91,13 @@ router.post("/gemini/conversations/:id/messages", async (req, res) => {
 
     let fullResponse = "";
 
+    const geminiConfig: Record<string, unknown> = { maxOutputTokens: 8192 };
+    if (mode === "think") geminiConfig.thinkingConfig = { thinkingBudget: 8000 };
+
     const stream = await ai.models.generateContentStream({
       model: "gemini-3-flash-preview",
       contents: chatMessages,
-      config: { maxOutputTokens: 8192 },
+      config: geminiConfig,
     });
 
     for await (const chunk of stream) {

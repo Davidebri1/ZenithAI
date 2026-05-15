@@ -31,6 +31,7 @@ import { useColors } from "@/hooks/useColors";
 import { AI_PROVIDERS, BASE_URL } from "@/constants/aiConfig";
 import { CONV_IDS_KEY, formatMessageTime } from "@/constants/sessions";
 import { NeonGlowOverlay } from "@/components/NeonGlowOverlay";
+import { PROVIDER_MODES, getProviderMode, setProviderMode } from "@/constants/providerModes";
 
 const BG = require("../../assets/images/bg-alley.png");
 const BG_FOCAL: object = { transform: [{ scale: 1.5 }, { translateY: -200 }] };
@@ -68,6 +69,16 @@ export default function ThreadScreen() {
   const [attachment, setAttachment] = useState<Attachment | null>(null);
   const [copiedIdx, setCopiedIdx] = useState<number | null>(null);
   const [showScrollBtn, setShowScrollBtn] = useState(false);
+  const [mode, setMode] = useState("standard");
+
+  useEffect(() => {
+    getProviderMode(provider.key).then(setMode);
+  }, [provider.key]);
+
+  const handleModeChange = async (newMode: string) => {
+    setMode(newMode);
+    await setProviderMode(provider.key, newMode);
+  };
 
   const scrollRef = useRef<ScrollView>(null);
   const activeReader = useRef<ReadableStreamDefaultReader<Uint8Array> | null>(null);
@@ -162,7 +173,7 @@ export default function ThreadScreen() {
 
     try {
       const id = await getOrCreateConvId();
-      const body: Record<string, string> = { content: text };
+      const body: Record<string, string> = { content: text, mode };
       if (pendingAttachment?.base64) { body.imageBase64 = pendingAttachment.base64; body.imageMimeType = pendingAttachment.mimeType; }
       const res = await authFetch(`${BASE_URL}/api/${provider.key}/conversations/${id}/messages`, {
         method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body),
@@ -286,6 +297,33 @@ export default function ThreadScreen() {
           </View>
           <View style={{ width: 34 }} />
         </View>
+
+        {(PROVIDER_MODES[provider.key]?.length ?? 0) > 1 && (
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={styles.modePicker}
+            contentContainerStyle={styles.modePickerContent}
+          >
+            {PROVIDER_MODES[provider.key].map((m) => (
+              <TouchableOpacity
+                key={m.key}
+                onPress={() => handleModeChange(m.key)}
+                style={[
+                  styles.modePill,
+                  m.key === mode
+                    ? { backgroundColor: `${provider.color}20`, borderColor: `${provider.color}70` }
+                    : {},
+                ]}
+                activeOpacity={0.7}
+              >
+                <Text style={[styles.modePillText, { color: m.key === mode ? provider.color : "rgba(200,200,220,0.4)" }]}>
+                  {m.emoji}  {m.label}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        )}
 
         <View style={styles.scrollContainer}>
           <ScrollView
@@ -464,6 +502,10 @@ const styles = StyleSheet.create({
   headerName: { fontSize: 15, fontFamily: "Inter_600SemiBold" },
   headerModel: { fontSize: 11, fontFamily: "Inter_400Regular", letterSpacing: 0.5, color: "rgba(255,255,255,0.4)" },
 
+  modePicker: { maxHeight: 44, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: "rgba(255,255,255,0.07)" },
+  modePickerContent: { flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 16, paddingVertical: 8 },
+  modePill: { flexDirection: "row", alignItems: "center", paddingHorizontal: 12, paddingVertical: 5, borderRadius: 20, borderWidth: 1, borderColor: "rgba(255,255,255,0.12)", backgroundColor: "rgba(255,255,255,0.04)" },
+  modePillText: { fontSize: 12, fontFamily: "Inter_400Regular", letterSpacing: 0.2 },
   scrollContainer: { flex: 1, position: "relative" },
   scroll: { flex: 1 },
   scrollContent: { paddingHorizontal: 16, paddingTop: 16, gap: 6 },

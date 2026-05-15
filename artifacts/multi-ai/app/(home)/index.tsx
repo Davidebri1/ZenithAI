@@ -32,6 +32,7 @@ import { useColors } from "@/hooks/useColors";
 import { useQuota } from "@/hooks/useQuota";
 import { QuotaBar } from "@/components/QuotaBar";
 import { AI_PROVIDERS, BASE_URL, SYNTHESIS_COLOR, SYNTHESIS_COLOR_GLOW, type AiProvider } from "@/constants/aiConfig";
+import { PROVIDER_MODES, getAllProviderModes } from "@/constants/providerModes";
 import { saveSession, CONV_IDS_KEY } from "@/constants/sessions";
 
 const CARD_GAP = 10;
@@ -96,9 +97,10 @@ interface AiCardProps {
   onToggleSelect: () => void;
   onOpen: () => void;
   cardWidth: number;
+  activeMode?: string;
 }
 
-function AiCard({ provider, state, selected, onToggleSelect, onOpen, cardWidth }: AiCardProps) {
+function AiCard({ provider, state, selected, onToggleSelect, onOpen, cardWidth, activeMode }: AiCardProps) {
   const previewText = state.streaming
     ? state.streamingText || "Thinking…"
     : state.lastMessage || provider.tagline;
@@ -168,6 +170,16 @@ function AiCard({ provider, state, selected, onToggleSelect, onOpen, cardWidth }
             </Text>
           )}
         </View>
+        {activeMode && activeMode !== "standard" && (() => {
+          const modeInfo = PROVIDER_MODES[provider.key]?.find((m) => m.key === activeMode);
+          return modeInfo ? (
+            <View style={styles.modeBadge}>
+              <Text style={[styles.modeBadgeText, { color: provider.color }]}>
+                {modeInfo.emoji}  {modeInfo.label}
+              </Text>
+            </View>
+          ) : null;
+        })()}
       </View>
     </Pressable>
   );
@@ -237,6 +249,7 @@ export default function HomeScreen() {
   const [convIds, setConvIds] = useState<ConvIds>({});
   const [attachment, setAttachment] = useState<Attachment | null>(null);
   const [synthesis, setSynthesis] = useState<SynthesisState>({ status: "idle", text: "", expanded: false });
+  const [providerModes, setProviderModes] = useState<Record<string, string>>({});
 
   // Ambient city-glow pulse — slow neon breath cycling through provider colors
   const glowPulse = useRef(new Animated.Value(0.4)).current;
@@ -291,7 +304,10 @@ export default function HomeScreen() {
   }, [loadLastMessage]);
 
   useEffect(() => { refreshFromStorage(); }, [refreshFromStorage]);
-  useFocusEffect(useCallback(() => { refreshFromStorage(); }, [refreshFromStorage]));
+  useFocusEffect(useCallback(() => {
+    refreshFromStorage();
+    getAllProviderModes().then(setProviderModes);
+  }, [refreshFromStorage]));
 
   const getOrCreateConvIds = useCallback(async (): Promise<ConvIds> => {
     const allKeys = AI_PROVIDERS.map((p) => p.key);
@@ -738,6 +754,7 @@ export default function HomeScreen() {
                     onToggleSelect={() => toggleSelect(p.key)}
                     onOpen={() => openThread(p)}
                     cardWidth={cardWidth}
+                    activeMode={providerModes[p.key]}
                   />
                 ) : (
                   <View key={`empty-${i}`} style={{ width: cardWidth }} />
@@ -875,6 +892,8 @@ const styles = StyleSheet.create({
   },
   cardBody: { padding: 10, paddingTop: 6, gap: 4 },
   previewRow: { minHeight: 54 },
+  modeBadge: { alignSelf: "flex-start", paddingHorizontal: 8, paddingVertical: 3, borderRadius: 10, backgroundColor: "rgba(255,255,255,0.05)", borderWidth: StyleSheet.hairlineWidth, borderColor: "rgba(255,255,255,0.13)", marginTop: 2 },
+  modeBadgeText: { fontSize: 10, fontFamily: "Inter_400Regular", letterSpacing: 0.3 },
   streamingRow: { flexDirection: "row", alignItems: "flex-start", gap: 6 },
   previewText: { fontSize: 12, fontFamily: "Inter_400Regular", lineHeight: 18 },
 
