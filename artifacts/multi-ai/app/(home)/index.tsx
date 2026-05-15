@@ -34,7 +34,7 @@ import { QuotaBar } from "@/components/QuotaBar";
 import { NeonSignsOverlay } from "@/components/NeonSignsOverlay";
 import { AI_PROVIDERS, BASE_URL, SYNTHESIS_COLOR, SYNTHESIS_COLOR_GLOW, type AiProvider } from "@/constants/aiConfig";
 import { PROVIDER_MODES, getAllProviderModes } from "@/constants/providerModes";
-import { saveSession, CONV_IDS_KEY } from "@/constants/sessions";
+import { saveSession, CONV_IDS_KEY, getPrivateMode } from "@/constants/sessions";
 import { BgImage } from "@/components/BgImage";
 
 const CARD_GAP = 10;
@@ -251,6 +251,7 @@ export default function HomeScreen() {
   const [attachment, setAttachment] = useState<Attachment | null>(null);
   const [synthesis, setSynthesis] = useState<SynthesisState>({ status: "idle", text: "", expanded: false });
   const [providerModes, setProviderModes] = useState<Record<string, string>>({});
+  const [privateMode, setPrivateModeState] = useState(false);
 
   // Ambient city-glow pulse — slow neon breath cycling through provider colors
   const glowPulse = useRef(new Animated.Value(0.4)).current;
@@ -308,6 +309,7 @@ export default function HomeScreen() {
   useFocusEffect(useCallback(() => {
     refreshFromStorage();
     getAllProviderModes().then(setProviderModes);
+    getPrivateMode().then(setPrivateModeState);
   }, [refreshFromStorage]));
 
   const getOrCreateConvIds = useCallback(async (): Promise<ConvIds> => {
@@ -543,7 +545,7 @@ export default function HomeScreen() {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     const currentIds = convIds;
     if (Object.keys(currentIds).length > 0) {
-      await saveSession(sessionTitleRef.current || "Untitled session", currentIds);
+      await saveSession(sessionTitleRef.current || "Untitled session", currentIds, privateMode);
     }
     sessionTitleRef.current = "";
     lastPromptRef.current = "";
@@ -602,6 +604,12 @@ export default function HomeScreen() {
               <Text style={styles.logoZ}>Z</Text>
             </View>
             <Text style={styles.appName}>Zenith</Text>
+            {privateMode && (
+              <View style={styles.privatePill}>
+                <Feather name="eye-off" size={10} color="#a78bfa" />
+                <Text style={styles.privatePillText}>Private</Text>
+              </View>
+            )}
           </View>
           <View style={styles.headerActions}>
             <TouchableOpacity onPress={() => router.push("/(home)/enterprise")} style={styles.headerBtn} activeOpacity={0.7}>
@@ -795,6 +803,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20, paddingBottom: 12,
   },
   logoRow: { flexDirection: "row", alignItems: "center", gap: 10 },
+  privatePill: {
+    flexDirection: "row", alignItems: "center", gap: 4,
+    backgroundColor: "rgba(167,139,250,0.15)",
+    borderWidth: 1, borderColor: "rgba(167,139,250,0.3)",
+    borderRadius: 10, paddingHorizontal: 7, paddingVertical: 3,
+  },
+  privatePillText: { fontSize: 10, fontFamily: "Inter_600SemiBold", color: "#a78bfa" },
   logoMark: {
     width: 30, height: 30, borderRadius: 8,
     backgroundColor: "rgba(34,197,94,0.15)",

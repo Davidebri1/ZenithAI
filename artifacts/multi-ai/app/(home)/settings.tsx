@@ -22,6 +22,7 @@ import {
   setGlobalSettings,
   settingsSummary,
 } from "@/constants/providerSettings";
+import { getPrivateMode, setPrivateMode } from "@/constants/sessions";
 import { SettingsSheet } from "@/components/SettingsSheet";
 import { NeonGlowOverlay } from "@/components/NeonGlowOverlay";
 import { BgImage } from "@/components/BgImage";
@@ -34,16 +35,27 @@ export default function SettingsScreen() {
   const [providerSettings, setProviderSettings] = useState<Record<string, ProviderSettings>>({});
   const [sheetProvider, setSheetProvider] = useState<string | null>(null);
   const [sheetSettings, setSheetSettings] = useState<ProviderSettings | null>(null);
+  const [privateMode, setPrivateModeState] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
-      Promise.all(AI_PROVIDERS.map((p) => getGlobalSettings(p.key))).then((results) => {
+      Promise.all([
+        Promise.all(AI_PROVIDERS.map((p) => getGlobalSettings(p.key))),
+        getPrivateMode(),
+      ]).then(([results, pm]) => {
         const map: Record<string, ProviderSettings> = {};
         AI_PROVIDERS.forEach((p, i) => { map[p.key] = results[i]; });
         setProviderSettings(map);
+        setPrivateModeState(pm);
       });
     }, [])
   );
+
+  const handleTogglePrivate = async () => {
+    const next = !privateMode;
+    setPrivateModeState(next);
+    await setPrivateMode(next);
+  };
 
   const openSheet = (key: string) => {
     const s = providerSettings[key];
@@ -73,9 +85,25 @@ export default function SettingsScreen() {
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn} activeOpacity={0.7}>
           <Feather name="chevron-left" size={22} color="#e8e8f4" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>AI Settings</Text>
+        <Text style={styles.headerTitle}>Settings</Text>
         <Text style={styles.headerSub}>Global defaults per model</Text>
       </View>
+
+      {/* Private Mode toggle */}
+      <TouchableOpacity style={styles.privateRow} onPress={handleTogglePrivate} activeOpacity={0.75}>
+        <BlurView intensity={20} tint="dark" style={StyleSheet.absoluteFill} />
+        <View style={[StyleSheet.absoluteFill, styles.privateRowBg, privateMode && styles.privateRowBgActive]} />
+        <View style={styles.privateLeft}>
+          <Feather name="eye-off" size={16} color={privateMode ? "#a78bfa" : "rgba(255,255,255,0.45)"} />
+          <View>
+            <Text style={[styles.privateLabel, privateMode && styles.privateLabelActive]}>Private Mode</Text>
+            <Text style={styles.privateSub}>New sessions won't appear in History</Text>
+          </View>
+        </View>
+        <View style={[styles.toggle, privateMode && styles.toggleActive]}>
+          <View style={[styles.toggleThumb, privateMode && styles.toggleThumbActive]} />
+        </View>
+      </TouchableOpacity>
 
       <FlatList
         data={AI_PROVIDERS}
@@ -142,6 +170,32 @@ const styles = StyleSheet.create({
   backBtn: { marginBottom: 8 },
   headerTitle: { fontSize: 22, fontFamily: "Inter_700Bold", color: "#e8e8f4" },
   headerSub: { fontSize: 12, fontFamily: "Inter_400Regular", color: "rgba(255,255,255,0.35)", marginTop: 2 },
+
+  privateRow: {
+    flexDirection: "row", alignItems: "center", justifyContent: "space-between",
+    marginHorizontal: 16, marginTop: 14, marginBottom: 2,
+    borderRadius: 16, overflow: "hidden",
+    borderWidth: StyleSheet.hairlineWidth, borderColor: "rgba(255,255,255,0.08)",
+    paddingVertical: 14, paddingHorizontal: 16,
+  },
+  privateRowBg: { backgroundColor: "rgba(255,255,255,0.03)" },
+  privateRowBgActive: { backgroundColor: "rgba(167,139,250,0.07)" },
+  privateLeft: { flexDirection: "row", alignItems: "center", gap: 12, flex: 1 },
+  privateLabel: { fontSize: 15, fontFamily: "Inter_600SemiBold", color: "rgba(255,255,255,0.6)" },
+  privateLabelActive: { color: "#a78bfa" },
+  privateSub: { fontSize: 11, fontFamily: "Inter_400Regular", color: "rgba(255,255,255,0.3)", marginTop: 2 },
+  toggle: {
+    width: 44, height: 26, borderRadius: 13,
+    backgroundColor: "rgba(255,255,255,0.12)",
+    justifyContent: "center", paddingHorizontal: 3,
+  },
+  toggleActive: { backgroundColor: "#a78bfa" },
+  toggleThumb: {
+    width: 20, height: 20, borderRadius: 10,
+    backgroundColor: "rgba(255,255,255,0.5)",
+    alignSelf: "flex-start",
+  },
+  toggleThumbActive: { backgroundColor: "#fff", alignSelf: "flex-end" },
 
   list: { padding: 16, gap: 10 },
 

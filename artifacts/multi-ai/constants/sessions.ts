@@ -2,6 +2,20 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 
 export const SESSIONS_KEY = "@multiai_sessions_v2";
 export const CONV_IDS_KEY = "@multiai_conv_ids_v2";
+export const PRIVATE_MODE_KEY = "@multiai_private_mode";
+
+export async function getPrivateMode(): Promise<boolean> {
+  try {
+    const val = await AsyncStorage.getItem(PRIVATE_MODE_KEY);
+    return val === "true";
+  } catch {
+    return false;
+  }
+}
+
+export async function setPrivateMode(enabled: boolean): Promise<void> {
+  await AsyncStorage.setItem(PRIVATE_MODE_KEY, enabled ? "true" : "false");
+}
 
 export interface Session {
   id: string;
@@ -22,7 +36,8 @@ export async function getSessions(): Promise<Session[]> {
 
 export async function saveSession(
   title: string,
-  convIds: Record<string, number>
+  convIds: Record<string, number>,
+  isPrivate?: boolean
 ): Promise<void> {
   if (!title || Object.keys(convIds).length === 0) return;
   const sessions = await getSessions();
@@ -31,7 +46,7 @@ export async function saveSession(
     title,
     createdAt: new Date().toISOString(),
     convIds,
-    isPrivate: false,
+    isPrivate: isPrivate ?? false,
   };
   sessions.unshift(session);
   if (sessions.length > 100) sessions.splice(100);
