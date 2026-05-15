@@ -2,6 +2,7 @@ import { Router } from "express";
 import { db, conversations, messages } from "@workspace/db";
 import { eq, asc } from "drizzle-orm";
 import { openrouter } from "@workspace/integrations-openrouter-ai";
+import { getAuth } from "@clerk/express";
 
 const router = Router();
 
@@ -20,9 +21,11 @@ function getModel(provider: string): string | null {
 router.post("/:provider/conversations", async (req, res) => {
   const model = getModel(req.params.provider);
   if (!model) { res.status(404).json({ error: "Unknown provider" }); return; }
+  const userId = getAuth(req)?.userId;
+  if (!userId) { res.status(401).json({ error: "Unauthorized" }); return; }
   try {
     const { title } = req.body as { title: string };
-    const [conv] = await db.insert(conversations).values({ title: title || "New Conversation" }).returning();
+    const [conv] = await db.insert(conversations).values({ title: title || "New Conversation", userId }).returning();
     res.status(201).json(conv);
   } catch (err) {
     req.log.error({ err }, "createOpenrouterConversation error");
@@ -33,8 +36,10 @@ router.post("/:provider/conversations", async (req, res) => {
 router.get("/:provider/conversations", async (req, res) => {
   const model = getModel(req.params.provider);
   if (!model) { res.status(404).json({ error: "Unknown provider" }); return; }
+  const userId = getAuth(req)?.userId;
+  if (!userId) { res.status(401).json({ error: "Unauthorized" }); return; }
   try {
-    const convs = await db.select().from(conversations).orderBy(asc(conversations.createdAt));
+    const convs = await db.select().from(conversations).where(eq(conversations.userId, userId)).orderBy(asc(conversations.createdAt));
     res.json(convs);
   } catch (err) {
     req.log.error({ err }, "listOpenrouterConversations error");
@@ -45,9 +50,14 @@ router.get("/:provider/conversations", async (req, res) => {
 router.post("/:provider/conversations/:id/messages", async (req, res) => {
   const model = getModel(req.params.provider);
   if (!model) { res.status(404).json({ error: "Unknown provider" }); return; }
+  const userId = getAuth(req)?.userId;
+  if (!userId) { res.status(401).json({ error: "Unauthorized" }); return; }
   try {
     const id = parseInt(req.params.id, 10);
     if (isNaN(id) || id <= 0) { res.status(400).json({ error: "Invalid conversation id" }); return; }
+    const [conv] = await db.select().from(conversations).where(eq(conversations.id, id));
+    if (!conv) { res.status(404).json({ error: "Conversation not found" }); return; }
+    if (conv.userId !== "unknown" && conv.userId !== userId) { res.status(403).json({ error: "Forbidden" }); return; }
     const { content, imageBase64, imageMimeType } = req.body as {
       content: string;
       imageBase64?: string;
