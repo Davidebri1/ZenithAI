@@ -32,7 +32,6 @@ import { authFetch } from "@/constants/apiAuth";
 import { NeonGlowOverlay } from "@/components/NeonGlowOverlay";
 
 const BG = require("../../assets/images/bg-alley.png");
-const BG_FOCAL: object = { transform: [{ scale: 1.5 }, { translateY: -200 }] };
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 const CARD_GAP = 10;
 
@@ -258,7 +257,7 @@ export default function SessionDetailScreen() {
 
   if (loadingSession) {
     return (
-      <ImageBackground source={BG} style={{ flex: 1 }} resizeMode="cover" imageStyle={BG_FOCAL}>
+      <ImageBackground source={BG} style={{ flex: 1 }} resizeMode="cover">
         <LinearGradient
           colors={["rgba(7,7,13,0.65)", "rgba(7,7,13,0.97)"]}
           style={StyleSheet.absoluteFill}
@@ -273,7 +272,7 @@ export default function SessionDetailScreen() {
 
   if (!session) {
     return (
-      <ImageBackground source={BG} style={{ flex: 1 }} resizeMode="cover" imageStyle={BG_FOCAL}>
+      <ImageBackground source={BG} style={{ flex: 1 }} resizeMode="cover">
         <LinearGradient
           colors={["rgba(7,7,13,0.65)", "rgba(7,7,13,0.97)"]}
           style={StyleSheet.absoluteFill}
@@ -293,7 +292,7 @@ export default function SessionDetailScreen() {
   }
 
   return (
-    <ImageBackground source={BG} style={styles.bg} resizeMode="cover" imageStyle={BG_FOCAL}>
+    <ImageBackground source={BG} style={styles.bg} resizeMode="cover">
       <LinearGradient
         colors={[
           "rgba(7,7,13,0.55)",

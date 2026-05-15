@@ -25,7 +25,7 @@ import { BASE_URL, AI_PROVIDERS } from "@/constants/aiConfig";
 import { NeonGlowOverlay } from "@/components/NeonGlowOverlay";
 
 const BG = require("../../assets/images/bg-alley.png");
-const BG_FOCAL: object = {};
+
 const { width: SW } = Dimensions.get("window");
 
 const GOLD = "#f59e0b";
@@ -130,7 +130,7 @@ export default function EnterpriseScreen() {
 
   return (
     <>
-      <ImageBackground source={BG} style={StyleSheet.absoluteFill} resizeMode="cover" imageStyle={BG_FOCAL}>
+      <ImageBackground source={BG} style={StyleSheet.absoluteFill} resizeMode="cover">
         <LinearGradient
           colors={["rgba(7,7,20,0.90)", "rgba(7,7,20,0.78)", "rgba(7,7,20,0.95)"]}
           style={StyleSheet.absoluteFill}

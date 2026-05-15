@@ -38,7 +38,7 @@ import { saveSession, CONV_IDS_KEY } from "@/constants/sessions";
 
 const CARD_GAP = 10;
 const BG = require("../../assets/images/bg-alley.png");
-const BG_FOCAL: object = {};
+
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
 interface ConvIds { [key: string]: number; }
@@ -569,7 +569,7 @@ export default function HomeScreen() {
   for (let i = 0; i < AI_PROVIDERS.length; i += 2) rows.push([AI_PROVIDERS[i], AI_PROVIDERS[i + 1] ?? null]);
 
   return (
-    <ImageBackground source={BG} style={styles.bg} resizeMode="cover" imageStyle={BG_FOCAL}>
+    <ImageBackground source={BG} style={styles.bg} resizeMode="cover">
       <LinearGradient
         colors={["rgba(7,7,13,0.25)", "rgba(7,7,13,0.55)", "rgba(7,7,13,0.88)", "rgba(7,7,13,0.97)"]}
         locations={[0, 0.35, 0.68, 1]}
