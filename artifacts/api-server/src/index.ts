@@ -1,5 +1,6 @@
 import app from "./app";
 import { logger } from "./lib/logger";
+import { pool } from "@workspace/db";
 
 const rawPort = process.env["PORT"];
 
@@ -11,6 +12,51 @@ const port = Number(rawPort);
 
 if (Number.isNaN(port) || port <= 0) {
   throw new Error(`Invalid PORT value: "${rawPort}"`);
+}
+
+async function ensureSchema() {
+  if (!process.env.DATABASE_URL) return;
+  try {
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS conversations (
+        id SERIAL PRIMARY KEY,
+        title TEXT NOT NULL,
+        created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL
+      );
+
+      CREATE TABLE IF NOT EXISTS messages (
+        id SERIAL PRIMARY KEY,
+        conversation_id INTEGER NOT NULL REFERENCES conversations(id) ON DELETE CASCADE,
+        role TEXT NOT NULL,
+        content TEXT NOT NULL,
+        created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL
+      );
+
+      CREATE TABLE IF NOT EXISTS users (
+        id TEXT PRIMARY KEY,
+        email TEXT,
+        stripe_customer_id TEXT,
+        stripe_subscription_id TEXT,
+        prompts_used INTEGER NOT NULL DEFAULT 0,
+        prompts_limit INTEGER NOT NULL DEFAULT 10,
+        plan TEXT NOT NULL DEFAULT 'free',
+        created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
+        updated_at TIMESTAMPTZ DEFAULT NOW() NOT NULL
+      );
+
+      CREATE TABLE IF NOT EXISTS inquiries (
+        id SERIAL PRIMARY KEY,
+        user_id TEXT,
+        name TEXT NOT NULL,
+        company TEXT,
+        message TEXT NOT NULL,
+        created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL
+      );
+    `);
+    logger.info("DB schema ready");
+  } catch (err) {
+    logger.error({ err }, "DB schema init failed — continuing");
+  }
 }
 
 async function initStripe() {
@@ -42,6 +88,7 @@ async function initStripe() {
   }
 }
 
+await ensureSchema();
 await initStripe();
 
 app.listen(port, (err) => {

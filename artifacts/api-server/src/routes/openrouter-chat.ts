@@ -103,7 +103,7 @@ router.post("/:provider/conversations/:id/messages", async (req, res) => {
     const stream = await openrouter.chat.completions.create({
       model,
       max_tokens: 8192,
-      messages: chatMessages,
+      messages: chatMessages as any,
       stream: true,
     });
 
