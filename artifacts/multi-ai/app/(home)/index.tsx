@@ -31,6 +31,7 @@ import { authFetch } from "@/constants/apiAuth";
 import { useColors } from "@/hooks/useColors";
 import { useQuota } from "@/hooks/useQuota";
 import { QuotaBar } from "@/components/QuotaBar";
+import { QuotaBanner } from "@/components/QuotaBanner";
 import { NeonSignsOverlay } from "@/components/NeonSignsOverlay";
 import { AI_PROVIDERS, BASE_URL, SYNTHESIS_COLOR, SYNTHESIS_COLOR_GLOW, type AiProvider } from "@/constants/aiConfig";
 import { PROVIDER_MODES, getAllProviderModes } from "@/constants/providerModes";
@@ -679,6 +680,9 @@ export default function HomeScreen() {
             </TouchableOpacity>
           </View>
         </View>
+
+        {/* ── QUOTA BANNER ── */}
+        <QuotaBanner quota={quota} />
 
         {/* ── INPUT — pinned at top, never covered by keyboard ── */}
         <View style={styles.inputSection}>

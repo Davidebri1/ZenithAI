@@ -258,7 +258,7 @@ const styles = StyleSheet.create({
     marginBottom: 14,
   },
   logoZ: { fontSize: 28, fontFamily: "Inter_700Bold", color: "#22c55e" },
-  logoText: { fontSize: 44, fontFamily: "Inter_700Bold", color: "#e8e8f4", letterSpacing: 2, marginBottom: 10 },
+  logoText: { fontSize: 44, fontFamily: "Inter_700Bold", color: "#00e5c8", letterSpacing: 2, marginBottom: 10 },
 
   heroTitle: { fontSize: 18, fontFamily: "Inter_400Regular", color: "rgba(255,255,255,0.55)", letterSpacing: 0.5 },
   heroSubtitle: { fontSize: 12, fontFamily: "Inter_400Regular", color: "rgba(255,255,255,0.28)", marginTop: 4, letterSpacing: 0.2 },
