@@ -34,6 +34,8 @@ import { QuotaBar } from "@/components/QuotaBar";
 import { NeonSignsOverlay } from "@/components/NeonSignsOverlay";
 import { AI_PROVIDERS, BASE_URL, SYNTHESIS_COLOR, SYNTHESIS_COLOR_GLOW, type AiProvider } from "@/constants/aiConfig";
 import { PROVIDER_MODES, getAllProviderModes } from "@/constants/providerModes";
+import { getAllGlobalSettings, setGlobalSettings, PROVIDER_SETTING_DEFS, DEFAULT_SETTINGS, type ProviderSettings, settingsSummary } from "@/constants/providerSettings";
+import { SettingsSheet } from "@/components/SettingsSheet";
 import { saveSession, CONV_IDS_KEY, getPrivateMode } from "@/constants/sessions";
 import { BgImage } from "@/components/BgImage";
 
@@ -97,11 +99,13 @@ interface AiCardProps {
   selected: boolean;
   onToggleSelect: () => void;
   onOpen: () => void;
+  onSettings: () => void;
   cardWidth: number;
   activeMode?: string;
+  settingsSummaryText?: string;
 }
 
-function AiCard({ provider, state, selected, onToggleSelect, onOpen, cardWidth, activeMode }: AiCardProps) {
+function AiCard({ provider, state, selected, onToggleSelect, onOpen, onSettings, cardWidth, activeMode, settingsSummaryText }: AiCardProps) {
   const previewText = state.streaming
     ? state.streamingText || "Thinking…"
     : state.lastMessage || provider.tagline;
@@ -131,19 +135,29 @@ function AiCard({ provider, state, selected, onToggleSelect, onOpen, cardWidth, 
         style={styles.cardTop}
       >
         <Text style={[styles.cardProviderName, { color: provider.color }]}>{provider.name}</Text>
-        <TouchableOpacity
-          onPress={(e) => { e.stopPropagation?.(); onToggleSelect(); }}
-          hitSlop={{ top: 8, right: 8, bottom: 8, left: 8 }}
-          style={[
-            styles.checkbox,
-            selected
-              ? { backgroundColor: provider.color, borderColor: provider.color }
-              : { backgroundColor: "rgba(0,0,0,0.35)", borderColor: "rgba(255,255,255,0.28)" },
-          ]}
-          activeOpacity={0.7}
-        >
-          {selected && <Feather name="check" size={12} color="#000" />}
-        </TouchableOpacity>
+        <View style={styles.cardTopRight}>
+          <TouchableOpacity
+            onPress={(e) => { e.stopPropagation?.(); onSettings(); }}
+            hitSlop={{ top: 8, right: 4, bottom: 8, left: 8 }}
+            style={styles.cardSettingsBtn}
+            activeOpacity={0.7}
+          >
+            <Feather name="sliders" size={12} color={`${provider.color}99`} />
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={(e) => { e.stopPropagation?.(); onToggleSelect(); }}
+            hitSlop={{ top: 8, right: 8, bottom: 8, left: 4 }}
+            style={[
+              styles.checkbox,
+              selected
+                ? { backgroundColor: provider.color, borderColor: provider.color }
+                : { backgroundColor: "rgba(0,0,0,0.35)", borderColor: "rgba(255,255,255,0.28)" },
+            ]}
+            activeOpacity={0.7}
+          >
+            {selected && <Feather name="check" size={12} color="#000" />}
+          </TouchableOpacity>
+        </View>
       </LinearGradient>
 
       <View style={styles.cardBody}>
@@ -181,6 +195,14 @@ function AiCard({ provider, state, selected, onToggleSelect, onOpen, cardWidth, 
             </View>
           ) : null;
         })()}
+        {settingsSummaryText && settingsSummaryText !== "Default" && (
+          <View style={styles.settingsSummaryChip}>
+            <Feather name="sliders" size={9} color={`${provider.color}88`} />
+            <Text style={[styles.settingsSummaryText, { color: `${provider.color}88` }]} numberOfLines={1}>
+              {settingsSummaryText}
+            </Text>
+          </View>
+        )}
       </View>
     </Pressable>
   );
@@ -251,6 +273,10 @@ export default function HomeScreen() {
   const [attachment, setAttachment] = useState<Attachment | null>(null);
   const [synthesis, setSynthesis] = useState<SynthesisState>({ status: "idle", text: "", expanded: false });
   const [providerModes, setProviderModes] = useState<Record<string, string>>({});
+  const [providerSettings, setProviderSettings] = useState<Record<string, ProviderSettings>>(
+    () => Object.fromEntries(AI_PROVIDERS.map((p) => [p.key, { ...DEFAULT_SETTINGS }]))
+  );
+  const [settingsOpenFor, setSettingsOpenFor] = useState<string | null>(null);
   const [privateMode, setPrivateModeState] = useState(false);
 
   // Ambient city-glow pulse — slow neon breath cycling through provider colors
@@ -310,6 +336,13 @@ export default function HomeScreen() {
     refreshFromStorage();
     getAllProviderModes().then(setProviderModes);
     getPrivateMode().then(setPrivateModeState);
+    getAllGlobalSettings().then((all) => {
+      setProviderSettings((prev) => {
+        const merged = { ...prev };
+        AI_PROVIDERS.forEach((p) => { if (all[p.key]) merged[p.key] = { ...DEFAULT_SETTINGS, ...all[p.key] }; });
+        return merged;
+      });
+    });
   }, [refreshFromStorage]));
 
   const getOrCreateConvIds = useCallback(async (): Promise<ConvIds> => {
@@ -339,16 +372,20 @@ export default function HomeScreen() {
 
   const streamForProvider = useCallback(async (
     key: string, convId: number, content: string,
-    imageBase64?: string, imageMimeType?: string
+    imageBase64?: string, imageMimeType?: string,
+    tuning?: { mode?: string; temperature?: number; length?: string; tone?: string; frequencyPenalty?: number; presencePenalty?: number; topK?: number; safetyLevel?: string; safeMode?: boolean }
   ) => {
     updateCard(key, { streaming: true, streamingText: "", hasUnread: false, lastMessage: content, lastRole: "user" });
+    const abort = new AbortController();
+    const timeout = setTimeout(() => abort.abort(), 90_000);
     try {
-      const body: Record<string, string> = { content };
-      if (imageBase64) { body.imageBase64 = imageBase64; body.imageMimeType = imageMimeType || "image/jpeg"; }
+      const bodyObj: Record<string, unknown> = { content, ...tuning };
+      if (imageBase64) { bodyObj.imageBase64 = imageBase64; bodyObj.imageMimeType = imageMimeType || "image/jpeg"; }
       const res = await authFetch(`${BASE_URL}/api/${key}/conversations/${convId}/messages`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
+        body: JSON.stringify(bodyObj),
+        signal: abort.signal,
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const reader = res.body?.getReader();
@@ -378,11 +415,15 @@ export default function HomeScreen() {
         if (finished) break;
       }
       if (!finished) updateCard(key, { streaming: false, streamingText: "", lastMessage: fullText || content, lastRole: fullText ? "assistant" : "user", hasUnread: !!fullText, conversationId: convId });
-    } catch {
-      const pName = AI_PROVIDERS.find((p) => p.key === key)?.name ?? key;
+    } catch (err: unknown) {
       updateCard(key, { streaming: false, streamingText: "" });
-      Alert.alert(`${pName} failed`, "Your message is still in the input bar.", [{ text: "OK" }]);
+      const isAbort = err instanceof Error && err.name === "AbortError";
+      if (!isAbort) {
+        const pName = AI_PROVIDERS.find((p) => p.key === key)?.name ?? key;
+        Alert.alert(`${pName} failed`, "Your message is still in the input bar.", [{ text: "OK" }]);
+      }
     } finally {
+      clearTimeout(timeout);
       activeReaders.current.delete(key);
     }
   }, [updateCard]);
@@ -504,7 +545,12 @@ export default function HomeScreen() {
       setMessage("");
       setAttachment(null);
       [...selected].forEach((key) => {
-        if (ids[key]) streamForProvider(key, ids[key], text, pendingAttachment?.base64, pendingAttachment?.mimeType);
+        if (ids[key]) {
+          const s = providerSettings[key] ?? DEFAULT_SETTINGS;
+          const mode = providerModes[key] ?? "standard";
+          const tuning = { mode, temperature: s.temperature, length: s.length, tone: s.tone, frequencyPenalty: s.frequencyPenalty, presencePenalty: s.presencePenalty, topK: s.topK, safetyLevel: s.safetyLevel, safeMode: s.safeMode };
+          streamForProvider(key, ids[key], text, pendingAttachment?.base64, pendingAttachment?.mimeType, tuning);
+        }
       });
       refreshQuota();
     } catch {
@@ -560,8 +606,8 @@ export default function HomeScreen() {
     setAttachment(null);
   };
 
-  const anyStreaming = Object.values(cards).some((c) => c.streaming);
   const selectedProviders = AI_PROVIDERS.filter((p) => selected.has(p.key));
+  const anyStreaming = selectedProviders.some((p) => cards[p.key].streaming);
   const canSend = (message.trim().length > 0 || !!attachment) && selected.size > 0 && !anyStreaming;
   const topPad = Platform.OS === "web" ? 52 : insets.top;
   const bottomPad = Platform.OS === "web" ? 24 : insets.bottom;
@@ -761,8 +807,10 @@ export default function HomeScreen() {
                     selected={selected.has(p.key)}
                     onToggleSelect={() => toggleSelect(p.key)}
                     onOpen={() => openThread(p)}
+                    onSettings={() => setSettingsOpenFor(p.key)}
                     cardWidth={cardWidth}
                     activeMode={providerModes[p.key]}
+                    settingsSummaryText={settingsSummary(providerSettings[p.key] ?? DEFAULT_SETTINGS)}
                   />
                 ) : (
                   <View key={`empty-${i}`} style={{ width: cardWidth }} />
@@ -784,6 +832,28 @@ export default function HomeScreen() {
         </View>
 
       </KeyboardAvoidingView>
+
+      {/* Per-provider tuning sheet */}
+      {settingsOpenFor && (() => {
+        const p = AI_PROVIDERS.find((pr) => pr.key === settingsOpenFor);
+        if (!p) return null;
+        return (
+          <SettingsSheet
+            visible
+            providerName={p.name}
+            providerColor={p.color}
+            providerKey={p.key}
+            defs={PROVIDER_SETTING_DEFS[p.key]}
+            initial={providerSettings[p.key] ?? DEFAULT_SETTINGS}
+            onApply={async (s) => {
+              setProviderSettings((prev) => ({ ...prev, [settingsOpenFor]: s }));
+              await setGlobalSettings(settingsOpenFor, s);
+            }}
+            onClose={() => setSettingsOpenFor(null)}
+            isGlobal
+          />
+        );
+      })()}
     </BgImage>
   );
 }
@@ -897,12 +967,13 @@ const styles = StyleSheet.create({
     elevation: 6,
   },
   cardTop: {
-    height: 40, alignItems: "center", justifyContent: "center",
-    paddingHorizontal: 10, position: "relative",
+    height: 40, flexDirection: "row", alignItems: "center", justifyContent: "space-between",
+    paddingHorizontal: 10,
   },
-  cardProviderName: { fontSize: 13, fontFamily: "Inter_700Bold", letterSpacing: 0.2, textAlign: "center" },
+  cardProviderName: { fontSize: 13, fontFamily: "Inter_700Bold", letterSpacing: 0.2, flex: 1 },
+  cardTopRight: { flexDirection: "row", alignItems: "center", gap: 4 },
+  cardSettingsBtn: { width: 22, height: 22, alignItems: "center", justifyContent: "center" },
   checkbox: {
-    position: "absolute", top: 10, right: 10,
     width: 20, height: 20, borderRadius: 10, borderWidth: 1.5,
     alignItems: "center", justifyContent: "center",
   },
@@ -910,6 +981,8 @@ const styles = StyleSheet.create({
   previewRow: { minHeight: 54 },
   modeBadge: { alignSelf: "flex-start", paddingHorizontal: 8, paddingVertical: 3, borderRadius: 10, backgroundColor: "rgba(255,255,255,0.05)", borderWidth: StyleSheet.hairlineWidth, borderColor: "rgba(255,255,255,0.13)", marginTop: 2 },
   modeBadgeText: { fontSize: 10, fontFamily: "Inter_400Regular", letterSpacing: 0.3 },
+  settingsSummaryChip: { flexDirection: "row", alignItems: "center", gap: 4, alignSelf: "flex-start", marginTop: 2 },
+  settingsSummaryText: { fontSize: 9, fontFamily: "Inter_400Regular", letterSpacing: 0.2 },
   streamingRow: { flexDirection: "row", alignItems: "flex-start", gap: 6 },
   previewText: { fontSize: 12, fontFamily: "Inter_400Regular", lineHeight: 18 },
 
