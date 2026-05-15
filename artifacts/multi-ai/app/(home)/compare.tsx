@@ -20,6 +20,7 @@ import { authFetch } from "@/constants/apiAuth";
 
 import { AI_PROVIDERS, BASE_URL } from "@/constants/aiConfig";
 import { CONV_IDS_KEY } from "@/constants/sessions";
+import { NeonGlowOverlay } from "@/components/NeonGlowOverlay";
 
 const BG = require("../../assets/images/bg-alley.png");
 const BG_FOCAL: object = { transform: [{ scale: 1.5 }, { translateY: -200 }] };
@@ -123,6 +124,7 @@ export default function CompareScreen() {
         style={StyleSheet.absoluteFill}
         pointerEvents="none"
       />
+      <NeonGlowOverlay />
       <View style={styles.container}>
         {/* Header */}
         <View style={[styles.header, { paddingTop: topPad + 10 }]}>

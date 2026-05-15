@@ -29,6 +29,7 @@ import {
   type Session,
 } from "@/constants/sessions";
 import { authFetch } from "@/constants/apiAuth";
+import { NeonGlowOverlay } from "@/components/NeonGlowOverlay";
 
 const BG = require("../../assets/images/bg-alley.png");
 const BG_FOCAL: object = { transform: [{ scale: 1.5 }, { translateY: -200 }] };
@@ -262,6 +263,7 @@ export default function SessionDetailScreen() {
           colors={["rgba(7,7,13,0.65)", "rgba(7,7,13,0.97)"]}
           style={StyleSheet.absoluteFill}
         />
+        <NeonGlowOverlay />
         <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
           <ActivityIndicator color="rgba(255,255,255,0.6)" size="large" />
         </View>
@@ -276,6 +278,7 @@ export default function SessionDetailScreen() {
           colors={["rgba(7,7,13,0.65)", "rgba(7,7,13,0.97)"]}
           style={StyleSheet.absoluteFill}
         />
+        <NeonGlowOverlay />
         <View style={{ flex: 1, alignItems: "center", justifyContent: "center", gap: 12 }}>
           <Feather name="alert-circle" size={32} color="rgba(255,255,255,0.3)" />
           <Text style={{ color: "rgba(255,255,255,0.5)", fontSize: 16 }}>
@@ -300,6 +303,7 @@ export default function SessionDetailScreen() {
         style={StyleSheet.absoluteFill}
         pointerEvents="none"
       />
+      <NeonGlowOverlay />
       <View style={styles.container}>
         <View style={[styles.header, { paddingTop: topPad + 10 }]}>
           <BlurView intensity={30} tint="dark" style={StyleSheet.absoluteFill} />

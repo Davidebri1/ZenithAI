@@ -19,6 +19,7 @@ import { authFetch } from "@/constants/apiAuth";
 
 import { useColors } from "@/hooks/useColors";
 import { AI_PROVIDERS, BASE_URL } from "@/constants/aiConfig";
+import { NeonGlowOverlay } from "@/components/NeonGlowOverlay";
 import { getSessions, formatMessageTime, type Session } from "@/constants/sessions";
 
 const BG = require("../../assets/images/bg-alley.png");
@@ -133,6 +134,7 @@ export default function SearchScreen() {
         colors={["rgba(7,7,13,0.65)", "rgba(7,7,13,0.88)", "rgba(7,7,13,0.97)"]}
         style={StyleSheet.absoluteFill}
       />
+      <NeonGlowOverlay />
       <View style={styles.container}>
         <View style={[styles.header, { paddingTop: topPad + 10 }]}>
           <BlurView intensity={30} tint="dark" style={StyleSheet.absoluteFill} />

@@ -22,6 +22,7 @@ import { useRouter } from "expo-router";
 import { useUser } from "@clerk/expo";
 import { authFetch } from "@/constants/apiAuth";
 import { BASE_URL, AI_PROVIDERS } from "@/constants/aiConfig";
+import { NeonGlowOverlay } from "@/components/NeonGlowOverlay";
 
 const BG = require("../../assets/images/bg-alley.png");
 const BG_FOCAL: object = { transform: [{ scale: 1.5 }, { translateY: -200 }] };
@@ -134,6 +135,7 @@ export default function EnterpriseScreen() {
           colors={["rgba(7,7,20,0.90)", "rgba(7,7,20,0.78)", "rgba(7,7,20,0.95)"]}
           style={StyleSheet.absoluteFill}
         />
+        <NeonGlowOverlay />
 
         <View style={[styles.container, { paddingTop: insets.top + 8, paddingBottom: insets.bottom + 16 }]}>
           <View style={styles.header}>

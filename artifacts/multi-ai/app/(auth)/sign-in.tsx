@@ -20,6 +20,7 @@ import * as AuthSession from "expo-auth-session";
 import { useRouter, Link } from "expo-router";
 import { Feather } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { NeonGlowOverlay } from "@/components/NeonGlowOverlay";
 
 const BG = require("../../assets/images/bg-alley.png");
 
@@ -98,6 +99,7 @@ export default function SignInScreen() {
     return (
       <ImageBackground source={BG} style={styles.bg} resizeMode="cover">
         <LinearGradient colors={["rgba(7,7,13,0.6)", "rgba(7,7,13,0.97)"]} style={StyleSheet.absoluteFill} pointerEvents="none" />
+        <NeonGlowOverlay />
         <KeyboardAvoidingView style={styles.container} behavior="padding">
           <View style={[styles.card, { margin: 24, marginTop: topPad + 60 }]}>
             <BlurView intensity={40} tint="dark" style={StyleSheet.absoluteFill} />
@@ -138,6 +140,7 @@ export default function SignInScreen() {
   return (
     <ImageBackground source={BG} style={styles.bg} resizeMode="cover">
       <LinearGradient colors={["rgba(7,7,13,0.55)", "rgba(7,7,13,0.97)"]} style={StyleSheet.absoluteFill} pointerEvents="none" />
+      <NeonGlowOverlay />
       <KeyboardAvoidingView style={styles.container} behavior="padding">
         <ScrollView contentContainerStyle={{ flexGrow: 1 }} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
           <View style={{ paddingTop: topPad + 30, paddingHorizontal: 24 }}>

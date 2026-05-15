@@ -30,6 +30,7 @@ import Markdown from "react-native-markdown-display";
 import { useColors } from "@/hooks/useColors";
 import { AI_PROVIDERS, BASE_URL } from "@/constants/aiConfig";
 import { CONV_IDS_KEY, formatMessageTime } from "@/constants/sessions";
+import { NeonGlowOverlay } from "@/components/NeonGlowOverlay";
 
 const BG = require("../../assets/images/bg-alley.png");
 const BG_FOCAL: object = { transform: [{ scale: 1.5 }, { translateY: -200 }] };
@@ -264,6 +265,7 @@ export default function ThreadScreen() {
         colors={["rgba(7,7,13,0.72)", "rgba(7,7,13,0.82)", "rgba(7,7,13,0.92)"]}
         style={StyleSheet.absoluteFill}
       />
+      <NeonGlowOverlay />
       <KeyboardAvoidingView style={styles.container} behavior="padding">
         <View style={[styles.header, { paddingTop: topPad + 10 }]}>
           <BlurView intensity={30} tint="dark" style={StyleSheet.absoluteFill} pointerEvents="none" />

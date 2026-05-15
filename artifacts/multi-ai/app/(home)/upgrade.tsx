@@ -19,6 +19,7 @@ import { Feather } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { authFetch } from "@/constants/apiAuth";
 import { BASE_URL } from "@/constants/aiConfig";
+import { NeonGlowOverlay } from "@/components/NeonGlowOverlay";
 
 const BG = require("../../assets/images/bg-alley.png");
 const BG_FOCAL: object = { transform: [{ scale: 1.5 }, { translateY: -200 }] };
@@ -124,6 +125,7 @@ export default function UpgradeScreen() {
           colors={["rgba(7,7,20,0.92)", "rgba(7,7,20,0.80)", "rgba(7,7,20,0.95)"]}
           style={StyleSheet.absoluteFill}
         />
+        <NeonGlowOverlay />
         <View style={[styles.container, styles.successContainer, { paddingTop: insets.top + 8, paddingBottom: insets.bottom + 24 }]}>
           <View style={[styles.successIcon, Platform.OS === "web" ? { boxShadow: `0 0 40px ${ACCENT_GLOW}` } as object : {}]}>
             <LinearGradient colors={[`${ACCENT}30`, `${ACCENT}08`]} style={styles.successIconGrad}>

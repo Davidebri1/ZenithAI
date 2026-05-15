@@ -18,6 +18,7 @@ import { useRouter, useFocusEffect } from "expo-router";
 import { Feather } from "@expo/vector-icons";
 import { useColors } from "@/hooks/useColors";
 import { AI_PROVIDERS } from "@/constants/aiConfig";
+import { NeonGlowOverlay } from "@/components/NeonGlowOverlay";
 import {
   getSessions,
   deleteSession,
@@ -113,6 +114,7 @@ export default function HistoryScreen() {
         colors={["rgba(7,7,13,0.65)", "rgba(7,7,13,0.88)", "rgba(7,7,13,0.97)"]}
         style={StyleSheet.absoluteFill}
       />
+      <NeonGlowOverlay />
       <View style={styles.container}>
         {/* Header */}
         <View style={[styles.header, { paddingTop: topPad + 10 }]}>
