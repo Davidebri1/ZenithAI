@@ -10,6 +10,7 @@ import {
   ActivityIndicator,
   KeyboardAvoidingView,
   ScrollView,
+  Alert,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { BlurView } from "expo-blur";
@@ -29,7 +30,7 @@ const PRIMARY_GLOW = "rgba(0,229,160,0.4)";
 
 export default function SignInScreen() {
   const { isSignedIn } = useAuth();
-  const { signIn, errors, fetchStatus } = useSignIn();
+  const { signIn, fetchStatus } = useSignIn();
   const { startSSOFlow } = useSSO();
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -45,28 +46,28 @@ export default function SignInScreen() {
   }, [isSignedIn]);
 
   const handleSubmit = async () => {
+    if (!signIn) return;
     const { error } = await signIn.password({ emailAddress: email, password });
-    if (error) return;
+    if (error) {
+      Alert.alert("Sign in failed", error.message ?? "Check your email and password.");
+      return;
+    }
     if (signIn.status === "complete") {
-      await signIn.finalize({
-        navigate: ({ decorateUrl }) => {
-          const url = decorateUrl("/");
-          if (url.startsWith("http")) {
-            router.replace("/(home)");
-          } else {
-            router.replace("/(home)");
-          }
-        },
-      });
+      await signIn.finalize();
+      router.replace("/(home)");
     }
   };
 
   const handleVerify = async () => {
-    await signIn.mfa.verifyEmailCode({ code: verifyCode });
+    if (!signIn) return;
+    const { error } = await signIn.mfa.verifyEmailCode({ code: verifyCode });
+    if (error) {
+      Alert.alert("Verification failed", error.message ?? "Check the code and try again.");
+      return;
+    }
     if (signIn.status === "complete") {
-      await signIn.finalize({
-        navigate: () => router.replace("/(home)"),
-      });
+      await signIn.finalize();
+      router.replace("/(home)");
     }
   };
 
@@ -77,39 +78,53 @@ export default function SignInScreen() {
         strategy: "oauth_google",
         redirectUrl: AuthSession.makeRedirectUri(),
       });
-      if (createdSessionId) {
-        setActive!({ session: createdSessionId, navigate: () => router.replace("/(home)") });
+      if (createdSessionId && setActive) {
+        await setActive({ session: createdSessionId });
+        router.replace("/(home)");
       }
-    } catch {}
-    setGoogleLoading(false);
+    } catch (err: any) {
+      const msg = err?.errors?.[0]?.message ?? "Google sign in failed. Try email instead.";
+      Alert.alert("Google sign in failed", msg);
+    } finally {
+      setGoogleLoading(false);
+    }
   };
 
   const topPad = Platform.OS === "web" ? 52 : insets.top;
   const isLoading = fetchStatus === "fetching";
   const canSubmit = email.length > 0 && password.length > 0 && !isLoading;
 
-  if (signIn.status === "needs_client_trust") {
+  if (signIn?.status === "needs_second_factor") {
     return (
       <ImageBackground source={BG} style={styles.bg} resizeMode="cover">
         <LinearGradient colors={["rgba(7,7,13,0.6)", "rgba(7,7,13,0.97)"]} style={StyleSheet.absoluteFill} pointerEvents="none" />
         <KeyboardAvoidingView style={styles.container} behavior="padding">
-          <View style={[styles.card, { marginTop: topPad + 40 }]}>
+          <View style={[styles.card, { margin: 24, marginTop: topPad + 60 }]}>
             <BlurView intensity={40} tint="dark" style={StyleSheet.absoluteFill} />
             <View pointerEvents="none" style={[StyleSheet.absoluteFill, styles.cardOverlay]} />
             <Text style={styles.title}>Check your email</Text>
             <Text style={styles.subtitle}>Enter the verification code we sent to {email}</Text>
-            <TextInput
-              style={styles.input}
-              value={verifyCode}
-              onChangeText={setVerifyCode}
-              placeholder="6-digit code"
-              placeholderTextColor="rgba(255,255,255,0.3)"
-              keyboardType="numeric"
-              maxLength={6}
-            />
-            {errors?.fields?.code && <Text style={styles.errorText}>{errors.fields.code.message}</Text>}
-            <TouchableOpacity onPress={handleVerify} style={[styles.primaryBtn, canSubmit ? {} : styles.primaryBtnDisabled]} disabled={verifyCode.length < 6 || isLoading} activeOpacity={0.8}>
-              <Text style={styles.primaryBtnText}>{isLoading ? "Verifying…" : "Verify"}</Text>
+            <View style={styles.inputWrap}>
+              <BlurView intensity={15} tint="dark" style={StyleSheet.absoluteFill} />
+              <View pointerEvents="none" style={[StyleSheet.absoluteFill, styles.inputOverlay]} />
+              <TextInput
+                style={styles.input}
+                value={verifyCode}
+                onChangeText={setVerifyCode}
+                placeholder="6-digit code"
+                placeholderTextColor="rgba(255,255,255,0.3)"
+                keyboardType="numeric"
+                maxLength={6}
+                onSubmitEditing={handleVerify}
+              />
+            </View>
+            <TouchableOpacity
+              onPress={handleVerify}
+              style={[styles.primaryBtn, { marginTop: 20 }, (verifyCode.length < 6 || isLoading) && styles.primaryBtnDisabled]}
+              disabled={verifyCode.length < 6 || isLoading}
+              activeOpacity={0.8}
+            >
+              {isLoading ? <ActivityIndicator size="small" color="#000" /> : <Text style={styles.primaryBtnText}>Verify</Text>}
             </TouchableOpacity>
             <TouchableOpacity onPress={() => signIn.mfa.sendEmailCode()} style={styles.textBtn} activeOpacity={0.7}>
               <Text style={styles.textBtnText}>Resend code</Text>
@@ -174,7 +189,6 @@ export default function SignInScreen() {
                 autoComplete="email"
               />
             </View>
-            {errors?.fields?.identifier && <Text style={styles.errorText}>{errors.fields.identifier.message}</Text>}
 
             <Text style={[styles.label, { marginTop: 14 }]}>Password</Text>
             <View style={styles.inputWrap}>
@@ -188,12 +202,12 @@ export default function SignInScreen() {
                 placeholderTextColor="rgba(255,255,255,0.3)"
                 secureTextEntry={!showPassword}
                 autoComplete="password"
+                onSubmitEditing={handleSubmit}
               />
               <TouchableOpacity onPress={() => setShowPassword((v) => !v)} style={styles.eyeBtn} activeOpacity={0.7}>
                 <Feather name={showPassword ? "eye-off" : "eye"} size={16} color="rgba(255,255,255,0.4)" />
               </TouchableOpacity>
             </View>
-            {errors?.fields?.password && <Text style={styles.errorText}>{errors.fields.password.message}</Text>}
 
             <TouchableOpacity
               onPress={handleSubmit}
@@ -272,8 +286,6 @@ const styles = StyleSheet.create({
     zIndex: 1,
   },
   eyeBtn: { position: "absolute", right: 14, top: 0, bottom: 0, justifyContent: "center", zIndex: 2 },
-
-  errorText: { fontSize: 12, fontFamily: "Inter_400Regular", color: "#ff4466", marginTop: 6 },
 
   primaryBtn: {
     height: 52, borderRadius: 14, backgroundColor: PRIMARY,

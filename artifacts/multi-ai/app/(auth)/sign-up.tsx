@@ -10,6 +10,7 @@ import {
   ActivityIndicator,
   KeyboardAvoidingView,
   ScrollView,
+  Alert,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { BlurView } from "expo-blur";
@@ -28,7 +29,7 @@ const PRIMARY = "#00e5a0";
 const PRIMARY_GLOW = "rgba(0,229,160,0.4)";
 
 export default function SignUpScreen() {
-  const { signUp, errors, fetchStatus } = useSignUp();
+  const { signUp, fetchStatus } = useSignUp();
   const { startSSOFlow } = useSSO();
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -40,18 +41,32 @@ export default function SignUpScreen() {
   const [googleLoading, setGoogleLoading] = useState(false);
 
   const handleSubmit = async () => {
+    if (!signUp) return;
     const { error } = await signUp.password({ emailAddress: email, password });
-    if (error) return;
-    if (!error) await signUp.verifications.sendEmailCode();
+    if (error) {
+      Alert.alert("Sign up failed", error.message ?? "Try again.");
+      return;
+    }
+    await signUp.verifications.sendEmailCode();
   };
 
   const handleVerify = async () => {
-    await signUp.verifications.verifyEmailCode({ code });
-    if (signUp.status === "complete") {
-      await signUp.finalize({
-        navigate: () => router.replace("/(home)"),
-      });
+    if (!signUp) return;
+    const { error } = await signUp.verifications.verifyEmailCode({ code });
+    if (error) {
+      Alert.alert("Verification failed", error.message ?? "Check the code and try again.");
+      return;
     }
+    if (signUp.status === "complete") {
+      await signUp.finalize();
+      router.replace("/(home)");
+    }
+  };
+
+  const handleResend = async () => {
+    if (!signUp) return;
+    await signUp.verifications.sendEmailCode();
+    Alert.alert("Code resent", "Check your email for a new verification code.");
   };
 
   const handleGoogle = async () => {
@@ -61,18 +76,23 @@ export default function SignUpScreen() {
         strategy: "oauth_google",
         redirectUrl: AuthSession.makeRedirectUri(),
       });
-      if (createdSessionId) {
-        setActive!({ session: createdSessionId, navigate: () => router.replace("/(home)") });
+      if (createdSessionId && setActive) {
+        await setActive({ session: createdSessionId });
+        router.replace("/(home)");
       }
-    } catch {}
-    setGoogleLoading(false);
+    } catch (err: any) {
+      const msg = err?.errors?.[0]?.message ?? "Google sign up failed. Try email instead.";
+      Alert.alert("Google sign up failed", msg);
+    } finally {
+      setGoogleLoading(false);
+    }
   };
 
   const topPad = Platform.OS === "web" ? 52 : insets.top;
   const isLoading = fetchStatus === "fetching";
   const canSubmit = email.length > 0 && password.length >= 8 && !isLoading;
 
-  if (signUp.status === "missing_requirements" && signUp.unverifiedFields.includes("email_address")) {
+  if (signUp?.status === "missing_requirements" && signUp.unverifiedFields.includes("email_address")) {
     return (
       <ImageBackground source={BG} style={styles.bg} resizeMode="cover">
         <LinearGradient colors={["rgba(7,7,13,0.6)", "rgba(7,7,13,0.97)"]} style={StyleSheet.absoluteFill} pointerEvents="none" />
@@ -93,22 +113,21 @@ export default function SignUpScreen() {
                 placeholderTextColor="rgba(255,255,255,0.3)"
                 keyboardType="numeric"
                 maxLength={6}
+                onSubmitEditing={handleVerify}
               />
             </View>
-            {errors?.fields?.code && <Text style={styles.errorText}>{errors.fields.code.message}</Text>}
             <TouchableOpacity
               onPress={handleVerify}
-              style={[styles.primaryBtn, { marginTop: 20 }, code.length < 6 && styles.primaryBtnDisabled]}
+              style={[styles.primaryBtn, { marginTop: 20 }, (code.length < 6 || isLoading) && styles.primaryBtnDisabled]}
               disabled={code.length < 6 || isLoading}
               activeOpacity={0.8}
             >
               {isLoading ? <ActivityIndicator size="small" color="#000" /> : <Text style={styles.primaryBtnText}>Verify & create account</Text>}
             </TouchableOpacity>
-            <TouchableOpacity onPress={() => signUp.verifications.sendEmailCode()} style={styles.textBtn} activeOpacity={0.7}>
+            <TouchableOpacity onPress={handleResend} style={styles.textBtn} activeOpacity={0.7}>
               <Text style={styles.textBtnText}>Resend code</Text>
             </TouchableOpacity>
           </View>
-          <View nativeID="clerk-captcha" />
         </KeyboardAvoidingView>
       </ImageBackground>
     );
@@ -127,7 +146,7 @@ export default function SignUpScreen() {
               <Text style={styles.logoText}>Zenith</Text>
             </View>
             <Text style={styles.heroTitle}>Create account</Text>
-            <Text style={styles.heroSubtitle}>One prompt. Eight AI answers.</Text>
+            <Text style={styles.heroSubtitle}>One prompt. All AI Models, at once.</Text>
           </View>
 
           <View style={[styles.card, { marginHorizontal: 24, marginTop: 28 }]}>
@@ -168,7 +187,6 @@ export default function SignUpScreen() {
                 autoComplete="email"
               />
             </View>
-            {errors?.fields?.emailAddress && <Text style={styles.errorText}>{errors.fields.emailAddress.message}</Text>}
 
             <Text style={[styles.label, { marginTop: 14 }]}>Password</Text>
             <View style={styles.inputWrap}>
@@ -187,7 +205,6 @@ export default function SignUpScreen() {
                 <Feather name={showPassword ? "eye-off" : "eye"} size={16} color="rgba(255,255,255,0.4)" />
               </TouchableOpacity>
             </View>
-            {errors?.fields?.password && <Text style={styles.errorText}>{errors.fields.password.message}</Text>}
 
             <TouchableOpacity
               onPress={handleSubmit}
@@ -212,8 +229,6 @@ export default function SignUpScreen() {
               </Link>
             </View>
           </View>
-
-          <View nativeID="clerk-captcha" />
         </ScrollView>
       </KeyboardAvoidingView>
     </ImageBackground>
@@ -267,8 +282,6 @@ const styles = StyleSheet.create({
     fontSize: 15, fontFamily: "Inter_400Regular", color: "#e8e8f4", zIndex: 1,
   },
   eyeBtn: { position: "absolute", right: 14, top: 0, bottom: 0, justifyContent: "center", zIndex: 2 },
-
-  errorText: { fontSize: 12, fontFamily: "Inter_400Regular", color: "#ff4466", marginTop: 6 },
 
   primaryBtn: { height: 52, borderRadius: 14, backgroundColor: PRIMARY, alignItems: "center", justifyContent: "center" },
   primaryBtnDisabled: { backgroundColor: "rgba(0,229,160,0.3)" },

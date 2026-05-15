@@ -544,12 +544,9 @@ export default function HomeScreen() {
   const anyStreaming = Object.values(cards).some((c) => c.streaming);
   const selectedProviders = AI_PROVIDERS.filter((p) => selected.has(p.key));
   const canSend = (message.trim().length > 0 || !!attachment) && selected.size > 0 && !anyStreaming;
-  const canSynthesize = !anyStreaming && AI_PROVIDERS.filter((p) => selected.has(p.key) && cards[p.key].lastRole === "assistant" && cards[p.key].lastMessage.length > 10).length >= 2;
   const topPad = Platform.OS === "web" ? 52 : insets.top;
   const bottomPad = Platform.OS === "web" ? 24 : insets.bottom;
 
-  const synthReady = canSynthesize || synthesis.status !== "idle";
-  const synthOpacity = synthReady ? 1 : 0.3;
 
   const rows: (AiProvider | null)[][] = [];
   for (let i = 0; i < AI_PROVIDERS.length; i += 2) rows.push([AI_PROVIDERS[i], AI_PROVIDERS[i + 1] ?? null]);
@@ -675,7 +672,7 @@ export default function HomeScreen() {
               stale={anyStreaming && synthesis.status === "done"}
             />
           )}
-          <Animated.View style={synthReady ? { transform: [{ scale: synthBreath }] } : undefined}>
+          <Animated.View style={{ transform: [{ scale: synthBreath }] }}>
             <TouchableOpacity
               onPress={
                 synthesis.expanded
@@ -684,36 +681,32 @@ export default function HomeScreen() {
                     ? () => setSynthesis((s) => ({ ...s, expanded: true }))
                     : handleSynthesize
               }
-              disabled={!canSynthesize && synthesis.status === "idle"}
               style={[
                 styles.synthesizeBtn,
-                { opacity: synthOpacity },
                 synthesis.expanded && { borderColor: `${SYNTHESIS_COLOR}70` },
-                Platform.OS === "web" && synthReady ? { boxShadow: `0 0 18px ${SYNTHESIS_COLOR_GLOW}` } as object : {},
+                Platform.OS === "web" ? { boxShadow: `0 0 18px ${SYNTHESIS_COLOR_GLOW}` } as object : {},
               ]}
               activeOpacity={0.75}
             >
               <BlurView intensity={22} tint="dark" style={StyleSheet.absoluteFill} pointerEvents="none" />
               <LinearGradient
-                colors={synthReady ? [`${SYNTHESIS_COLOR}20`, `${SYNTHESIS_COLOR}05`] : ["rgba(255,255,255,0.03)", "transparent"]}
+                colors={[`${SYNTHESIS_COLOR}20`, `${SYNTHESIS_COLOR}05`]}
                 style={StyleSheet.absoluteFill}
                 pointerEvents="none"
               />
-              <Text style={[styles.synthesizeBtnIcon, !synthReady && { color: "rgba(255,255,255,0.5)" }]}>✦</Text>
+              <Text style={styles.synthesizeBtnIcon}>✦</Text>
               <View style={styles.synthesizeBtnContent}>
-                <Text style={[styles.synthesizeBtnTitle, !synthReady && { color: "rgba(255,255,255,0.5)" }, Platform.OS === "web" && synthReady ? { textShadow: `0 0 20px ${SYNTHESIS_COLOR}` } as object : {}]}>
+                <Text style={[styles.synthesizeBtnTitle, Platform.OS === "web" ? { textShadow: `0 0 20px ${SYNTHESIS_COLOR}` } as object : {}]}>
                   {synthesis.status === "loading" ? "Synthesizing…" : "Synthesize"}
                 </Text>
-                <Text style={[styles.synthesizeBtnSub, !synthReady && { color: "rgba(255,255,255,0.2)" }]}>
+                <Text style={styles.synthesizeBtnSub}>
                   {synthesis.expanded && synthesis.status !== "idle"
                     ? "Tap to collapse"
                     : synthesis.status === "done"
                       ? "Tap to reveal consensus"
                       : synthesis.status === "error"
                         ? "Tap to retry"
-                        : canSynthesize
-                          ? `Consensus across ${AI_PROVIDERS.filter((p) => selected.has(p.key) && cards[p.key].lastRole === "assistant").length} AI responses`
-                          : "Send a prompt to unlock"}
+                        : `Consensus across ${AI_PROVIDERS.filter((p) => selected.has(p.key)).length} AI responses`}
                 </Text>
               </View>
               {synthesis.status === "loading" ? (
@@ -722,7 +715,7 @@ export default function HomeScreen() {
                 <Feather
                   name={synthesis.expanded ? "chevron-up" : "chevron-down"}
                   size={16}
-                  color={synthReady ? `${SYNTHESIS_COLOR}90` : "rgba(255,255,255,0.2)"}
+                  color={`${SYNTHESIS_COLOR}90`}
                 />
               )}
             </TouchableOpacity>
