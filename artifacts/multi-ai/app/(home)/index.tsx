@@ -718,12 +718,6 @@ export default function HomeScreen() {
               ]}
               activeOpacity={0.75}
             >
-              <BlurView intensity={22} tint="dark" style={StyleSheet.absoluteFill} pointerEvents="none" />
-              <LinearGradient
-                colors={[`${SYNTHESIS_COLOR}20`, `${SYNTHESIS_COLOR}05`]}
-                style={StyleSheet.absoluteFill}
-                pointerEvents="none"
-              />
               <Text style={styles.synthesizeBtnIcon}>✦</Text>
               <View style={styles.synthesizeBtnContent}>
                 <Text style={[styles.synthesizeBtnTitle, Platform.OS === "web" ? { textShadow: `0 0 20px ${SYNTHESIS_COLOR}` } as object : {}]}>

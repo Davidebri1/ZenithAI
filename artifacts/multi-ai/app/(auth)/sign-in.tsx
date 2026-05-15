@@ -137,26 +137,20 @@ export default function SignInScreen() {
 
   return (
     <BgImage style={styles.bg}>
-      <LinearGradient colors={["rgba(7,7,13,0.35)", "rgba(7,7,13,0.7)", "rgba(7,7,13,0.92)"]} locations={[0, 0.4, 1]} style={StyleSheet.absoluteFill} pointerEvents="none" />
+      <LinearGradient colors={["rgba(7,7,13,0.08)", "rgba(7,7,13,0.38)", "rgba(7,7,13,0.82)"]} locations={[0, 0.45, 1]} style={StyleSheet.absoluteFill} pointerEvents="none" />
       <NeonGlowOverlay />
       <KeyboardAvoidingView style={styles.container} behavior="padding">
         <ScrollView contentContainerStyle={{ flexGrow: 1 }} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
           <View style={[styles.titleBand, { paddingTop: topPad + 30 }]}>
-            <BlurView intensity={18} tint="dark" style={StyleSheet.absoluteFill} pointerEvents="none" />
-            <LinearGradient
-              colors={["rgba(180,35,10,0.28)", "rgba(10,5,5,0.55)", "transparent"]}
-              style={StyleSheet.absoluteFill}
-              pointerEvents="none"
-            />
             <View style={styles.logoMark}>
               <Text style={styles.logoZ}>Z</Text>
             </View>
             <Text style={[
               styles.logoText,
               Platform.OS === "web"
-                ? { textShadow: "0 0 22px rgba(255,90,40,0.65), 0 0 50px rgba(220,50,10,0.3)" } as object
+                ? { textShadow: "0 0 28px rgba(0,220,200,0.55), 0 0 60px rgba(0,200,180,0.25)" } as object
                 : {},
-            ]}>Zenith</Text>
+            ]}>Zenith AI</Text>
             <Text style={styles.heroTitle}>Welcome back</Text>
             <Text style={styles.heroSubtitle}>Sign in to compare All AI Models</Text>
           </View>
@@ -254,11 +248,7 @@ const styles = StyleSheet.create({
 
   titleBand: {
     width: "100%", alignItems: "center",
-    paddingBottom: 28, paddingHorizontal: 24,
-    overflow: "hidden",
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: "rgba(255,255,255,0.07)",
-    marginBottom: 4,
+    paddingTop: 0, paddingBottom: 24, paddingHorizontal: 24,
   },
   logoMark: {
     width: 52, height: 52, borderRadius: 14,
@@ -268,10 +258,10 @@ const styles = StyleSheet.create({
     marginBottom: 14,
   },
   logoZ: { fontSize: 28, fontFamily: "Inter_700Bold", color: "#22c55e" },
-  logoText: { fontSize: 38, fontFamily: "Inter_700Bold", color: "#e8e8f4", letterSpacing: -1.5, marginBottom: 14 },
+  logoText: { fontSize: 44, fontFamily: "Inter_700Bold", color: "#e8e8f4", letterSpacing: 2, marginBottom: 10 },
 
-  heroTitle: { fontSize: 20, fontFamily: "Inter_600SemiBold", color: "rgba(255,255,255,0.65)", letterSpacing: -0.3 },
-  heroSubtitle: { fontSize: 13, fontFamily: "Inter_400Regular", color: "rgba(255,255,255,0.3)", marginTop: 4 },
+  heroTitle: { fontSize: 18, fontFamily: "Inter_400Regular", color: "rgba(255,255,255,0.55)", letterSpacing: 0.5 },
+  heroSubtitle: { fontSize: 12, fontFamily: "Inter_400Regular", color: "rgba(255,255,255,0.28)", marginTop: 4, letterSpacing: 0.2 },
 
   card: {
     borderRadius: 24, overflow: "hidden", padding: 24,
