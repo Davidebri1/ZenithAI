@@ -34,9 +34,8 @@ import { NeonGlowOverlay } from "@/components/NeonGlowOverlay";
 import { PROVIDER_MODES, getProviderMode, setProviderMode } from "@/constants/providerModes";
 import { ProviderSettings, PROVIDER_SETTING_DEFS, getGlobalSettings, DEFAULT_SETTINGS } from "@/constants/providerSettings";
 import { SettingsSheet } from "@/components/SettingsSheet";
+import { BgImage } from "@/components/BgImage";
 
-const BG = require("../../assets/images/bg-alley.png");
-const BG_FOCAL = { transform: [{ scale: 1.5 }, { translateY: -200 }] };
 
 
 interface Message {
@@ -288,7 +287,7 @@ export default function ThreadScreen() {
   };
 
   return (
-    <ImageBackground source={BG} style={styles.bg} resizeMode="cover" imageStyle={BG_FOCAL}>
+    <BgImage style={styles.bg}>
       <LinearGradient
         colors={["rgba(7,7,13,0.72)", "rgba(7,7,13,0.82)", "rgba(7,7,13,0.92)"]}
         style={StyleSheet.absoluteFill}
@@ -509,7 +508,7 @@ export default function ThreadScreen() {
         onApply={(s) => setSettings(s)}
         onClose={() => setSettingsOpen(false)}
       />
-    </ImageBackground>
+    </BgImage>
   );
 }
 

@@ -35,10 +35,9 @@ import { NeonSignsOverlay } from "@/components/NeonSignsOverlay";
 import { AI_PROVIDERS, BASE_URL, SYNTHESIS_COLOR, SYNTHESIS_COLOR_GLOW, type AiProvider } from "@/constants/aiConfig";
 import { PROVIDER_MODES, getAllProviderModes } from "@/constants/providerModes";
 import { saveSession, CONV_IDS_KEY } from "@/constants/sessions";
+import { BgImage } from "@/components/BgImage";
 
 const CARD_GAP = 10;
-const BG = require("../../assets/images/bg-alley.png");
-const BG_FOCAL = { transform: [{ scale: 1.5 }, { translateY: -200 }] };
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
@@ -570,7 +569,7 @@ export default function HomeScreen() {
   for (let i = 0; i < AI_PROVIDERS.length; i += 2) rows.push([AI_PROVIDERS[i], AI_PROVIDERS[i + 1] ?? null]);
 
   return (
-    <ImageBackground source={BG} style={styles.bg} resizeMode="cover" imageStyle={BG_FOCAL}>
+    <BgImage style={styles.bg}>
       <LinearGradient
         colors={["rgba(7,7,13,0.25)", "rgba(7,7,13,0.55)", "rgba(7,7,13,0.88)", "rgba(7,7,13,0.97)"]}
         locations={[0, 0.35, 0.68, 1]}
@@ -782,7 +781,7 @@ export default function HomeScreen() {
         </View>
 
       </KeyboardAvoidingView>
-    </ImageBackground>
+    </BgImage>
   );
 }
 

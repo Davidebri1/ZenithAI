@@ -30,9 +30,8 @@ import {
 } from "@/constants/sessions";
 import { authFetch } from "@/constants/apiAuth";
 import { NeonGlowOverlay } from "@/components/NeonGlowOverlay";
+import { BgImage } from "@/components/BgImage";
 
-const BG = require("../../assets/images/bg-alley.png");
-const BG_FOCAL = { transform: [{ scale: 1.5 }, { translateY: -200 }] };
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 const CARD_GAP = 10;
 
@@ -258,7 +257,7 @@ export default function SessionDetailScreen() {
 
   if (loadingSession) {
     return (
-      <ImageBackground source={BG} style={{ flex: 1 }} resizeMode="cover" imageStyle={BG_FOCAL}>
+      <BgImage>
         <LinearGradient
           colors={["rgba(7,7,13,0.65)", "rgba(7,7,13,0.97)"]}
           style={StyleSheet.absoluteFill}
@@ -267,13 +266,13 @@ export default function SessionDetailScreen() {
         <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
           <ActivityIndicator color="rgba(255,255,255,0.6)" size="large" />
         </View>
-      </ImageBackground>
+      </BgImage>
     );
   }
 
   if (!session) {
     return (
-      <ImageBackground source={BG} style={{ flex: 1 }} resizeMode="cover" imageStyle={BG_FOCAL}>
+      <BgImage>
         <LinearGradient
           colors={["rgba(7,7,13,0.65)", "rgba(7,7,13,0.97)"]}
           style={StyleSheet.absoluteFill}
@@ -288,12 +287,12 @@ export default function SessionDetailScreen() {
             <Text style={{ color: "rgba(255,255,255,0.7)", fontSize: 15 }}>Go back</Text>
           </TouchableOpacity>
         </View>
-      </ImageBackground>
+      </BgImage>
     );
   }
 
   return (
-    <ImageBackground source={BG} style={styles.bg} resizeMode="cover" imageStyle={BG_FOCAL}>
+    <BgImage style={styles.bg}>
       <LinearGradient
         colors={[
           "rgba(7,7,13,0.55)",
@@ -422,7 +421,7 @@ export default function SessionDetailScreen() {
           />
         )}
       </View>
-    </ImageBackground>
+    </BgImage>
   );
 }
 

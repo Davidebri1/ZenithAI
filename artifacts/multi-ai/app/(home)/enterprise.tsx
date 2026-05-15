@@ -23,9 +23,8 @@ import { useUser } from "@clerk/expo";
 import { authFetch } from "@/constants/apiAuth";
 import { BASE_URL, AI_PROVIDERS } from "@/constants/aiConfig";
 import { NeonGlowOverlay } from "@/components/NeonGlowOverlay";
+import { BgImage } from "@/components/BgImage";
 
-const BG = require("../../assets/images/bg-alley.png");
-const BG_FOCAL = { transform: [{ scale: 1.5 }, { translateY: -200 }] };
 
 const { width: SW } = Dimensions.get("window");
 
@@ -131,7 +130,7 @@ export default function EnterpriseScreen() {
 
   return (
     <>
-      <ImageBackground source={BG} style={StyleSheet.absoluteFill} resizeMode="cover" imageStyle={BG_FOCAL}>
+      <BgImage style={StyleSheet.absoluteFill}>
         <LinearGradient
           colors={["rgba(7,7,20,0.90)", "rgba(7,7,20,0.78)", "rgba(7,7,20,0.95)"]}
           style={StyleSheet.absoluteFill}
@@ -288,7 +287,7 @@ export default function EnterpriseScreen() {
 
           </ScrollView>
         </View>
-      </ImageBackground>
+      </BgImage>
 
       {/* In-app contact form modal */}
       <Modal
