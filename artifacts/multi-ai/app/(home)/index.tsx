@@ -861,18 +861,18 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16, paddingBottom: 8, gap: 4,
   },
   synthesizeBtn: {
-    flexDirection: "row", alignItems: "center", gap: 10,
-    paddingHorizontal: 18, paddingVertical: 13,
-    borderRadius: 18, borderWidth: 1, borderColor: `${SYNTHESIS_COLOR}35`,
+    flexDirection: "row", alignItems: "center", gap: 8,
+    paddingHorizontal: 14, paddingVertical: 8,
+    borderRadius: 14, borderWidth: 1, borderColor: `${SYNTHESIS_COLOR}30`,
     overflow: "hidden",
   },
-  synthesizeBtnIcon: { fontSize: 20, color: SYNTHESIS_COLOR },
-  synthesizeBtnContent: { flex: 1, gap: 2, alignItems: "center" },
+  synthesizeBtnIcon: { fontSize: 14, color: SYNTHESIS_COLOR },
+  synthesizeBtnContent: { flex: 1, gap: 1, alignItems: "center" },
   synthesizeBtnTitle: {
-    fontSize: 15, fontFamily: "Inter_700Bold",
-    color: SYNTHESIS_COLOR, letterSpacing: 0.3, textAlign: "center",
+    fontSize: 13, fontFamily: "Inter_600SemiBold",
+    color: SYNTHESIS_COLOR, letterSpacing: 0.2, textAlign: "center",
   },
-  synthesizeBtnSub: { fontSize: 11, fontFamily: "Inter_400Regular", color: "rgba(255,200,0,0.5)", textAlign: "center" },
+  synthesizeBtnSub: { fontSize: 10, fontFamily: "Inter_400Regular", color: "rgba(255,200,0,0.4)", textAlign: "center" },
 
   synthCard: { borderRadius: 22, marginBottom: 4 },
   synthHeader: {
