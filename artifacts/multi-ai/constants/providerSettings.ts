@@ -23,14 +23,20 @@ export interface ProviderSettingsDef {
 }
 
 export const PROVIDER_SETTING_DEFS: Record<string, ProviderSettingsDef> = {
-  openai:   { temperature: true,  length: true, tone: true, frequencyPenalty: true,  presencePenalty: true,  topK: false, safetyLevel: false, safeMode: false },
-  anthropic:{ temperature: true,  length: true, tone: true, frequencyPenalty: false, presencePenalty: false, topK: true,  safetyLevel: false, safeMode: false },
-  gemini:   { temperature: true,  length: true, tone: true, frequencyPenalty: false, presencePenalty: false, topK: true,  safetyLevel: true,  safeMode: false },
-  grok:     { temperature: true,  length: true, tone: true, frequencyPenalty: false, presencePenalty: false, topK: false, safetyLevel: false, safeMode: false },
-  deepseek: { temperature: true,  length: true, tone: true, frequencyPenalty: false, presencePenalty: false, topK: false, safetyLevel: false, safeMode: false },
-  mistral:  { temperature: true,  length: true, tone: true, frequencyPenalty: false, presencePenalty: false, topK: false, safetyLevel: false, safeMode: true  },
-  llama:    { temperature: true,  length: true, tone: true, frequencyPenalty: false, presencePenalty: false, topK: false, safetyLevel: false, safeMode: false },
-  qwen:     { temperature: true,  length: true, tone: true, frequencyPenalty: false, presencePenalty: false, topK: false, safetyLevel: false, safeMode: false },
+  openai:        { temperature: true,  length: true, tone: true, frequencyPenalty: true,  presencePenalty: true,  topK: false, safetyLevel: false, safeMode: false },
+  "openai-elite":{ temperature: false, length: true, tone: true, frequencyPenalty: false, presencePenalty: false, topK: false, safetyLevel: false, safeMode: false },
+  anthropic:     { temperature: true,  length: true, tone: true, frequencyPenalty: false, presencePenalty: false, topK: true,  safetyLevel: false, safeMode: false },
+  "claude-opus": { temperature: true,  length: true, tone: true, frequencyPenalty: false, presencePenalty: false, topK: true,  safetyLevel: false, safeMode: false },
+  gemini:        { temperature: true,  length: true, tone: true, frequencyPenalty: false, presencePenalty: false, topK: true,  safetyLevel: true,  safeMode: false },
+  grok:          { temperature: true,  length: true, tone: true, frequencyPenalty: false, presencePenalty: false, topK: false, safetyLevel: false, safeMode: false },
+  deepseek:      { temperature: true,  length: true, tone: true, frequencyPenalty: false, presencePenalty: false, topK: false, safetyLevel: false, safeMode: false },
+  mistral:       { temperature: true,  length: true, tone: true, frequencyPenalty: false, presencePenalty: false, topK: false, safetyLevel: false, safeMode: true  },
+  llama:         { temperature: true,  length: true, tone: true, frequencyPenalty: false, presencePenalty: false, topK: false, safetyLevel: false, safeMode: false },
+  qwen:          { temperature: true,  length: true, tone: true, frequencyPenalty: false, presencePenalty: false, topK: false, safetyLevel: false, safeMode: false },
+  gemma:         { temperature: true,  length: true, tone: true, frequencyPenalty: false, presencePenalty: false, topK: false, safetyLevel: false, safeMode: false },
+  phi:           { temperature: true,  length: true, tone: true, frequencyPenalty: false, presencePenalty: false, topK: false, safetyLevel: false, safeMode: false },
+  "deepseek-free":{ temperature: true, length: true, tone: true, frequencyPenalty: false, presencePenalty: false, topK: false, safetyLevel: false, safeMode: false },
+  "qwen-free":   { temperature: true,  length: true, tone: true, frequencyPenalty: false, presencePenalty: false, topK: false, safetyLevel: false, safeMode: false },
 };
 
 export const DEFAULT_SETTINGS: ProviderSettings = {

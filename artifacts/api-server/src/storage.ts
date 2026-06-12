@@ -3,7 +3,8 @@ import { eq, sql } from "drizzle-orm";
 import { db } from "@workspace/db";
 
 export const FREE_PROMPTS_LIMIT = 9999;
-export const PRO_PROMPTS_LIMIT = 250;
+export const PRO_PROMPTS_LIMIT = 500;
+export const ELITE_PROMPTS_LIMIT = 1000;
 
 export class Storage {
   async getProduct(productId: string) {
@@ -84,13 +85,27 @@ export class Storage {
     return user;
   }
 
-  async deactivateProPlan(userId: string) {
+  async activateElitePlan(userId: string) {
+    const [user] = await db
+      .update(users)
+      .set({ plan: "elite", promptsLimit: ELITE_PROMPTS_LIMIT, updatedAt: new Date() })
+      .where(eq(users.id, userId))
+      .returning();
+    return user;
+  }
+
+  async deactivatePaidPlan(userId: string) {
     const [user] = await db
       .update(users)
       .set({ plan: "free", promptsLimit: FREE_PROMPTS_LIMIT, updatedAt: new Date() })
       .where(eq(users.id, userId))
       .returning();
     return user;
+  }
+
+  /** @deprecated Use deactivatePaidPlan instead */
+  async deactivateProPlan(userId: string) {
+    return this.deactivatePaidPlan(userId);
   }
 
   async resetMonthlyUsage(userId: string) {

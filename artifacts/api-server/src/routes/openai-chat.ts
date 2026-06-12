@@ -3,6 +3,7 @@ import { db, conversations, messages } from "@workspace/db";
 import { eq, asc } from "drizzle-orm";
 import { openai } from "@workspace/integrations-openai-ai-server";
 import { getAuth } from "@clerk/express";
+import { requirePlan } from "../lib/planCheck";
 
 const router = Router();
 
@@ -38,6 +39,18 @@ router.post("/openai/conversations", async (req, res) => {
   }
 });
 
+router.post("/openai-elite/conversations", async (req, res) => {
+  const userId = getAuth(req)?.userId ?? "guest";
+  try {
+    const { title } = req.body as { title: string };
+    const [conv] = await db.insert(conversations).values({ title: title || "New Conversation", userId }).returning();
+    res.status(201).json(conv);
+  } catch (err) {
+    req.log.error({ err }, "createOpenaiEliteConversation error");
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 router.get("/openai/conversations", async (req, res) => {
   const userId = getAuth(req)?.userId ?? "guest";
   try {
@@ -49,7 +62,20 @@ router.get("/openai/conversations", async (req, res) => {
   }
 });
 
+router.get("/openai-elite/conversations", async (req, res) => {
+  const userId = getAuth(req)?.userId ?? "guest";
+  try {
+    const convs = await db.select().from(conversations).where(eq(conversations.userId, userId)).orderBy(asc(conversations.createdAt));
+    res.json(convs);
+  } catch (err) {
+    req.log.error({ err }, "listOpenaiEliteConversations error");
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 router.post("/openai/conversations/:id/messages", async (req, res) => {
+  const allowed = await requirePlan(req, res, "pro");
+  if (!allowed) return;
   const userId = getAuth(req)?.userId ?? "guest";
   try {
     const id = parseInt(req.params.id, 10);
@@ -153,6 +179,110 @@ router.post("/openai/conversations/:id/messages", async (req, res) => {
     res.end();
   } catch (err) {
     req.log.error({ err }, "sendOpenaiMessage error");
+    if (!res.headersSent) {
+      res.status(500).json({ error: "Internal server error" });
+    } else {
+      res.write(`data: ${JSON.stringify({ error: "Stream error" })}\n\n`);
+      res.end();
+    }
+  }
+});
+
+// openai-elite: GPT o3 reasoning, requires elite plan
+router.post("/openai-elite/conversations/:id/messages", async (req, res) => {
+  const allowed = await requirePlan(req, res, "elite");
+  if (!allowed) return;
+  const userId = getAuth(req)?.userId ?? "guest";
+  try {
+    const id = parseInt(req.params.id, 10);
+    if (isNaN(id) || id <= 0) { res.status(400).json({ error: "Invalid conversation id" }); return; }
+    const [conv] = await db.select().from(conversations).where(eq(conversations.id, id));
+    if (!conv) { res.status(404).json({ error: "Conversation not found" }); return; }
+    if (conv.userId !== "unknown" && conv.userId !== "guest" && conv.userId !== userId) { res.status(403).json({ error: "Forbidden" }); return; }
+    const { content, imageBase64, imageMimeType, temperature, length, tone, memoryContext } = req.body as {
+      content: string;
+      imageBase64?: string;
+      imageMimeType?: string;
+      temperature?: number;
+      length?: string;
+      tone?: string;
+      memoryContext?: string;
+    };
+
+    if ((content === undefined || content === null) && !imageBase64) {
+      res.status(400).json({ error: "content or image is required" });
+      return;
+    }
+
+    const textContent = content || "";
+    const storedContent = imageBase64
+      ? `${textContent}${textContent ? "\n\n" : ""}[📷 Image attached]`
+      : textContent;
+
+    await db.insert(messages).values({ conversationId: id, role: "user", content: storedContent });
+
+    const existingMessages = await db
+      .select()
+      .from(messages)
+      .where(eq(messages.conversationId, id))
+      .orderBy(asc(messages.createdAt));
+
+    const normalized = existingMessages.filter((m, i, arr) => i === arr.length - 1 || arr[i + 1].role !== m.role);
+
+    type ChatMsg = {
+      role: "user" | "assistant";
+      content: string | Array<{ type: string; text?: string; image_url?: { url: string } }>;
+    };
+
+    const chatMessages: ChatMsg[] = normalized.map((m, idx) => {
+      const isLastUser = idx === normalized.length - 1 && m.role === "user" && imageBase64;
+      if (isLastUser) {
+        return {
+          role: "user",
+          content: [
+            { type: "image_url", image_url: { url: `data:${imageMimeType || "image/jpeg"};base64,${imageBase64}` } },
+            { type: "text", text: textContent || "Describe this image." },
+          ],
+        };
+      }
+      return { role: m.role as "user" | "assistant", content: m.content };
+    });
+
+    res.setHeader("Content-Type", "text/event-stream");
+    res.setHeader("Cache-Control", "no-cache");
+    res.setHeader("Connection", "keep-alive");
+
+    const sysPrompt = buildSystemPrompt(tone, length, memoryContext);
+    const finalMessages = sysPrompt
+      ? [{ role: "system" as const, content: sysPrompt }, ...chatMessages]
+      : chatMessages;
+
+    let fullResponse = "";
+
+    const lengthTokens: Record<string, number> = { concise: 1024, detailed: 32768, exhaustive: 65536 };
+    const maxToks = length && length !== "standard" ? (lengthTokens[length] ?? 32768) : 32768;
+
+    const stream = openai.chat.completions.create({
+      model: "o3",
+      max_completion_tokens: maxToks,
+      messages: finalMessages,
+      reasoning_effort: "high",
+      stream: true,
+    } as any) as unknown as AsyncIterable<{ choices: { delta: { content?: string } }[] }>;
+
+    for await (const chunk of stream) {
+      const delta = chunk.choices[0]?.delta?.content;
+      if (delta) {
+        fullResponse += delta;
+        res.write(`data: ${JSON.stringify({ content: delta })}\n\n`);
+      }
+    }
+
+    await db.insert(messages).values({ conversationId: id, role: "assistant", content: fullResponse });
+    res.write(`data: ${JSON.stringify({ done: true })}\n\n`);
+    res.end();
+  } catch (err) {
+    req.log.error({ err }, "sendOpenaiEliteMessage error");
     if (!res.headersSent) {
       res.status(500).json({ error: "Internal server error" });
     } else {

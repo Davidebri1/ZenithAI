@@ -50,12 +50,25 @@ export class WebhookHandlers {
 
       const status: string = data.status ?? "";
       if (ACTIVE_STATUSES.has(status)) {
-        await storage.activateProPlan(user.id);
+        // Determine plan tier by price unit_amount
+        const unitAmount: number = data.items?.data?.[0]?.price?.unit_amount ?? 0;
+        const interval: string = data.items?.data?.[0]?.price?.recurring?.interval ?? "month";
+        // Normalise to monthly equivalent in cents
+        const monthlyAmount = interval === "year" ? Math.round(unitAmount / 12) : unitAmount;
+        // ≥ $40/mo → elite, else → pro
+        const newPlan = monthlyAmount >= 4000 ? "elite" : "pro";
+
+        if (newPlan === "elite") {
+          await storage.activateElitePlan(user.id);
+          logger.info({ userId: user.id, status, monthlyAmount, eventType: type }, "Elite plan activated");
+        } else {
+          await storage.activateProPlan(user.id);
+          logger.info({ userId: user.id, status, monthlyAmount, eventType: type }, "Pro plan activated");
+        }
         await storage.updateUserStripeInfo(user.id, { stripeSubscriptionId: data.id });
-        logger.info({ userId: user.id, status, eventType: type }, "Pro plan activated");
       } else {
-        await storage.deactivateProPlan(user.id);
-        logger.info({ userId: user.id, status, eventType: type }, "Pro plan deactivated");
+        await storage.deactivatePaidPlan(user.id);
+        logger.info({ userId: user.id, status, eventType: type }, "Paid plan deactivated");
       }
       return;
     }
@@ -67,7 +80,7 @@ export class WebhookHandlers {
       const user = await storage.getUserByStripeCustomerId(customerId);
       if (!user) return;
 
-      await storage.deactivateProPlan(user.id);
+      await storage.deactivatePaidPlan(user.id);
       logger.info({ userId: user.id }, "Subscription deleted — reverted to free plan");
       return;
     }
@@ -84,9 +97,9 @@ export class WebhookHandlers {
       const user = await storage.getUserByStripeCustomerId(customerId);
       if (!user) return;
 
-      if (user.plan === "pro") {
+      if (user.plan === "pro" || user.plan === "elite") {
         await storage.resetMonthlyUsage(user.id);
-        logger.info({ userId: user.id, billingReason }, "Monthly usage reset on invoice.paid");
+        logger.info({ userId: user.id, plan: user.plan, billingReason }, "Monthly usage reset on invoice.paid");
       }
       return;
     }

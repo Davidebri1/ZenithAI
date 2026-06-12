@@ -3,6 +3,7 @@ import { db, conversations, messages } from "@workspace/db";
 import { eq, asc } from "drizzle-orm";
 import { ai } from "@workspace/integrations-gemini-ai";
 import { getAuth } from "@clerk/express";
+import { requirePlan } from "../lib/planCheck";
 
 const router = Router();
 
@@ -50,6 +51,8 @@ router.get("/gemini/conversations", async (req, res) => {
 });
 
 router.post("/gemini/conversations/:id/messages", async (req, res) => {
+  const allowed = await requirePlan(req, res, "pro");
+  if (!allowed) return;
   const userId = getAuth(req)?.userId ?? "guest";
   try {
     const id = parseInt(req.params.id, 10);
