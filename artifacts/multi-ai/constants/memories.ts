@@ -22,8 +22,9 @@ export async function getMemories(): Promise<Memory[]> {
 
 export async function addMemory(text: string): Promise<Memory> {
   const memories = await getMemories();
+  const id = `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
   const mem: Memory = {
-    id: Date.now().toString(),
+    id,
     text: text.trim(),
     createdAt: new Date().toISOString(),
   };

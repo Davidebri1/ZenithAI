@@ -153,8 +153,12 @@ router.post("/:provider/groq/conversations/:id/messages", async (req, res) => {
     let fullResponse = "";
     let streamSucceeded = false;
 
-    // Try Groq primary key first
-    for (const groqClient of [groqPrimary, groqSecondary]) {
+    // Try Groq primary key first, skip if key is not configured
+    const groqClients = [
+      GROQ_KEY_PRIMARY ? groqPrimary : null,
+      GROQ_KEY_SECONDARY ? groqSecondary : null,
+    ].filter(Boolean) as OpenAI[];
+    for (const groqClient of groqClients) {
       try {
         const stream = await streamWithGroq(groqClient, selectedModel, finalMessages, maxTokens, temperature);
         for await (const chunk of stream) {

@@ -322,6 +322,7 @@ export default function HomeScreen() {
   const sessionTitleRef = useRef<string>("");
   const lastPromptRef = useRef<string>("");
   const lastAttachmentRef = useRef<Attachment | null>(null);
+  const memoryCacheRef = useRef<string>("");
 
   const updateCard = useCallback((key: string, patch: Partial<CardState>) =>
     setCards((prev) => ({ ...prev, [key]: { ...prev[key], ...patch } })), []);
@@ -352,6 +353,8 @@ export default function HomeScreen() {
     refreshFromStorage();
     getAllProviderModes().then(setProviderModes);
     getPrivateMode().then(setPrivateModeState);
+    // Refresh memory cache whenever the screen is focused (user may have changed memories)
+    buildMemorySystemPrompt().then((ctx) => { memoryCacheRef.current = ctx; });
     getAllGlobalSettings().then((all) => {
       setProviderSettings((prev) => {
         const merged = { ...prev };
@@ -562,7 +565,7 @@ export default function HomeScreen() {
       lastAttachmentRef.current = pendingAttachment;
       setMessage("");
       setAttachment(null);
-      const memCtx = await buildMemorySystemPrompt();
+      const memCtx = memoryCacheRef.current || undefined;
       [...selected].forEach((key) => {
         if (ids[key]) {
           const s = providerSettings[key] ?? DEFAULT_SETTINGS;
