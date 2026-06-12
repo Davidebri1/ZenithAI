@@ -6,7 +6,7 @@ import { getAuth } from "@clerk/express";
 
 const router = Router();
 
-function buildSystemPrompt(tone?: string, length?: string): string | null {
+function buildSystemPrompt(tone?: string, length?: string, memoryContext?: string): string | null {
   const toneParts: Record<string, string> = {
     professional: "Respond formally and with precision. Use technical language where appropriate.",
     casual: "Respond conversationally and accessibly. Keep your tone warm and friendly.",
@@ -21,6 +21,7 @@ function buildSystemPrompt(tone?: string, length?: string): string | null {
   const parts = [
     tone && tone !== "default" ? toneParts[tone] : null,
     length && length !== "standard" ? lengthParts[length] : null,
+    memoryContext || null,
   ].filter(Boolean);
   return parts.length > 0 ? parts.join(" ") : null;
 }
@@ -56,7 +57,7 @@ router.post("/gemini/conversations/:id/messages", async (req, res) => {
     const [conv] = await db.select().from(conversations).where(eq(conversations.id, id));
     if (!conv) { res.status(404).json({ error: "Conversation not found" }); return; }
     if (conv.userId !== "unknown" && conv.userId !== "guest" && conv.userId !== userId) { res.status(403).json({ error: "Forbidden" }); return; }
-    const { content, imageBase64, imageMimeType, mode, temperature, length, tone, topK, safetyLevel } = req.body as {
+    const { content, imageBase64, imageMimeType, mode, temperature, length, tone, topK, safetyLevel, memoryContext } = req.body as {
       content: string;
       imageBase64?: string;
       imageMimeType?: string;
@@ -66,6 +67,7 @@ router.post("/gemini/conversations/:id/messages", async (req, res) => {
       tone?: string;
       topK?: number;
       safetyLevel?: string;
+      memoryContext?: string;
     };
 
     if ((content === undefined || content === null) && !imageBase64) {
@@ -110,7 +112,7 @@ router.post("/gemini/conversations/:id/messages", async (req, res) => {
     res.setHeader("Cache-Control", "no-cache");
     res.setHeader("Connection", "keep-alive");
 
-    const sysPrompt = buildSystemPrompt(tone, length);
+    const sysPrompt = buildSystemPrompt(tone, length, memoryContext);
     let fullResponse = "";
 
     const lengthTokens: Record<string, number> = { concise: 1024, detailed: 16384, exhaustive: 32768 };

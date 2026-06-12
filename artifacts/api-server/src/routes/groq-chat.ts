@@ -8,8 +8,8 @@ import { openrouter } from "@workspace/integrations-openrouter-ai";
 const router = Router();
 
 // Groq uses the OpenAI-compatible API
-const GROQ_KEY_PRIMARY = process.env.GROQ_API_KEY ?? "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";
-const GROQ_KEY_SECONDARY = process.env.GROQ_API_KEY_2 ?? "kgsk_pMUYdUxJOBYnLPR5gtx1WGdyb3FYBBGkdmBofvWrB5cde97zWyWS";
+const GROQ_KEY_PRIMARY = process.env.GROQ_API_KEY ?? "";
+const GROQ_KEY_SECONDARY = process.env.GROQ_API_KEY_2 ?? "";
 
 const groqPrimary = new OpenAI({
   baseURL: "https://api.groq.com/openai/v1",
@@ -95,7 +95,7 @@ router.post("/:provider/groq/conversations/:id/messages", async (req, res) => {
     if (!conv) { res.status(404).json({ error: "Conversation not found" }); return; }
     if (conv.userId !== "unknown" && conv.userId !== "guest" && conv.userId !== userId) { res.status(403).json({ error: "Forbidden" }); return; }
 
-    const { content, imageBase64, imageMimeType, mode, temperature, length, tone, safeMode } = req.body as {
+    const { content, imageBase64, imageMimeType, mode, temperature, length, tone, safeMode, memoryContext } = req.body as {
       content: string;
       imageBase64?: string;
       imageMimeType?: string;
@@ -104,6 +104,7 @@ router.post("/:provider/groq/conversations/:id/messages", async (req, res) => {
       length?: string;
       tone?: string;
       safeMode?: boolean;
+      memoryContext?: string;
     };
 
     const textContent = content || "";
@@ -144,6 +145,7 @@ router.post("/:provider/groq/conversations/:id/messages", async (req, res) => {
       tone && tone !== "default" ? toneParts[tone] : null,
       length && length !== "standard" ? lengthParts[length] : null,
       safeMode ? "Keep all responses safe and appropriate for all audiences." : null,
+      memoryContext || null,
     ].filter(Boolean);
     const sysContent = sysParts.join(" ");
     const finalMessages = sysContent ? [{ role: "system" as const, content: sysContent }, ...chatMessages] : chatMessages;

@@ -41,6 +41,7 @@ import { saveSession, CONV_IDS_KEY, getPrivateMode } from "@/constants/sessions"
 import { BgImage } from "@/components/BgImage";
 import { ThemeSelector } from "@/components/ThemeSelector";
 import { getUISettings, setUISettings } from "@/constants/uiSettings";
+import { buildMemorySystemPrompt } from "@/constants/memories";
 
 const CARD_GAP = 10;
 
@@ -388,7 +389,8 @@ export default function HomeScreen() {
   const streamForProvider = useCallback(async (
     key: string, convId: number, content: string,
     imageBase64?: string, imageMimeType?: string,
-    tuning?: { mode?: string; temperature?: number; length?: string; tone?: string; frequencyPenalty?: number; presencePenalty?: number; topK?: number; safetyLevel?: string; safeMode?: boolean }
+    tuning?: { mode?: string; temperature?: number; length?: string; tone?: string; frequencyPenalty?: number; presencePenalty?: number; topK?: number; safetyLevel?: string; safeMode?: boolean },
+    memoryContext?: string
   ) => {
     updateCard(key, { streaming: true, streamingText: "", hasUnread: false, lastMessage: content, lastRole: "user" });
     const abort = new AbortController();
@@ -396,6 +398,7 @@ export default function HomeScreen() {
     try {
       const bodyObj: Record<string, unknown> = { content, ...tuning };
       if (imageBase64) { bodyObj.imageBase64 = imageBase64; bodyObj.imageMimeType = imageMimeType || "image/jpeg"; }
+      if (memoryContext) bodyObj.memoryContext = memoryContext;
       const res = await authFetch(`${BASE_URL}/api/${providerApiPath(key)}/conversations/${convId}/messages`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -559,12 +562,13 @@ export default function HomeScreen() {
       lastAttachmentRef.current = pendingAttachment;
       setMessage("");
       setAttachment(null);
+      const memCtx = await buildMemorySystemPrompt();
       [...selected].forEach((key) => {
         if (ids[key]) {
           const s = providerSettings[key] ?? DEFAULT_SETTINGS;
           const mode = providerModes[key] ?? "standard";
           const tuning = { mode, temperature: s.temperature, length: s.length, tone: s.tone, frequencyPenalty: s.frequencyPenalty, presencePenalty: s.presencePenalty, topK: s.topK, safetyLevel: s.safetyLevel, safeMode: s.safeMode };
-          streamForProvider(key, ids[key], text, pendingAttachment?.base64, pendingAttachment?.mimeType, tuning);
+          streamForProvider(key, ids[key], text, pendingAttachment?.base64, pendingAttachment?.mimeType, tuning, memCtx || undefined);
         }
       });
       refreshQuota();

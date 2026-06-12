@@ -25,6 +25,7 @@ import {
 } from "@/constants/providerSettings";
 import { getPrivateMode, setPrivateMode } from "@/constants/sessions";
 import { getUISettings, setUISettings } from "@/constants/uiSettings";
+import { getMemories } from "@/constants/memories";
 import { SettingsSheet } from "@/components/SettingsSheet";
 import { NeonGlowOverlay } from "@/components/NeonGlowOverlay";
 import { BgImage } from "@/components/BgImage";
@@ -44,6 +45,7 @@ export default function SettingsScreen() {
   const [privateMode, setPrivateModeState] = useState(false);
   const [columnCount, setColumnCountState] = useState<1 | 2 | 3>(2);
   const [themeSelectVisible, setThemeSelectVisible] = useState(false);
+  const [memoryCount, setMemoryCount] = useState(0);
 
   useFocusEffect(
     useCallback(() => {
@@ -51,12 +53,14 @@ export default function SettingsScreen() {
         Promise.all(AI_PROVIDERS.map((p) => getGlobalSettings(p.key))),
         getPrivateMode(),
         getUISettings(),
-      ]).then(([results, pm, uiS]) => {
+        getMemories(),
+      ]).then(([results, pm, uiS, mems]) => {
         const map: Record<string, ProviderSettings> = {};
         AI_PROVIDERS.forEach((p, i) => { map[p.key] = results[i]; });
         setProviderSettings(map);
         setPrivateModeState(pm);
         setColumnCountState(uiS.columnCount);
+        setMemoryCount(mems.length);
       });
     }, [])
   );
@@ -148,9 +152,32 @@ export default function SettingsScreen() {
           </View>
         </View>
 
+        {/* ── PERSONALIZATION ── */}
+        <Text style={[styles.sectionLabel, { marginTop: 16 }]}>PERSONALIZATION</Text>
+
+        {/* Memories row */}
+        <TouchableOpacity style={styles.settingRow} onPress={() => router.push("/(home)/memories")} activeOpacity={0.75}>
+          <BlurView intensity={20} tint="dark" style={StyleSheet.absoluteFill} />
+          <View style={[StyleSheet.absoluteFill, styles.rowBg]} />
+          <View style={styles.rowLeft}>
+            <Feather name="bookmark" size={16} color="rgba(255,255,255,0.6)" />
+            <View>
+              <Text style={styles.rowLabel}>Memories</Text>
+              <Text style={styles.rowSub}>Context injected into every prompt</Text>
+            </View>
+          </View>
+          <View style={styles.rowRight}>
+            {memoryCount > 0 && (
+              <View style={styles.countBadge}>
+                <Text style={styles.countBadgeText}>{memoryCount}</Text>
+              </View>
+            )}
+            <Feather name="chevron-right" size={16} color="rgba(255,255,255,0.25)" />
+          </View>
+        </TouchableOpacity>
+
         {/* ── PRIVACY ── */}
         <Text style={[styles.sectionLabel, { marginTop: 16 }]}>PRIVACY</Text>
-
         {/* Private Mode toggle */}
         <TouchableOpacity style={styles.settingRow} onPress={handleTogglePrivate} activeOpacity={0.75}>
           <BlurView intensity={20} tint="dark" style={StyleSheet.absoluteFill} />
@@ -282,6 +309,7 @@ const styles = StyleSheet.create({
   rowBg: { backgroundColor: "rgba(255,255,255,0.03)" },
   rowBgActive: { backgroundColor: "rgba(167,139,250,0.07)" },
   rowLeft: { flexDirection: "row", alignItems: "center", gap: 12, flex: 1 },
+  rowRight: { flexDirection: "row", alignItems: "center", gap: 6 },
   rowLabel: { fontSize: 15, fontFamily: "Inter_600SemiBold", color: "rgba(255,255,255,0.75)" },
   rowLabelActive: { color: "#a78bfa" },
   rowValue: { fontSize: 12, fontFamily: "Inter_400Regular", marginTop: 2 },
@@ -310,6 +338,14 @@ const styles = StyleSheet.create({
   colBtnActive: { backgroundColor: "rgba(255,255,255,0.18)" },
   colBtnText: { fontSize: 13, fontFamily: "Inter_600SemiBold", color: "rgba(255,255,255,0.4)" },
   colBtnTextActive: { color: "#ffffff" },
+
+  countBadge: {
+    backgroundColor: "rgba(255,255,255,0.12)",
+    borderRadius: 10,
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+  },
+  countBadgeText: { fontSize: 11, fontFamily: "Inter_600SemiBold", color: "rgba(255,255,255,0.6)" },
 
   card: {
     borderRadius: 16,

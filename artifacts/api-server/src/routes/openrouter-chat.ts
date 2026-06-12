@@ -55,7 +55,7 @@ router.post("/:provider/conversations/:id/messages", async (req, res) => {
     const [conv] = await db.select().from(conversations).where(eq(conversations.id, id));
     if (!conv) { res.status(404).json({ error: "Conversation not found" }); return; }
     if (conv.userId !== "unknown" && conv.userId !== "guest" && conv.userId !== userId) { res.status(403).json({ error: "Forbidden" }); return; }
-    const { content, imageBase64, imageMimeType, mode, temperature, length, tone, safeMode } = req.body as {
+    const { content, imageBase64, imageMimeType, mode, temperature, length, tone, safeMode, memoryContext } = req.body as {
       content: string;
       imageBase64?: string;
       imageMimeType?: string;
@@ -64,6 +64,7 @@ router.post("/:provider/conversations/:id/messages", async (req, res) => {
       length?: string;
       tone?: string;
       safeMode?: boolean;
+      memoryContext?: string;
     };
 
     if ((content === undefined || content === null) && !imageBase64) {
@@ -136,6 +137,7 @@ router.post("/:provider/conversations/:id/messages", async (req, res) => {
       tone && tone !== "default" ? toneParts[tone] : null,
       length && length !== "standard" ? lengthParts[length] : null,
       safeMode ? "Keep all responses safe and appropriate for all audiences." : null,
+      memoryContext || null,
     ].filter(Boolean);
     const sysContent = sysParts.join(" ");
 
