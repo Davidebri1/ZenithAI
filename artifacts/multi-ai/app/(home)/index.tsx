@@ -33,12 +33,15 @@ import { useQuota } from "@/hooks/useQuota";
 import { QuotaBar } from "@/components/QuotaBar";
 import { QuotaBanner } from "@/components/QuotaBanner";
 import { NeonSignsOverlay } from "@/components/NeonSignsOverlay";
-import { AI_PROVIDERS, BASE_URL, SYNTHESIS_COLOR, SYNTHESIS_COLOR_GLOW, type AiProvider } from "@/constants/aiConfig";
+import { AI_PROVIDERS, BASE_URL, SYNTHESIS_COLOR, SYNTHESIS_COLOR_GLOW, providerApiPath, accessibleProviders, type AiProvider } from "@/constants/aiConfig";
 import { PROVIDER_MODES, getAllProviderModes } from "@/constants/providerModes";
 import { getAllGlobalSettings, setGlobalSettings, PROVIDER_SETTING_DEFS, DEFAULT_SETTINGS, type ProviderSettings, settingsSummary } from "@/constants/providerSettings";
 import { SettingsSheet } from "@/components/SettingsSheet";
 import { saveSession, CONV_IDS_KEY, getPrivateMode } from "@/constants/sessions";
 import { BgImage } from "@/components/BgImage";
+import { ThemeSelector } from "@/components/ThemeSelector";
+import { getUISettings, setUISettings } from "@/constants/uiSettings";
+import { buildMemorySystemPrompt } from "@/constants/memories";
 
 const CARD_GAP = 10;
 
@@ -98,72 +101,108 @@ interface AiCardProps {
   provider: AiProvider;
   state: CardState;
   selected: boolean;
+  locked: boolean;
   onToggleSelect: () => void;
   onOpen: () => void;
   onSettings: () => void;
+  onUpgrade: () => void;
   cardWidth: number;
   activeMode?: string;
   settingsSummaryText?: string;
 }
 
-function AiCard({ provider, state, selected, onToggleSelect, onOpen, onSettings, cardWidth, activeMode, settingsSummaryText }: AiCardProps) {
+const TIER_LABEL: Record<string, string> = { pro: "PRO", elite: "ELITE" };
+const TIER_COLOR: Record<string, string> = { pro: "#22c55e", elite: "#f0c040" };
+
+function AiCard({ provider, state, selected, locked, onToggleSelect, onOpen, onSettings, onUpgrade, cardWidth, activeMode, settingsSummaryText }: AiCardProps) {
   const previewText = state.streaming
     ? state.streamingText || "Thinking…"
     : state.lastMessage || provider.tagline;
 
   return (
     <Pressable
-      onPress={onOpen}
+      onPress={locked ? onUpgrade : onOpen}
       style={({ pressed }) => [
         styles.card,
         {
           width: cardWidth,
-          borderColor: selected ? `${provider.color}cc` : "rgba(255,255,255,0.08)",
+          borderColor: locked ? "rgba(255,255,255,0.04)" : selected ? `${provider.color}cc` : "rgba(255,255,255,0.08)",
           borderWidth: 1,
-          opacity: pressed ? 0.85 : 1,
+          opacity: pressed ? 0.85 : locked ? 0.7 : 1,
           overflow: "hidden",
-          ...cardGlowStyle(provider.color, selected),
+          ...(!locked && cardGlowStyle(provider.color, selected)),
         },
       ]}
     >
       <BlurView intensity={28} tint="dark" style={StyleSheet.absoluteFill} />
-      <View style={[StyleSheet.absoluteFill, { backgroundColor: "rgba(7,7,20,0.52)" }]} />
+      <View style={[StyleSheet.absoluteFill, { backgroundColor: locked ? "rgba(7,7,20,0.68)" : "rgba(7,7,20,0.52)" }]} />
 
       <LinearGradient
-        colors={[`${provider.color}22`, `${provider.color}00`]}
+        colors={locked ? ["rgba(255,255,255,0.04)", "rgba(255,255,255,0.01)"] : [`${provider.color}22`, `${provider.color}00`]}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         style={styles.cardTop}
       >
-        <Text style={[styles.cardProviderName, { color: provider.color }]}>{provider.name}</Text>
+        <Text style={[styles.cardProviderName, { color: locked ? "rgba(255,255,255,0.4)" : provider.color }]}>{provider.name}</Text>
         <View style={styles.cardTopRight}>
-          <TouchableOpacity
-            onPress={(e) => { e.stopPropagation?.(); onSettings(); }}
-            hitSlop={{ top: 8, right: 4, bottom: 8, left: 8 }}
-            style={styles.cardSettingsBtn}
-            activeOpacity={0.7}
-          >
-            <Feather name="sliders" size={12} color={`${provider.color}99`} />
-          </TouchableOpacity>
-          <TouchableOpacity
-            onPress={(e) => { e.stopPropagation?.(); onToggleSelect(); }}
-            hitSlop={{ top: 8, right: 8, bottom: 8, left: 4 }}
-            style={[
-              styles.checkbox,
-              selected
-                ? { backgroundColor: provider.color, borderColor: provider.color }
-                : { backgroundColor: "rgba(0,0,0,0.35)", borderColor: "rgba(255,255,255,0.28)" },
-            ]}
-            activeOpacity={0.7}
-          >
-            {selected && <Feather name="check" size={12} color="#000" />}
-          </TouchableOpacity>
+          {/* Tier badge */}
+          {provider.tier !== "free" && (
+            <View style={[styles.tierBadge, { backgroundColor: `${TIER_COLOR[provider.tier]}18`, borderColor: `${TIER_COLOR[provider.tier]}40` }]}>
+              <Text style={[styles.tierBadgeText, { color: TIER_COLOR[provider.tier] }]}>{TIER_LABEL[provider.tier]}</Text>
+            </View>
+          )}
+          {!locked && (
+            <>
+              <TouchableOpacity
+                onPress={(e) => { e.stopPropagation?.(); onSettings(); }}
+                hitSlop={{ top: 8, right: 4, bottom: 8, left: 8 }}
+                style={styles.cardSettingsBtn}
+                activeOpacity={0.7}
+              >
+                <Feather name="sliders" size={12} color={`${provider.color}99`} />
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={(e) => { e.stopPropagation?.(); onToggleSelect(); }}
+                hitSlop={{ top: 8, right: 8, bottom: 8, left: 4 }}
+                style={[
+                  styles.checkbox,
+                  selected
+                    ? { backgroundColor: provider.color, borderColor: provider.color }
+                    : { backgroundColor: "rgba(0,0,0,0.35)", borderColor: "rgba(255,255,255,0.28)" },
+                ]}
+                activeOpacity={0.7}
+              >
+                {selected && <Feather name="check" size={12} color="#000" />}
+              </TouchableOpacity>
+            </>
+          )}
+          {locked && (
+            <View style={styles.lockIcon}>
+              <Feather name="lock" size={11} color="rgba(255,255,255,0.3)" />
+            </View>
+          )}
         </View>
       </LinearGradient>
 
       <View style={styles.cardBody}>
         <View style={styles.previewRow}>
-          {state.streaming ? (
+          {locked ? (
+            <View style={styles.lockedBody}>
+              <Text style={styles.lockedTagline}>{provider.tagline}</Text>
+              <TouchableOpacity onPress={onUpgrade} style={styles.upgradeChip} activeOpacity={0.8}>
+                <LinearGradient
+                  colors={provider.tier === "elite" ? ["#f0c040", "#d4a800"] : ["#22c55e", "#16a34a"]}
+                  start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
+                  style={styles.upgradeChipGrad}
+                >
+                  <Feather name="zap" size={10} color="#000" />
+                  <Text style={styles.upgradeChipText}>
+                    {provider.tier === "elite" ? "Upgrade to Elite" : "Upgrade to Pro"}
+                  </Text>
+                </LinearGradient>
+              </TouchableOpacity>
+            </View>
+          ) : state.streaming ? (
             <View style={styles.streamingRow}>
               <ActivityIndicator size="small" color={provider.color} style={{ transform: [{ scale: 0.7 }] }} />
               <Text style={[styles.previewText, { color: `${provider.color}cc` }]} numberOfLines={2}>
@@ -186,7 +225,7 @@ function AiCard({ provider, state, selected, onToggleSelect, onOpen, onSettings,
             </Text>
           )}
         </View>
-        {activeMode && activeMode !== "standard" && (() => {
+        {!locked && activeMode && activeMode !== "standard" && (() => {
           const modeInfo = PROVIDER_MODES[provider.key]?.find((m) => m.key === activeMode);
           return modeInfo ? (
             <View style={styles.modeBadge}>
@@ -196,7 +235,7 @@ function AiCard({ provider, state, selected, onToggleSelect, onOpen, onSettings,
             </View>
           ) : null;
         })()}
-        {settingsSummaryText && settingsSummaryText !== "Default" && (
+        {!locked && settingsSummaryText && settingsSummaryText !== "Default" && (
           <View style={styles.settingsSummaryChip}>
             <Feather name="sliders" size={9} color={`${provider.color}88`} />
             <Text style={[styles.settingsSummaryText, { color: `${provider.color}88` }]} numberOfLines={1}>
@@ -262,13 +301,17 @@ export default function HomeScreen() {
   const c = useColors();
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const cardWidth = (SCREEN_WIDTH - 32 - CARD_GAP) / 2;
   const { quota, refresh: refreshQuota } = useQuota();
+
+  const [columnCount, setColumnCountState] = useState<1 | 2 | 3>(2);
+  const [themeSelectVisible, setThemeSelectVisible] = useState(false);
+
+  const cardWidth = (SCREEN_WIDTH - 32 - CARD_GAP * (columnCount - 1)) / columnCount;
 
   const [cards, setCards] = useState<Record<string, CardState>>(() =>
     Object.fromEntries(AI_PROVIDERS.map((p) => [p.key, makeDefaultCard()]))
   );
-  const [selected, setSelected] = useState<Set<string>>(new Set(AI_PROVIDERS.map((p) => p.key)));
+  const [selected, setSelected] = useState<Set<string>>(new Set(AI_PROVIDERS.filter((p) => p.tier === "free").map((p) => p.key)));
   const [message, setMessage] = useState("");
   const [convIds, setConvIds] = useState<ConvIds>({});
   const [attachment, setAttachment] = useState<Attachment | null>(null);
@@ -286,6 +329,8 @@ export default function HomeScreen() {
   const synthBreath = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
+    // Load persisted UI settings (column count)
+    getUISettings().then((s) => setColumnCountState(s.columnCount));
     Animated.loop(
       Animated.sequence([
         Animated.timing(glowPulse, { toValue: 1, duration: 4000, useNativeDriver: true }),
@@ -302,11 +347,18 @@ export default function HomeScreen() {
     ).start();
   }, []);
 
+  const handleSetColumnCount = useCallback(async (n: 1 | 2 | 3) => {
+    setColumnCountState(n);
+    await setUISettings({ columnCount: n });
+    Haptics.selectionAsync();
+  }, []);
+
   const inputRef = useRef<TextInput>(null);
   const activeReaders = useRef<Map<string, ReadableStreamDefaultReader<Uint8Array>>>(new Map());
   const sessionTitleRef = useRef<string>("");
   const lastPromptRef = useRef<string>("");
   const lastAttachmentRef = useRef<Attachment | null>(null);
+  const memoryCacheRef = useRef<string>("");
 
   const updateCard = useCallback((key: string, patch: Partial<CardState>) =>
     setCards((prev) => ({ ...prev, [key]: { ...prev[key], ...patch } })), []);
@@ -331,12 +383,13 @@ export default function HomeScreen() {
       AI_PROVIDERS.forEach((p) => { if (ids[p.key]) loadLastMessage(p.key, ids[p.key]); });
     });
   }, [loadLastMessage]);
-
   useEffect(() => { refreshFromStorage(); }, [refreshFromStorage]);
   useFocusEffect(useCallback(() => {
     refreshFromStorage();
     getAllProviderModes().then(setProviderModes);
     getPrivateMode().then(setPrivateModeState);
+    // Refresh memory cache whenever the screen is focused (user may have changed memories)
+    buildMemorySystemPrompt().then((ctx) => { memoryCacheRef.current = ctx; });
     getAllGlobalSettings().then((all) => {
       setProviderSettings((prev) => {
         const merged = { ...prev };
@@ -347,15 +400,16 @@ export default function HomeScreen() {
   }, [refreshFromStorage]));
 
   const getOrCreateConvIds = useCallback(async (): Promise<ConvIds> => {
-    const allKeys = AI_PROVIDERS.map((p) => p.key);
+    const currentAccessible = accessibleProviders(quota.plan);
+    const allKeys = currentAccessible.map((p) => p.key);
     if (allKeys.every((k) => convIds[k])) return convIds;
     const stored = await AsyncStorage.getItem(CONV_IDS_KEY);
     const existing: ConvIds = stored ? JSON.parse(stored) : {};
     if (allKeys.every((k) => existing[k])) { setConvIds(existing); return existing; }
-    const missing = AI_PROVIDERS.filter((p) => !existing[p.key]);
+    const missing = currentAccessible.filter((p) => !existing[p.key]);
     const results = await Promise.all(
       missing.map(async (p) => {
-        const res = await authFetch(`${BASE_URL}/api/${p.key}/conversations`, {
+        const res = await authFetch(`${BASE_URL}/api/${providerApiPath(p.key)}/conversations`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ title: "My Conversations" }),
@@ -369,12 +423,13 @@ export default function HomeScreen() {
     await AsyncStorage.setItem(CONV_IDS_KEY, JSON.stringify(ids));
     setConvIds(ids);
     return ids;
-  }, [convIds]);
+  }, [convIds, quota.plan]);
 
   const streamForProvider = useCallback(async (
     key: string, convId: number, content: string,
     imageBase64?: string, imageMimeType?: string,
-    tuning?: { mode?: string; temperature?: number; length?: string; tone?: string; frequencyPenalty?: number; presencePenalty?: number; topK?: number; safetyLevel?: string; safeMode?: boolean }
+    tuning?: { mode?: string; temperature?: number; length?: string; tone?: string; frequencyPenalty?: number; presencePenalty?: number; topK?: number; safetyLevel?: string; safeMode?: boolean },
+    memoryContext?: string
   ) => {
     updateCard(key, { streaming: true, streamingText: "", hasUnread: false, lastMessage: content, lastRole: "user" });
     const abort = new AbortController();
@@ -382,7 +437,8 @@ export default function HomeScreen() {
     try {
       const bodyObj: Record<string, unknown> = { content, ...tuning };
       if (imageBase64) { bodyObj.imageBase64 = imageBase64; bodyObj.imageMimeType = imageMimeType || "image/jpeg"; }
-      const res = await authFetch(`${BASE_URL}/api/${key}/conversations/${convId}/messages`, {
+      if (memoryContext) bodyObj.memoryContext = memoryContext;
+      const res = await authFetch(`${BASE_URL}/api/${providerApiPath(key)}/conversations/${convId}/messages`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(bodyObj),
@@ -545,12 +601,13 @@ export default function HomeScreen() {
       lastAttachmentRef.current = pendingAttachment;
       setMessage("");
       setAttachment(null);
+      const memCtx = memoryCacheRef.current || undefined;
       [...selected].forEach((key) => {
         if (ids[key]) {
           const s = providerSettings[key] ?? DEFAULT_SETTINGS;
           const mode = providerModes[key] ?? "standard";
           const tuning = { mode, temperature: s.temperature, length: s.length, tone: s.tone, frequencyPenalty: s.frequencyPenalty, presencePenalty: s.presencePenalty, topK: s.topK, safetyLevel: s.safetyLevel, safeMode: s.safeMode };
-          streamForProvider(key, ids[key], text, pendingAttachment?.base64, pendingAttachment?.mimeType, tuning);
+          streamForProvider(key, ids[key], text, pendingAttachment?.base64, pendingAttachment?.mimeType, tuning, memCtx || undefined);
         }
       });
       refreshQuota();
@@ -601,21 +658,48 @@ export default function HomeScreen() {
     await AsyncStorage.removeItem(CONV_IDS_KEY);
     setConvIds({});
     setCards(Object.fromEntries(AI_PROVIDERS.map((p) => [p.key, makeDefaultCard()])));
-    setSelected(new Set(AI_PROVIDERS.map((p) => p.key)));
+    // Reset selection to only accessible providers
+    const accessibleOnReset = accessibleProviders(quota.plan);
+    setSelected(new Set(accessibleOnReset.map((p) => p.key)));
     setSynthesis({ status: "idle", text: "", expanded: false });
     setMessage("");
     setAttachment(null);
   };
 
   const selectedProviders = AI_PROVIDERS.filter((p) => selected.has(p.key));
-  const anyStreaming = selectedProviders.some((p) => cards[p.key].streaming);
+  const anyStreaming = selectedProviders.some((p) => cards[p.key]?.streaming);
   const canSend = (message.trim().length > 0 || !!attachment) && selected.size > 0 && !anyStreaming;
   const topPad = Platform.OS === "web" ? 52 : insets.top;
   const bottomPad = Platform.OS === "web" ? 24 : insets.bottom;
 
+  // Determine which providers the user can access
+  const accessible = accessibleProviders(quota.plan);
+  const accessibleKeys = new Set(accessible.map((p) => p.key));
 
-  const rows: (AiProvider | null)[][] = [];
-  for (let i = 0; i < AI_PROVIDERS.length; i += 2) rows.push([AI_PROVIDERS[i], AI_PROVIDERS[i + 1] ?? null]);
+  // Split providers into free and paid sections
+  const freeProviders = AI_PROVIDERS.filter((p) => p.tier === "free");
+  const proProviders = AI_PROVIDERS.filter((p) => p.tier === "pro");
+  const eliteProviders = AI_PROVIDERS.filter((p) => p.tier === "elite");
+
+  function buildRows(providers: AiProvider[]): (AiProvider | null)[][] {
+    const rows: (AiProvider | null)[][] = [];
+    for (let i = 0; i < providers.length; i += columnCount) {
+      const row: (AiProvider | null)[] = [];
+      for (let j = 0; j < columnCount; j++) row.push(providers[i + j] ?? null);
+      rows.push(row);
+    }
+    return rows;
+  }
+
+  type GridSection = { type: "sectionHeader"; title: string; subtitle: string; accent: string } | { type: "row"; row: (AiProvider | null)[] };
+  const gridSections: GridSection[] = [
+    { type: "sectionHeader", title: "FREE", subtitle: "Open models · no cost", accent: "#4ade80" },
+    ...buildRows(freeProviders).map((row) => ({ type: "row" as const, row })),
+    { type: "sectionHeader", title: "PRO  ·  $20/mo", subtitle: "Frontier models · requires Pro plan", accent: "#22c55e" },
+    ...buildRows(proProviders).map((row) => ({ type: "row" as const, row })),
+    { type: "sectionHeader", title: "ELITE  ·  $50/mo", subtitle: "Most capable models · requires Elite plan", accent: "#f0c040" },
+    ...buildRows(eliteProviders).map((row) => ({ type: "row" as const, row })),
+  ];
 
   return (
     <BgImage style={styles.bg}>
@@ -658,11 +742,25 @@ export default function HomeScreen() {
             )}
           </View>
           <View style={styles.headerActions}>
+            {/* Column count selector */}
+            <View style={styles.colSelector}>
+              {([1, 2, 3] as const).map((n) => (
+                <TouchableOpacity
+                  key={n}
+                  onPress={() => handleSetColumnCount(n)}
+                  style={[styles.colBtn, columnCount === n && styles.colBtnActive]}
+                  activeOpacity={0.7}
+                >
+                  <Text style={[styles.colBtnText, columnCount === n && styles.colBtnTextActive]}>{n}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+            {/* Theme selector */}
+            <TouchableOpacity onPress={() => setThemeSelectVisible(true)} style={styles.headerBtn} activeOpacity={0.7}>
+              <Feather name="image" size={17} color="rgba(255,255,255,0.6)" />
+            </TouchableOpacity>
             <TouchableOpacity onPress={() => router.push("/(home)/enterprise")} style={styles.headerBtn} activeOpacity={0.7}>
               <Feather name="star" size={17} color="#f59e0b" />
-            </TouchableOpacity>
-            <TouchableOpacity onPress={() => router.push("/(home)/compare")} style={styles.headerBtn} activeOpacity={0.7}>
-              <Feather name="columns" size={17} color="rgba(255,255,255,0.6)" />
             </TouchableOpacity>
             <TouchableOpacity onPress={() => router.push("/(home)/search")} style={styles.headerBtn} activeOpacity={0.7}>
               <Feather name="search" size={17} color="rgba(255,255,255,0.6)" />
@@ -797,30 +895,46 @@ export default function HomeScreen() {
 
         {/* ── CARDS GRID ── */}
         <FlatList
-          data={rows}
-          keyExtractor={(_, i) => String(i)}
-          renderItem={({ item: row }) => (
-            <View style={styles.row}>
-              {row.map((p, i) =>
-                p ? (
-                  <AiCard
-                    key={p.key}
-                    provider={p}
-                    state={cards[p.key]}
-                    selected={selected.has(p.key)}
-                    onToggleSelect={() => toggleSelect(p.key)}
-                    onOpen={() => openThread(p)}
-                    onSettings={() => setSettingsOpenFor(p.key)}
-                    cardWidth={cardWidth}
-                    activeMode={providerModes[p.key]}
-                    settingsSummaryText={settingsSummary(providerSettings[p.key] ?? DEFAULT_SETTINGS)}
-                  />
-                ) : (
-                  <View key={`empty-${i}`} style={{ width: cardWidth }} />
-                )
-              )}
-            </View>
-          )}
+          data={gridSections}
+          keyExtractor={(item, i) => item.type === "sectionHeader" ? `hdr-${item.title}` : `row-${i}`}
+          renderItem={({ item }) => {
+            if (item.type === "sectionHeader") {
+              return (
+                <View style={styles.gridSectionHeader}>
+                  <View style={[styles.gridSectionDivider, { backgroundColor: item.accent }]} />
+                  <View style={styles.gridSectionLabels}>
+                    <Text style={[styles.gridSectionTitle, { color: item.accent }]}>{item.title}</Text>
+                    <Text style={styles.gridSectionSub}>{item.subtitle}</Text>
+                  </View>
+                  <View style={[styles.gridSectionDivider, { backgroundColor: item.accent, opacity: 0.2 }]} />
+                </View>
+              );
+            }
+            return (
+              <View style={styles.row}>
+                {item.row.map((p, i) =>
+                  p ? (
+                    <AiCard
+                      key={p.key}
+                      provider={p}
+                      state={cards[p.key] ?? makeDefaultCard()}
+                      selected={selected.has(p.key)}
+                      locked={!accessibleKeys.has(p.key)}
+                      onToggleSelect={() => toggleSelect(p.key)}
+                      onOpen={() => openThread(p)}
+                      onSettings={() => setSettingsOpenFor(p.key)}
+                      onUpgrade={() => router.push("/(home)/upgrade")}
+                      cardWidth={cardWidth}
+                      activeMode={providerModes[p.key]}
+                      settingsSummaryText={settingsSummary(providerSettings[p.key] ?? DEFAULT_SETTINGS)}
+                    />
+                  ) : (
+                    <View key={`empty-${i}`} style={{ width: cardWidth }} />
+                  )
+                )}
+              </View>
+            );
+          }}
           contentContainerStyle={styles.grid}
           ListFooterComponent={<View style={{ paddingBottom: 4 }} />}
           showsVerticalScrollIndicator={false}
@@ -857,6 +971,9 @@ export default function HomeScreen() {
           />
         );
       })()}
+
+      {/* Theme Selector */}
+      <ThemeSelector visible={themeSelectVisible} onClose={() => setThemeSelectVisible(false)} />
     </BgImage>
   );
 }
@@ -885,7 +1002,19 @@ const styles = StyleSheet.create({
   },
   logoZ: { fontSize: 17, fontFamily: "Inter_700Bold", color: "#22c55e" },
   appName: { fontSize: 22, fontFamily: "Inter_700Bold", letterSpacing: -0.5, color: "#f0f0ff" },
-  headerActions: { flexDirection: "row", alignItems: "center", gap: 6 },
+  headerActions: { flexDirection: "row", alignItems: "center", gap: 4 },
+  colSelector: {
+    flexDirection: "row", alignItems: "center",
+    borderRadius: 10, borderWidth: 1, borderColor: "rgba(255,255,255,0.12)",
+    backgroundColor: "rgba(255,255,255,0.05)",
+    overflow: "hidden", marginRight: 4,
+  },
+  colBtn: {
+    width: 26, height: 26, alignItems: "center", justifyContent: "center",
+  },
+  colBtnActive: { backgroundColor: "rgba(255,255,255,0.18)" },
+  colBtnText: { fontSize: 12, fontFamily: "Inter_600SemiBold", color: "rgba(255,255,255,0.4)" },
+  colBtnTextActive: { color: "#ffffff" },
   headerBtn: { width: 34, height: 34, alignItems: "center", justifyContent: "center" },
   newChatBtn: {
     flexDirection: "row", alignItems: "center", gap: 4,
@@ -980,14 +1109,34 @@ const styles = StyleSheet.create({
     width: 20, height: 20, borderRadius: 10, borderWidth: 1.5,
     alignItems: "center", justifyContent: "center",
   },
+  tierBadge: {
+    paddingHorizontal: 5, paddingVertical: 2, borderRadius: 5, borderWidth: 1,
+  },
+  tierBadgeText: { fontSize: 8, fontFamily: "Inter_700Bold", letterSpacing: 0.8 },
+  lockIcon: { width: 22, height: 22, alignItems: "center", justifyContent: "center" },
   cardBody: { padding: 10, paddingTop: 6, gap: 4 },
   previewRow: { minHeight: 54 },
+  lockedBody: { gap: 8, minHeight: 54, justifyContent: "center" },
+  lockedTagline: { fontSize: 11, fontFamily: "Inter_400Regular", color: "rgba(255,255,255,0.3)", lineHeight: 16 },
+  upgradeChip: { alignSelf: "flex-start", borderRadius: 8, overflow: "hidden" },
+  upgradeChipGrad: { flexDirection: "row", alignItems: "center", gap: 4, paddingHorizontal: 8, paddingVertical: 5 },
+  upgradeChipText: { fontSize: 10, fontFamily: "Inter_700Bold", color: "#000" },
   modeBadge: { alignSelf: "flex-start", paddingHorizontal: 8, paddingVertical: 3, borderRadius: 10, backgroundColor: "rgba(255,255,255,0.05)", borderWidth: StyleSheet.hairlineWidth, borderColor: "rgba(255,255,255,0.13)", marginTop: 2 },
   modeBadgeText: { fontSize: 10, fontFamily: "Inter_400Regular", letterSpacing: 0.3 },
   settingsSummaryChip: { flexDirection: "row", alignItems: "center", gap: 4, alignSelf: "flex-start", marginTop: 2 },
   settingsSummaryText: { fontSize: 9, fontFamily: "Inter_400Regular", letterSpacing: 0.2 },
   streamingRow: { flexDirection: "row", alignItems: "flex-start", gap: 6 },
   previewText: { fontSize: 12, fontFamily: "Inter_400Regular", lineHeight: 18 },
+
+  // Grid section headers
+  gridSectionHeader: {
+    flexDirection: "row", alignItems: "center", gap: 10,
+    paddingHorizontal: 4, paddingTop: 14, paddingBottom: 8,
+  },
+  gridSectionDivider: { flex: 1, height: 1, opacity: 0.35 },
+  gridSectionLabels: { gap: 1 },
+  gridSectionTitle: { fontSize: 10, fontFamily: "Inter_700Bold", letterSpacing: 1.5 },
+  gridSectionSub: { fontSize: 9, fontFamily: "Inter_400Regular", color: "rgba(255,255,255,0.3)", letterSpacing: 0.2 },
 
   bottomBar: {
     paddingTop: 8, paddingHorizontal: 14,

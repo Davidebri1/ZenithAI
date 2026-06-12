@@ -5,13 +5,22 @@ import { db } from "@workspace/db";
 
 const router = Router();
 
+const GUEST_PROMPTS_LIMIT = 50;
+
 router.post("/prompt/track", async (req, res) => {
   try {
     const auth = getAuth(req);
     const userId = auth?.userId;
 
+    // Guest mode: allow usage without sign-in
     if (!userId) {
-      res.json({ tracked: false });
+      res.json({
+        tracked: false,
+        promptsUsed: 0,
+        promptsLimit: GUEST_PROMPTS_LIMIT,
+        plan: "guest",
+        remaining: GUEST_PROMPTS_LIMIT,
+      });
       return;
     }
 
@@ -47,8 +56,7 @@ router.post("/prompt/track", async (req, res) => {
 });
 
 router.get("/conversations/:id/messages", async (req, res) => {
-  const userId = getAuth(req)?.userId;
-  if (!userId) { res.status(401).json({ error: "Unauthorized" }); return; }
+  const userId = getAuth(req)?.userId ?? "guest";
   try {
     const { messages, conversations } = await import("@workspace/db");
     const { eq, asc } = await import("drizzle-orm");
@@ -56,7 +64,7 @@ router.get("/conversations/:id/messages", async (req, res) => {
     if (isNaN(id) || id <= 0) { res.status(400).json({ error: "Invalid conversation id" }); return; }
     const [conv] = await db.select().from(conversations).where(eq(conversations.id, id));
     if (!conv) { res.status(404).json({ error: "Conversation not found" }); return; }
-    if (conv.userId !== "unknown" && conv.userId !== userId) { res.status(403).json({ error: "Forbidden" }); return; }
+    if (conv.userId !== "unknown" && conv.userId !== "guest" && conv.userId !== userId) { res.status(403).json({ error: "Forbidden" }); return; }
     const msgs = await db
       .select()
       .from(messages)

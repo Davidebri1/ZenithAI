@@ -12,7 +12,17 @@ export const PROVIDER_MODES: Record<string, ProviderMode[]> = {
     { key: "think",    label: "Think",          emoji: "🧠" },
     { key: "deep",     label: "Deep Research",  emoji: "🔬" },
   ],
+  "openai-elite": [
+    { key: "standard", label: "Standard",      emoji: "⚡" },
+    { key: "think",    label: "Think",          emoji: "🧠" },
+    { key: "deep",     label: "Deep Research",  emoji: "🔬" },
+  ],
   anthropic: [
+    { key: "standard", label: "Standard",         emoji: "⚡" },
+    { key: "think",    label: "Extended Thinking", emoji: "🧠" },
+    { key: "deep",     label: "Deep Research",     emoji: "🔬" },
+  ],
+  "claude-opus": [
     { key: "standard", label: "Standard",         emoji: "⚡" },
     { key: "think",    label: "Extended Thinking", emoji: "🧠" },
     { key: "deep",     label: "Deep Research",     emoji: "🔬" },
@@ -32,6 +42,9 @@ export const PROVIDER_MODES: Record<string, ProviderMode[]> = {
     { key: "think",    label: "DeepThink (R1)",   emoji: "🧠" },
     { key: "deep",     label: "Deep Research",     emoji: "🔬" },
   ],
+  "deepseek-free": [
+    { key: "standard", label: "Standard",      emoji: "⚡" },
+  ],
   mistral: [
     { key: "standard", label: "Standard",      emoji: "⚡" },
     { key: "think",    label: "Think",          emoji: "🧠" },
@@ -46,6 +59,15 @@ export const PROVIDER_MODES: Record<string, ProviderMode[]> = {
     { key: "standard", label: "Standard",      emoji: "⚡" },
     { key: "think",    label: "Think (QwQ)",   emoji: "🧠" },
     { key: "deep",     label: "Deep Research", emoji: "🔬" },
+  ],
+  "qwen-free": [
+    { key: "standard", label: "Standard",      emoji: "⚡" },
+  ],
+  gemma: [
+    { key: "standard", label: "Standard",      emoji: "⚡" },
+  ],
+  phi: [
+    { key: "standard", label: "Standard",      emoji: "⚡" },
   ],
 };
 

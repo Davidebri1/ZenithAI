@@ -5,6 +5,7 @@ import openaiChatRouter from "./openai-chat";
 import anthropicChatRouter from "./anthropic-chat";
 import geminiChatRouter from "./gemini-chat";
 import openrouterChatRouter from "./openrouter-chat";
+import groqChatRouter from "./groq-chat";
 import synthesizeRouter from "./synthesize";
 import searchRouter from "./search";
 import stripeRouter from "./stripe";
@@ -27,6 +28,9 @@ router.use(anthropicChatRouter);
 router.use(geminiChatRouter);
 router.use(synthesizeRouter);
 router.use(searchRouter);
+// Groq-backed routes (llama, mistral) with OpenRouter fallback
+router.use(groqChatRouter);
+// OpenRouter routes for remaining providers (grok, deepseek, qwen)
 router.use(openrouterChatRouter);
 
 export default router;

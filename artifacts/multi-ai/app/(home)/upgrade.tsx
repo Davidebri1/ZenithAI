@@ -22,8 +22,10 @@ import { BASE_URL } from "@/constants/aiConfig";
 import { NeonGlowOverlay } from "@/components/NeonGlowOverlay";
 import { BgImage } from "@/components/BgImage";
 
-const ACCENT = "#22c55e";
-const ACCENT_GLOW = "#22c55e55";
+const ACCENT_PRO = "#22c55e";
+const ACCENT_PRO_GLOW = "#22c55e55";
+const ACCENT_ELITE = "#f0c040";
+const ACCENT_ELITE_GLOW = "#f0c04055";
 
 interface Price {
   id: string;
@@ -39,13 +41,22 @@ interface Product {
   prices: Price[];
 }
 
-const FEATURES = [
-  { icon: "zap", label: "High-volume prompts across All AI Models" },
-  { icon: "layers", label: "Simultaneous GPT, Claude, Gemini, Grok, DeepSeek, Mistral, Llama & Qwen" },
-  { icon: "cpu", label: "Synthesis — AI-powered cross-model summary" },
+const PRO_FEATURES = [
+  { icon: "zap", label: "500 prompts/month across all frontier models" },
+  { icon: "layers", label: "GPT-4.1, Claude Sonnet, Gemini Flash, Grok 3, DeepSeek R1 & more" },
+  { icon: "cpu", label: "Synthesis — AI-powered cross-model consensus" },
   { icon: "search", label: "Search across all your conversations" },
   { icon: "clock", label: "Full session history" },
-  { icon: "shield", label: "Priority access to new models" },
+  { icon: "shield", label: "Priority access to new text models" },
+];
+
+const ELITE_FEATURES = [
+  { icon: "star", label: "Everything in Pro" },
+  { icon: "image", label: "Standard image generation (DALL·E, Stable Diffusion)" },
+  { icon: "film", label: "Standard video generation (Runway, Pika)" },
+  { icon: "music", label: "Standard music generation (Suno, Udio)" },
+  { icon: "award", label: "1,000 prompts/month" },
+  { icon: "zap", label: "Early access to advanced media models (coming soon)" },
 ];
 
 export default function UpgradeScreen() {
@@ -54,6 +65,7 @@ export default function UpgradeScreen() {
 
   const [products, setProducts] = useState<Product[]>([]);
   const [selectedInterval, setSelectedInterval] = useState<"month" | "year">("year");
+  const [selectedTier, setSelectedTier] = useState<"pro" | "elite">("pro");
   const [loading, setLoading] = useState(true);
   const [checkoutLoading, setCheckoutLoading] = useState(false);
   const [checkoutUrl, setCheckoutUrl] = useState<string | null>(null);
@@ -72,11 +84,24 @@ export default function UpgradeScreen() {
     })();
   }, []);
 
-  const proProduct = products[0] ?? null;
-  const selectedPrice = proProduct?.prices?.find(
+  // Products are sorted by price ascending — Pro is index 0, Elite is index 1
+  const proProduct = products.find((p) => {
+    const monthly = p.prices?.find((pr) => pr.recurring?.interval === "month");
+    return monthly && monthly.unit_amount <= 2500; // <= $25/mo → Pro
+  }) ?? products[0] ?? null;
+  const eliteProduct = products.find((p) => {
+    const monthly = p.prices?.find((pr) => pr.recurring?.interval === "month");
+    return monthly && monthly.unit_amount > 2500; // > $25/mo → Elite
+  }) ?? products[1] ?? null;
+
+  const activeProduct = selectedTier === "elite" ? eliteProduct : proProduct;
+  const ACCENT = selectedTier === "elite" ? ACCENT_ELITE : ACCENT_PRO;
+  const ACCENT_GLOW = selectedTier === "elite" ? ACCENT_ELITE_GLOW : ACCENT_PRO_GLOW;
+
+  const selectedPrice = activeProduct?.prices?.find(
     (p) => p.recurring?.interval === selectedInterval
   );
-  const otherPrice = proProduct?.prices?.find(
+  const otherPrice = activeProduct?.prices?.find(
     (p) => p.recurring?.interval !== selectedInterval
   );
 
@@ -131,12 +156,16 @@ export default function UpgradeScreen() {
               <Feather name="check" size={36} color={ACCENT} />
             </LinearGradient>
           </View>
-          <Text style={styles.successTitle}>Welcome to Pro</Text>
+          <Text style={styles.successTitle}>
+            Welcome to {selectedTier === "elite" ? "Elite" : "Pro"}!
+          </Text>
           <Text style={styles.successSub}>
-            You now have full access to All AI Models. Start asking.
+            {selectedTier === "elite"
+              ? "You now have full access to all frontier models and media generation."
+              : "You now have access to all frontier AI models. Start comparing."}
           </Text>
           <TouchableOpacity onPress={() => router.replace("/(home)")} style={styles.successCTA} activeOpacity={0.85}>
-            <LinearGradient colors={[ACCENT, "#16a34a"]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.successCTAGrad}>
+            <LinearGradient colors={[ACCENT, selectedTier === "elite" ? "#b8900a" : "#16a34a"]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.successCTAGrad}>
               <Text style={styles.successCTAText}>Start comparing</Text>
             </LinearGradient>
           </TouchableOpacity>
@@ -144,6 +173,9 @@ export default function UpgradeScreen() {
       </BgImage>
     );
   }
+
+  const activeFeatures = selectedTier === "elite" ? ELITE_FEATURES : PRO_FEATURES;
+  const ctaColors: [string, string] = selectedTier === "elite" ? [ACCENT_ELITE, "#b8900a"] : [ACCENT_PRO, "#16a34a"];
 
   return (
     <>
@@ -159,7 +191,7 @@ export default function UpgradeScreen() {
             <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
               <Feather name="x" size={22} color="rgba(240,240,255,0.7)" />
             </TouchableOpacity>
-            <Text style={styles.headerTitle}>Zenith Pro</Text>
+            <Text style={styles.headerTitle}>Upgrade Zenith</Text>
             <View style={{ width: 36 }} />
           </View>
 
@@ -168,13 +200,54 @@ export default function UpgradeScreen() {
             <View style={styles.hero}>
               <View style={[styles.heroBadge, Platform.OS === "web" ? { boxShadow: `0 0 32px ${ACCENT_GLOW}` } as object : {}]}>
                 <LinearGradient colors={[`${ACCENT}30`, `${ACCENT}08`]} style={styles.heroBadgeGrad}>
-                  <Feather name="zap" size={28} color={ACCENT} />
+                  <Feather name={selectedTier === "elite" ? "star" : "zap"} size={28} color={ACCENT} />
                 </LinearGradient>
               </View>
-              <Text style={styles.heroTitle}>Unlock All AI Models</Text>
-              <Text style={styles.heroSub}>
-                Compare GPT, Claude, Gemini, Grok, DeepSeek, Mistral, Llama & Qwen side by side.
+              <Text style={styles.heroTitle}>
+                {selectedTier === "elite" ? "Zenith Elite" : "Zenith Pro"}
               </Text>
+              <Text style={styles.heroSub}>
+                {selectedTier === "elite"
+                  ? "Frontier AI models + image, video & music generation."
+                  : "Unlock all frontier text models — GPT, Claude, Gemini, Grok & more."}
+              </Text>
+            </View>
+
+            {/* Tier selector */}
+            <View style={styles.tierRow}>
+              <TouchableOpacity
+                onPress={() => setSelectedTier("pro")}
+                style={[styles.tierBtn, selectedTier === "pro" && { borderColor: ACCENT_PRO, backgroundColor: `${ACCENT_PRO}12` }]}
+                activeOpacity={0.8}
+              >
+                <LinearGradient
+                  colors={selectedTier === "pro" ? [`${ACCENT_PRO}30`, `${ACCENT_PRO}00`] : ["transparent", "transparent"]}
+                  style={StyleSheet.absoluteFill}
+                />
+                <View style={[styles.tierBtnBadge, { backgroundColor: `${ACCENT_PRO}20`, borderColor: `${ACCENT_PRO}50` }]}>
+                  <Feather name="zap" size={11} color={ACCENT_PRO} />
+                  <Text style={[styles.tierBtnBadgeText, { color: ACCENT_PRO }]}>PRO</Text>
+                </View>
+                <Text style={styles.tierBtnPrice}>$20<Text style={styles.tierBtnPricePer}>/mo</Text></Text>
+                <Text style={styles.tierBtnSub}>All frontier text models</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                onPress={() => setSelectedTier("elite")}
+                style={[styles.tierBtn, selectedTier === "elite" && { borderColor: ACCENT_ELITE, backgroundColor: `${ACCENT_ELITE}10` }]}
+                activeOpacity={0.8}
+              >
+                <LinearGradient
+                  colors={selectedTier === "elite" ? [`${ACCENT_ELITE}28`, `${ACCENT_ELITE}00`] : ["transparent", "transparent"]}
+                  style={StyleSheet.absoluteFill}
+                />
+                <View style={[styles.tierBtnBadge, { backgroundColor: `${ACCENT_ELITE}20`, borderColor: `${ACCENT_ELITE}50` }]}>
+                  <Feather name="star" size={11} color={ACCENT_ELITE} />
+                  <Text style={[styles.tierBtnBadgeText, { color: ACCENT_ELITE }]}>ELITE</Text>
+                </View>
+                <Text style={styles.tierBtnPrice}>$50<Text style={styles.tierBtnPricePer}>/mo</Text></Text>
+                <Text style={styles.tierBtnSub}>Pro + media generation</Text>
+              </TouchableOpacity>
             </View>
 
             {/* Interval toggle */}
@@ -213,7 +286,7 @@ export default function UpgradeScreen() {
                   <ActivityIndicator color={ACCENT} />
                 ) : selectedPrice ? (
                   <>
-                    <Text style={styles.priceName}>{proProduct?.name ?? "Zenith Pro"}</Text>
+                    <Text style={[styles.priceName, { color: ACCENT }]}>{activeProduct?.name ?? (selectedTier === "elite" ? "Zenith Elite" : "Zenith Pro")}</Text>
                     <Text style={styles.priceAmount}>
                       ${(selectedPrice.unit_amount / 100).toFixed(0)}
                       <Text style={styles.pricePer}>/{selectedInterval === "year" ? "year" : "month"}</Text>
@@ -223,7 +296,7 @@ export default function UpgradeScreen() {
                     )}
                   </>
                 ) : (
-                  <Text style={styles.priceAmount}>$20/mo</Text>
+                  <Text style={styles.priceAmount}>{selectedTier === "elite" ? "$50/mo" : "$20/mo"}</Text>
                 )}
               </View>
             </View>
@@ -235,11 +308,13 @@ export default function UpgradeScreen() {
               activeOpacity={0.85}
               style={styles.ctaWrap}
             >
-              <LinearGradient colors={[ACCENT, "#16a34a"]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.cta}>
+              <LinearGradient colors={ctaColors} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.cta}>
                 {checkoutLoading ? (
                   <ActivityIndicator color="#000" />
                 ) : (
-                  <Text style={styles.ctaText}>Start Pro — {selectedInterval === "year" ? "Best Value" : "Monthly"}</Text>
+                  <Text style={styles.ctaText}>
+                    Start {selectedTier === "elite" ? "Elite" : "Pro"} — {selectedInterval === "year" ? "Best Value" : "Monthly"}
+                  </Text>
                 )}
               </LinearGradient>
             </TouchableOpacity>
@@ -249,11 +324,13 @@ export default function UpgradeScreen() {
             {/* Features */}
             <View style={[styles.featuresCard, { overflow: "hidden" }]}>
               <BlurView intensity={18} tint="dark" style={StyleSheet.absoluteFill} />
-              <View style={[StyleSheet.absoluteFill, { backgroundColor: "rgba(7,7,20,0.50)", borderRadius: 16, borderWidth: 1, borderColor: "rgba(255,255,255,0.06)" }]} />
+              <View style={[StyleSheet.absoluteFill, { backgroundColor: "rgba(7,7,20,0.50)", borderRadius: 16, borderWidth: 1, borderColor: `${ACCENT}18` }]} />
               <View style={styles.featuresContent}>
-                <Text style={styles.featuresTitle}>Everything included</Text>
-                {FEATURES.map((f) => (
-                  <View key={f.icon} style={styles.featureRow}>
+                <Text style={[styles.featuresTitle, { color: ACCENT }]}>
+                  {selectedTier === "elite" ? "Elite includes" : "Pro includes"}
+                </Text>
+                {activeFeatures.map((f) => (
+                  <View key={f.label} style={styles.featureRow}>
                     <View style={[styles.featureIcon, { backgroundColor: `${ACCENT}18` }]}>
                       <Feather name={f.icon as any} size={14} color={ACCENT} />
                     </View>
@@ -265,7 +342,7 @@ export default function UpgradeScreen() {
 
             {/* Free tier reminder */}
             <View style={styles.freeTier}>
-              <Text style={styles.freeTierText}>Free plan: 10 prompts to try Zenith</Text>
+              <Text style={styles.freeTierText}>Free plan: 10 prompts to explore Zenith</Text>
             </View>
           </ScrollView>
         </View>
@@ -340,8 +417,21 @@ const styles = StyleSheet.create({
   toggleBtnActive: { backgroundColor: "rgba(255,255,255,0.10)" },
   toggleLabel: { color: "rgba(240,240,255,0.5)", fontSize: 14, fontWeight: "600" },
   toggleLabelActive: { color: "#f0f0ff" },
-  savingsBadge: { backgroundColor: ACCENT, borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2 },
+  savingsBadge: { backgroundColor: ACCENT_PRO, borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2 },
   savingsText: { color: "#000", fontSize: 11, fontWeight: "800" },
+  tierRow: { flexDirection: "row", gap: 10, marginBottom: 16 },
+  tierBtn: {
+    flex: 1, borderRadius: 16, borderWidth: 1, borderColor: "rgba(255,255,255,0.08)",
+    padding: 14, gap: 6, overflow: "hidden", alignItems: "flex-start",
+  },
+  tierBtnBadge: {
+    flexDirection: "row", alignItems: "center", gap: 4,
+    borderRadius: 6, borderWidth: 1, paddingHorizontal: 6, paddingVertical: 3,
+  },
+  tierBtnBadgeText: { fontSize: 9, fontWeight: "800", letterSpacing: 0.8 },
+  tierBtnPrice: { color: "#f0f0ff", fontSize: 28, fontWeight: "800", marginTop: 2 },
+  tierBtnPricePer: { color: "rgba(240,240,255,0.5)", fontSize: 13, fontWeight: "500" },
+  tierBtnSub: { color: "rgba(240,240,255,0.45)", fontSize: 11, fontWeight: "400" },
   priceCard: { borderRadius: 20, minHeight: 110, marginBottom: 14, overflow: "hidden" },
   priceContent: { padding: 20, alignItems: "center" },
   priceName: { color: "rgba(240,240,255,0.6)", fontSize: 13, marginBottom: 6, fontWeight: "600", letterSpacing: 0.5 },
@@ -385,7 +475,7 @@ const styles = StyleSheet.create({
   webviewClose: { width: 36, height: 36, alignItems: "center", justifyContent: "center" },
   webviewTitle: { color: "#f0f0ff", fontSize: 15, fontWeight: "700" },
   webviewSecure: { flexDirection: "row", alignItems: "center", gap: 4 },
-  webviewSecureText: { color: ACCENT, fontSize: 12, fontWeight: "600" },
+  webviewSecureText: { color: ACCENT_PRO, fontSize: 12, fontWeight: "600" },
   webview: { flex: 1 },
   webviewLoading: { position: "absolute", inset: 0, alignItems: "center", justifyContent: "center", backgroundColor: "#07070d" } as any,
 });
