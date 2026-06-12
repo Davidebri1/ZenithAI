@@ -26,8 +26,7 @@ function buildSystemPrompt(tone?: string, length?: string): string | null {
 }
 
 router.post("/gemini/conversations", async (req, res) => {
-  const userId = getAuth(req)?.userId;
-  if (!userId) { res.status(401).json({ error: "Unauthorized" }); return; }
+  const userId = getAuth(req)?.userId ?? "guest";
   try {
     const { title } = req.body as { title: string };
     const [conv] = await db.insert(conversations).values({ title: title || "New Conversation", userId }).returning();
@@ -39,8 +38,7 @@ router.post("/gemini/conversations", async (req, res) => {
 });
 
 router.get("/gemini/conversations", async (req, res) => {
-  const userId = getAuth(req)?.userId;
-  if (!userId) { res.status(401).json({ error: "Unauthorized" }); return; }
+  const userId = getAuth(req)?.userId ?? "guest";
   try {
     const convs = await db.select().from(conversations).where(eq(conversations.userId, userId)).orderBy(asc(conversations.createdAt));
     res.json(convs);
@@ -51,14 +49,13 @@ router.get("/gemini/conversations", async (req, res) => {
 });
 
 router.post("/gemini/conversations/:id/messages", async (req, res) => {
-  const userId = getAuth(req)?.userId;
-  if (!userId) { res.status(401).json({ error: "Unauthorized" }); return; }
+  const userId = getAuth(req)?.userId ?? "guest";
   try {
     const id = parseInt(req.params.id, 10);
     if (isNaN(id) || id <= 0) { res.status(400).json({ error: "Invalid conversation id" }); return; }
     const [conv] = await db.select().from(conversations).where(eq(conversations.id, id));
     if (!conv) { res.status(404).json({ error: "Conversation not found" }); return; }
-    if (conv.userId !== "unknown" && conv.userId !== userId) { res.status(403).json({ error: "Forbidden" }); return; }
+    if (conv.userId !== "unknown" && conv.userId !== "guest" && conv.userId !== userId) { res.status(403).json({ error: "Forbidden" }); return; }
     const { content, imageBase64, imageMimeType, mode, temperature, length, tone, topK, safetyLevel } = req.body as {
       content: string;
       imageBase64?: string;

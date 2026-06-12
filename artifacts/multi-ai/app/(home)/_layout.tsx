@@ -1,6 +1,6 @@
 import React, { useEffect } from "react";
 import { View } from "react-native";
-import { Stack, Redirect } from "expo-router";
+import { Stack } from "expo-router";
 import { useAuth } from "@clerk/expo";
 import { setApiTokenGetter } from "@/constants/apiAuth";
 import { useColors } from "@/hooks/useColors";
@@ -12,13 +12,16 @@ export default function HomeLayout() {
   useEffect(() => {
     if (isSignedIn) {
       setApiTokenGetter(getToken);
+    } else {
+      // Guest mode: no token, server tracks anonymously
+      setApiTokenGetter(async () => null);
     }
   }, [isSignedIn, getToken]);
 
   if (!isLoaded) {
     return <View style={{ flex: 1, backgroundColor: "#07070d" }} />;
   }
-  if (!isSignedIn) return <Redirect href="/(auth)/sign-in" />;
+  // No redirect — app works in guest mode without sign-in
 
   return (
     <Stack

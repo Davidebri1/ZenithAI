@@ -33,12 +33,14 @@ import { useQuota } from "@/hooks/useQuota";
 import { QuotaBar } from "@/components/QuotaBar";
 import { QuotaBanner } from "@/components/QuotaBanner";
 import { NeonSignsOverlay } from "@/components/NeonSignsOverlay";
-import { AI_PROVIDERS, BASE_URL, SYNTHESIS_COLOR, SYNTHESIS_COLOR_GLOW, type AiProvider } from "@/constants/aiConfig";
+import { AI_PROVIDERS, BASE_URL, SYNTHESIS_COLOR, SYNTHESIS_COLOR_GLOW, providerApiPath, type AiProvider } from "@/constants/aiConfig";
 import { PROVIDER_MODES, getAllProviderModes } from "@/constants/providerModes";
 import { getAllGlobalSettings, setGlobalSettings, PROVIDER_SETTING_DEFS, DEFAULT_SETTINGS, type ProviderSettings, settingsSummary } from "@/constants/providerSettings";
 import { SettingsSheet } from "@/components/SettingsSheet";
 import { saveSession, CONV_IDS_KEY, getPrivateMode } from "@/constants/sessions";
 import { BgImage } from "@/components/BgImage";
+import { ThemeSelector } from "@/components/ThemeSelector";
+import { getUISettings, setUISettings } from "@/constants/uiSettings";
 
 const CARD_GAP = 10;
 
@@ -262,8 +264,12 @@ export default function HomeScreen() {
   const c = useColors();
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const cardWidth = (SCREEN_WIDTH - 32 - CARD_GAP) / 2;
   const { quota, refresh: refreshQuota } = useQuota();
+
+  const [columnCount, setColumnCountState] = useState<1 | 2 | 3>(2);
+  const [themeSelectVisible, setThemeSelectVisible] = useState(false);
+
+  const cardWidth = (SCREEN_WIDTH - 32 - CARD_GAP * (columnCount - 1)) / columnCount;
 
   const [cards, setCards] = useState<Record<string, CardState>>(() =>
     Object.fromEntries(AI_PROVIDERS.map((p) => [p.key, makeDefaultCard()]))
@@ -286,6 +292,8 @@ export default function HomeScreen() {
   const synthBreath = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
+    // Load persisted UI settings (column count)
+    getUISettings().then((s) => setColumnCountState(s.columnCount));
     Animated.loop(
       Animated.sequence([
         Animated.timing(glowPulse, { toValue: 1, duration: 4000, useNativeDriver: true }),
@@ -300,6 +308,12 @@ export default function HomeScreen() {
         Animated.timing(synthBreath, { toValue: 0.98, duration: 2000, useNativeDriver: true }),
       ])
     ).start();
+  }, []);
+
+  const handleSetColumnCount = useCallback(async (n: 1 | 2 | 3) => {
+    setColumnCountState(n);
+    await setUISettings({ columnCount: n });
+    Haptics.selectionAsync();
   }, []);
 
   const inputRef = useRef<TextInput>(null);
@@ -355,7 +369,7 @@ export default function HomeScreen() {
     const missing = AI_PROVIDERS.filter((p) => !existing[p.key]);
     const results = await Promise.all(
       missing.map(async (p) => {
-        const res = await authFetch(`${BASE_URL}/api/${p.key}/conversations`, {
+        const res = await authFetch(`${BASE_URL}/api/${providerApiPath(p.key)}/conversations`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ title: "My Conversations" }),
@@ -382,7 +396,7 @@ export default function HomeScreen() {
     try {
       const bodyObj: Record<string, unknown> = { content, ...tuning };
       if (imageBase64) { bodyObj.imageBase64 = imageBase64; bodyObj.imageMimeType = imageMimeType || "image/jpeg"; }
-      const res = await authFetch(`${BASE_URL}/api/${key}/conversations/${convId}/messages`, {
+      const res = await authFetch(`${BASE_URL}/api/${providerApiPath(key)}/conversations/${convId}/messages`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(bodyObj),
@@ -613,9 +627,13 @@ export default function HomeScreen() {
   const topPad = Platform.OS === "web" ? 52 : insets.top;
   const bottomPad = Platform.OS === "web" ? 24 : insets.bottom;
 
-
+  // Build grid rows based on current column count
   const rows: (AiProvider | null)[][] = [];
-  for (let i = 0; i < AI_PROVIDERS.length; i += 2) rows.push([AI_PROVIDERS[i], AI_PROVIDERS[i + 1] ?? null]);
+  for (let i = 0; i < AI_PROVIDERS.length; i += columnCount) {
+    const row: (AiProvider | null)[] = [];
+    for (let j = 0; j < columnCount; j++) row.push(AI_PROVIDERS[i + j] ?? null);
+    rows.push(row);
+  }
 
   return (
     <BgImage style={styles.bg}>
@@ -658,11 +676,25 @@ export default function HomeScreen() {
             )}
           </View>
           <View style={styles.headerActions}>
+            {/* Column count selector */}
+            <View style={styles.colSelector}>
+              {([1, 2, 3] as const).map((n) => (
+                <TouchableOpacity
+                  key={n}
+                  onPress={() => handleSetColumnCount(n)}
+                  style={[styles.colBtn, columnCount === n && styles.colBtnActive]}
+                  activeOpacity={0.7}
+                >
+                  <Text style={[styles.colBtnText, columnCount === n && styles.colBtnTextActive]}>{n}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+            {/* Theme selector */}
+            <TouchableOpacity onPress={() => setThemeSelectVisible(true)} style={styles.headerBtn} activeOpacity={0.7}>
+              <Feather name="image" size={17} color="rgba(255,255,255,0.6)" />
+            </TouchableOpacity>
             <TouchableOpacity onPress={() => router.push("/(home)/enterprise")} style={styles.headerBtn} activeOpacity={0.7}>
               <Feather name="star" size={17} color="#f59e0b" />
-            </TouchableOpacity>
-            <TouchableOpacity onPress={() => router.push("/(home)/compare")} style={styles.headerBtn} activeOpacity={0.7}>
-              <Feather name="columns" size={17} color="rgba(255,255,255,0.6)" />
             </TouchableOpacity>
             <TouchableOpacity onPress={() => router.push("/(home)/search")} style={styles.headerBtn} activeOpacity={0.7}>
               <Feather name="search" size={17} color="rgba(255,255,255,0.6)" />
@@ -857,6 +889,9 @@ export default function HomeScreen() {
           />
         );
       })()}
+
+      {/* Theme Selector */}
+      <ThemeSelector visible={themeSelectVisible} onClose={() => setThemeSelectVisible(false)} />
     </BgImage>
   );
 }
@@ -885,7 +920,19 @@ const styles = StyleSheet.create({
   },
   logoZ: { fontSize: 17, fontFamily: "Inter_700Bold", color: "#22c55e" },
   appName: { fontSize: 22, fontFamily: "Inter_700Bold", letterSpacing: -0.5, color: "#f0f0ff" },
-  headerActions: { flexDirection: "row", alignItems: "center", gap: 6 },
+  headerActions: { flexDirection: "row", alignItems: "center", gap: 4 },
+  colSelector: {
+    flexDirection: "row", alignItems: "center",
+    borderRadius: 10, borderWidth: 1, borderColor: "rgba(255,255,255,0.12)",
+    backgroundColor: "rgba(255,255,255,0.05)",
+    overflow: "hidden", marginRight: 4,
+  },
+  colBtn: {
+    width: 26, height: 26, alignItems: "center", justifyContent: "center",
+  },
+  colBtnActive: { backgroundColor: "rgba(255,255,255,0.18)" },
+  colBtnText: { fontSize: 12, fontFamily: "Inter_600SemiBold", color: "rgba(255,255,255,0.4)" },
+  colBtnTextActive: { color: "#ffffff" },
   headerBtn: { width: 34, height: 34, alignItems: "center", justifyContent: "center" },
   newChatBtn: {
     flexDirection: "row", alignItems: "center", gap: 4,

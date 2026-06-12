@@ -8,6 +8,8 @@ export interface AiProvider {
   colorDark: string;
   colorGlow: string;
   tagline: string;
+  /** Providers backed by Groq (primary) + OpenRouter (fallback) */
+  usesGroq?: boolean;
 }
 
 export const AI_PROVIDERS: AiProvider[] = [
@@ -69,24 +71,26 @@ export const AI_PROVIDERS: AiProvider[] = [
   {
     key: "mistral",
     name: "Mistral",
-    model: "Large 24",
+    model: "8x7B · Groq",
     initial: "M",
     color: "#ffc400",
     colorLight: "#ffc40012",
     colorDark: "#e0aa00",
     colorGlow: "#ffc40035",
     tagline: "Efficient & precise",
+    usesGroq: true,
   },
   {
     key: "llama",
     name: "Llama",
-    model: "4 Maverick",
+    model: "3.3 70B · Groq",
     initial: "L",
     color: "#e040fb",
     colorLight: "#e040fb12",
     colorDark: "#cc22ee",
     colorGlow: "#e040fb35",
     tagline: "Open-source powerhouse",
+    usesGroq: true,
   },
   {
     key: "qwen",
@@ -100,6 +104,13 @@ export const AI_PROVIDERS: AiProvider[] = [
     tagline: "Multilingual & broad",
   },
 ];
+
+export const GROQ_PROVIDERS = new Set(AI_PROVIDERS.filter((p) => p.usesGroq).map((p) => p.key));
+
+/** Returns the API path segment for a provider (groq-backed vs standard) */
+export function providerApiPath(key: string): string {
+  return GROQ_PROVIDERS.has(key) ? `${key}/groq` : key;
+}
 
 export const SYNTHESIS_COLOR = "#ffd700";
 export const SYNTHESIS_COLOR_DARK = "#cc9900";

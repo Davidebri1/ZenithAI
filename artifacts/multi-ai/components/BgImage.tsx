@@ -1,8 +1,7 @@
 import React from "react";
 import { View, StyleSheet } from "react-native";
 import { Image } from "expo-image";
-
-const BG = require("../assets/images/bg-alley.png");
+import { useTheme } from "@/contexts/ThemeContext";
 
 interface Props {
   style?: object;
@@ -10,13 +9,16 @@ interface Props {
 }
 
 export function BgImage({ style, children }: Props) {
+  const { theme } = useTheme();
   return (
     <View style={[styles.root, style]}>
       <Image
-        source={BG}
+        source={theme.image}
         style={StyleSheet.absoluteFill}
         contentFit="cover"
         contentPosition="center"
+        transition={400}
+        cachePolicy="memory-disk"
       />
       {children}
     </View>
